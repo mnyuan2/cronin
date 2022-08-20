@@ -16,6 +16,8 @@
             <el-container>
                 <el-header>页头</el-header>
                 <el-main>
+                    <el-button type="text" @click="dialogFormVisible = true">添加任务</el-button>
+
 
                     <el-table>
                         <el-table-column prop="" label="编号"></el-table-column>
@@ -27,6 +29,27 @@
                 <el-footer>页脚</el-footer>
             </el-container>
         </el-container>
+
+
+
+        <el-dialog title="添加任务" :visible.sync="dialogFormVisible">
+            <el-form :model="form">
+                <el-form-item label="活动名称" :label-width="formLabelWidth">
+                    <el-input v-model="form.name" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="活动区域" :label-width="formLabelWidth">
+                    <el-select v-model="form.protocol" placeholder="请选择活动区域">
+                        <el-option label="http" value="1"></el-option>
+                        <el-option label="rpc" value="2"></el-option>
+                        <el-option label="cmd" value="3"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="dialogFormVisible = false">取 消</el-button>
+                <el-button type="primary" @click="dialogFormVisible = false">确 定</el-button>
+            </div>
+        </el-dialog>
     </div>
 
 
@@ -37,7 +60,11 @@
         data(){
             return {
                 listData: [],
-
+                dialogFormVisible: false,
+                form:{
+                    name:'',
+                    protocol: 0
+                }
             };
         },
         created(){
