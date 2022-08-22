@@ -11,7 +11,7 @@ import (
 func Init() *gin.Engine {
 
 	r := gin.Default()
-	r.Delims("[[","]]")
+	r.Delims("[[", "]]")
 	r.LoadHTMLGlob("web/*.html")
 	r.Static("/static", "web/static")
 
@@ -22,18 +22,16 @@ func Init() *gin.Engine {
 
 	gv := r.Group("view")
 	gv.GET("/cron/list", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "cron_list.html", nil)
+		ctx.HTML(http.StatusOK, "cron_list.html", map[string]string{})
 	})
-
-
 
 	return r
 }
 
-func httpList(ctx *gin.Context){
+func httpList(ctx *gin.Context) {
 	r := &pb.CronConfigListRequest{}
-	if err := ctx.BindQuery(r); err != nil{
-		NewReply(ctx).SetError(pb.ParamError,err.Error()).RenderJson()
+	if err := ctx.BindQuery(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
 	rep, err := biz.NewCronConfigService().List(ctx.Request.Context(), r)
