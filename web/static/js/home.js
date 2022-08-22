@@ -51,15 +51,25 @@ var api = {
             }
             url = url.slice(0,-1)
         }
-        console.log("url", url)
+        console.log("get", url)
         this.ajax(url, null, null,null, success, null, true, 'get')
     },
+
+    /**
+     * 内网post请求
+     */
+    innerPost: function (path, param, success) {
+        let url =  this.baseUrl+path
+        console.log("post", url)
+        this.ajax(url, param, null,null, success, null, true, 'post')
+    },
+
     innerGetFile: function(path){
         let features = "height=240, width=400, top=50, left=50, toolbar=no, menubar=no,scrollbars=no,resizable=no, location=no, status=no,toolbar=no";
         window.open(this.baseUrl+path, "_blank", features)
     },
-    ajax: function (url, data, beforeSend, complete, success, error, async=true, type='post', dataType='json') {
 
+    ajax: function (url, data, beforeSend, complete, success, error, async=true, type='post', dataType='json') {
         var success = success || function (data) {
             // 默认Success方法
             if(data.code == '-403'){
@@ -78,7 +88,7 @@ var api = {
                 } else if(data.status == 503) {
                     alert('请求失败503');
                 } else if(data.status == 401){
-                    alert('登录超时，请重新登录');
+                    alert('登录超时');
                     setTimeout(()=>{location.reload();},1000);
                 }else{
                     alert('请求失败,网络连接超时');

@@ -34,20 +34,29 @@
 
         <el-dialog title="添加任务" :visible.sync="dialogFormVisible">
             <el-form :model="form">
-                <el-form-item label="活动名称" :label-width="formLabelWidth">
-                    <el-input v-model="form.name" autocomplete="off"></el-input>
+                <el-form-item label="活动名称*">
+                    <el-input v-model="form.name"></el-input>
                 </el-form-item>
-                <el-form-item label="活动区域" :label-width="formLabelWidth">
-                    <el-select v-model="form.protocol" placeholder="请选择活动区域">
+                <el-form-item label="时间*">
+                    <el-input v-model="form.spec"></el-input>
+                </el-form-item>
+                <el-form-item label="协议*">
+                    <el-select v-model="form.protocol" placeholder="请选择命令协议">
                         <el-option label="http" value="1"></el-option>
                         <el-option label="rpc" value="2"></el-option>
                         <el-option label="cmd" value="3"></el-option>
                     </el-select>
                 </el-form-item>
+                <el-form-item label="命令内容*">
+                    <el-input type="textarea" v-model="form.command" rows="5"></el-input>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="form.remark"></el-input>
+                </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="dialogFormVisible = false">取 消</el-button>
-                <el-button type="primary" @click="dialogFormVisible = false">确 定</el-button>
+                <el-button type="primary" @click="createCron()">确 定</el-button>
             </div>
         </el-dialog>
     </div>
@@ -62,8 +71,11 @@
                 listData: [],
                 dialogFormVisible: false,
                 form:{
-                    name:'',
-                    protocol: 0
+                    name: '',
+                    spec: '',
+                    protocol: null,
+                    command: '',
+                    remark: '',
                 }
             };
         },
@@ -71,10 +83,30 @@
             this.getList()
         },
         methods:{
+            // 任务列表
             getList(){
                 api.innerGet("/config/list", {}, (res)=>{
-                    console.log(res)
+                    console.log("列表响应",res)
                 })
+            },
+            // 添加任务
+            createCron(){
+
+                if (this.form.name == ''){
+                    return this.$message.error('请输入任务名称')
+                }else if (this.form.spec == ''){
+                    return this.$message.error('请输入任务执行时间')
+                }else if (!this.form.protocol){
+                    return this.$message.error('请选择任务协议')
+                }else if (this.form.command == ''){
+                    return this.$message.error('请输入命令类容')
+                }
+
+                api.innerPost("/config/set", this.form, (res)=>{
+                    console.log("添加响应",res)
+                })
+
+                this.dialogFormVisible = false;
             }
         }
     })
