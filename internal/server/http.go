@@ -16,7 +16,7 @@ func Init() *gin.Engine {
 	r.Static("/static", "web/static")
 
 	r.GET("/config/list", httpList)
-	r.POST("/config/set")
+	r.POST("/config/set", httpSet)
 	r.GET("/config/get")
 	r.POST("/config/del")
 
@@ -35,5 +35,15 @@ func httpList(ctx *gin.Context) {
 		return
 	}
 	rep, err := biz.NewCronConfigService().List(ctx.Request.Context(), r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+func httpSet(ctx *gin.Context) {
+	r := &pb.CronConfigSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronConfigService().Set(ctx.Request.Context(), r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
