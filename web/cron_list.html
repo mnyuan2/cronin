@@ -91,7 +91,6 @@
             },
             // 添加任务
             createCron(){
-
                 if (this.form.name == ''){
                     return this.$message.error('请输入任务名称')
                 }else if (this.form.spec == ''){
@@ -101,8 +100,16 @@
                 }else if (this.form.command == ''){
                     return this.$message.error('请输入命令类容')
                 }
+                // 主要是强制类型
+                let body = {
+                    name: this.form.name,
+                    spec: this.form.spec,
+                    protocol: Number(this.form.protocol),
+                    command: this.form.command,
+                    remark: this.form.remark,
+                }
 
-                api.innerPost("/config/set", this.form, (res)=>{
+                api.innerPost("/config/set", body, (res)=>{
                     console.log("添加响应",res)
                 })
 

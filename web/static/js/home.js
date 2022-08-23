@@ -60,8 +60,9 @@ var api = {
      */
     innerPost: function (path, param, success) {
         let url =  this.baseUrl+path
-        console.log("post", url)
-        this.ajax(url, param, null,null, success, null, true, 'post')
+        param = JSON.stringify(param)
+        console.log("post", url, param)
+        this.ajax(url, param, null,null, success, null, true, 'post', 'json')
     },
 
     innerGetFile: function(path){
@@ -90,6 +91,8 @@ var api = {
                 } else if(data.status == 401){
                     alert('登录超时');
                     setTimeout(()=>{location.reload();},1000);
+                }else if (data.message != ""){
+                    alert(data.message);
                 }else{
                     alert('请求失败,网络连接超时');
                 }
@@ -100,6 +103,9 @@ var api = {
             'url': url,
             'data': data,
             'type': type,
+            'headers': {
+                'Content-Type': 'application/json'
+            },
             'dataType': dataType,
             'async': async,
             'beforeSend': beforeSend,
