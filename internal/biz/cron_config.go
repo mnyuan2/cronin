@@ -27,7 +27,11 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 			Size: 10,
 		},
 	}
-	resp.Page.Total, err = data.NewCronConfigData(ctx).GetList(w, 1, 10, &resp.List)
+	resp.Page.Total, err = data.NewCronConfigData(ctx).GetList(w, 1, 20, &resp.List)
+	for _, item := range resp.List {
+		item.StatusName = models.StatusMap[item.Status]
+		item.ProtocolName = models.ProtocolMap[item.Protocol]
+	}
 
 	return resp, err
 }
@@ -42,7 +46,7 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		Id:       r.Id,
 		Name:     r.Name,
 		Spec:     r.Spec,
-		Protocol: models.CronProtocol(r.Protocol),
+		Protocol: r.Protocol,
 		Command:  r.Command,
 		Status:   models.StatusDisable,
 		Remark:   r.Remark,
