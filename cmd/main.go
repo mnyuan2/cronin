@@ -6,6 +6,6 @@ func main() {
 	// 初始化任务
 
 	// 初始化http
-	r := server.Init()
+	r := server.InitHttp()
 	r.Run(":8081")
 }

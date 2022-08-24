@@ -32,6 +32,7 @@ type CronConfigSetRequest struct {
 	Spec     string `json:"spec"`               // 执行时间表达式
 	Protocol int    `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
 	Command  string `json:"command,omitempty"`  // 命令
+	Status   int    `json:"status"`             // 状态
 	Remark   string `json:"remark"`
 }
 type CronConfigSetResponse struct {
