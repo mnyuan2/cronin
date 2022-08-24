@@ -14,13 +14,15 @@ type CronConfigListReply struct {
 	Page *Page                 `json:"page"`
 }
 type CronConfigListItem struct {
-	Id         int
-	Name       string
-	Protocol   int
-	Remark     string
-	Status     int
-	StatusName string
-	UpdateDt   string
+	Id           int    `json:"id"`
+	Name         string `json:"name"`
+	Spec         string `json:"spec"`
+	Protocol     int    `json:"protocol"`
+	ProtocolName string `json:"protocol_name"`
+	Remark       string `json:"remark"`
+	Status       int    `json:"status"`
+	StatusName   string `json:"status_name"`
+	UpdateDt     string `json:"update_dt"`
 }
 
 // 任务设置
