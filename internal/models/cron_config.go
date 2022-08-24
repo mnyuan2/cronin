@@ -20,7 +20,7 @@ const (
 	StatusActive  = 2 // 激活
 )
 
-var StatusMap = map[int]string{
+var ConfStatusMap = map[int]string{
 	StatusDisable: "停用",
 	StatusActive:  "激活",
 }

@@ -26,7 +26,10 @@
                         <el-table-column prop="protocol_name" label="协议"></el-table-column>
                         <el-table-column prop="remark" label="备注"></el-table-column>
                         <el-table-column prop="status_name" label="状态"></el-table-column>
-                        <el-table-column label="操作"></el-table-column>
+                        <el-table-column label="操作">
+                            // 操作，再弹窗中进行操作（小型弹窗）；
+                            // 日志，侧边栏弹窗查看完整日志；
+                        </el-table-column>
                     </el-table>
                     <el-pagination
                             @size-change="handleSizeChange"

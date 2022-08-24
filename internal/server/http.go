@@ -8,7 +8,7 @@ import (
 )
 
 // Init http 初始化
-func Init() *gin.Engine {
+func InitHttp() *gin.Engine {
 
 	r := gin.Default()
 	r.Delims("[[", "]]")
@@ -17,6 +17,7 @@ func Init() *gin.Engine {
 
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
+	r.POST("/config/edit", httpEdit)
 	r.GET("/config/get")
 	r.POST("/config/del")
 
@@ -28,6 +29,7 @@ func Init() *gin.Engine {
 	return r
 }
 
+// 任务列表
 func httpList(ctx *gin.Context) {
 	r := &pb.CronConfigListRequest{}
 	if err := ctx.BindQuery(r); err != nil {
@@ -38,6 +40,7 @@ func httpList(ctx *gin.Context) {
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
+// 任务设置
 func httpSet(ctx *gin.Context) {
 	r := &pb.CronConfigSetRequest{}
 	if err := ctx.BindJSON(r); err != nil {
@@ -45,5 +48,16 @@ func httpSet(ctx *gin.Context) {
 		return
 	}
 	rep, err := biz.NewCronConfigService().Set(ctx.Request.Context(), r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 任务编辑
+func httpEdit(ctx *gin.Context) {
+	r := &pb.CronConfigSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronConfigService().Edit(ctx.Request.Context(), r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
