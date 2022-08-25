@@ -83,6 +83,18 @@ func (dm *CronConfigService) Edit(ctx context.Context, r *pb.CronConfigSetReques
 		// 停用 到 启用 要把任务注册；
 		// 新旧状态一致，就不用附加操作了。
 	}
+	if r.Name != "" {
+		conf.Name = r.Name
+	}
+	if r.Spec != "" {
+		conf.Spec = r.Spec
+	}
+	if r.Remark != "" {
+		conf.Remark = r.Remark
+	}
+	if _, err = secondParser.Parse(conf.Spec); err != nil {
+		return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
+	}
 
 	if err = da.Set(conf); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）

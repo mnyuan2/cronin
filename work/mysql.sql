@@ -11,3 +11,15 @@ CREATE TABLE `cron_config`  (
     `update_dt` datetime NULL COMMENT '更新时间',
     PRIMARY KEY (`id`)
 );
+
+-- 任务日志表创建
+CREATE TABLE `cron_log` (
+    `id` INT ( 11 ) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `conf_id` INT ( 11 ) NOT NULL COMMENT '任务编号',
+    `create_dt` datetime NULL COMMENT '创建时间',
+    `status` TINYINT ( 2 ) NULL COMMENT '状态：1.错误、2.成功',
+    `body` text NULL COMMENT '日志内容',
+    `snap` text NULL COMMENT '任务快照',
+    PRIMARY KEY ( `id` ),
+    INDEX ( `conf_id` )
+);
