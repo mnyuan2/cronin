@@ -6,7 +6,11 @@ import (
 	"os"
 )
 
+// 调度器连接
 var cronRun *cron.Cron
+
+// 时间解释器
+var secondParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 
 // 全局初始化
 func init() {
@@ -26,4 +30,6 @@ func cronInit() {
 			cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "上一步还未完成, 跳过:", log.LstdFlags))),
 		),
 	)
+	cronRun.Start() // 启动程序；启动之后添加任务也是可以的；
+	//cronRun.Stop() // 停止服务
 }

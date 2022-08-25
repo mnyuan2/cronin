@@ -51,7 +51,7 @@ func (dm *TaskService) Add(conf *models.CronConfig) {
 	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
 		// 这里记录，不做任何返回(db日志写入失败，就一块要写入到文件了)。
-		g := models.NewErrorCronLog(conf.Id, err.Error())
+		g := models.NewErrorCronLog(conf, err.Error())
 		data.NewCronLogData(context.Background()).Add(g)
 		return
 	}

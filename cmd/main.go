@@ -1,6 +1,8 @@
 package main
 
-import "cron/internal/server"
+import (
+	"cron/internal/server"
+)
 
 func main() {
 	// 初始化任务

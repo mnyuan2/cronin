@@ -23,6 +23,7 @@ type CronConfigListItem struct {
 	Status       int    `json:"status"`
 	StatusName   string `json:"status_name"`
 	UpdateDt     string `json:"update_dt"`
+	Command      string `json:"command"`
 }
 
 // 任务设置
