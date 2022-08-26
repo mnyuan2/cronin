@@ -20,6 +20,11 @@ func (job *CronJob) SetCronId(cronId cron.EntryID) {
 	job.cronId = cronId
 }
 
+// 返回任务执行中的id
+func (job *CronJob) GetCronId() cron.EntryID {
+	return job.cronId
+}
+
 func (job *CronJob) Run() {
 	switch job.conf.Protocol {
 	case ProtocolHttp:
@@ -33,6 +38,8 @@ func (job *CronJob) Run() {
 
 // http 执行函数
 func (job *CronJob) httpFunc() {
+
+	// 执行请求任务，并记录结果日志
 	fmt.Println("执行http 任务")
 }
 
@@ -43,5 +50,6 @@ func (job *CronJob) rpcFunc() {
 
 // rpc 执行函数
 func (job *CronJob) cmdFunc() {
+	// 这个最后兼容
 	fmt.Println("执行cmd 任务")
 }
