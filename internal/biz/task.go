@@ -56,4 +56,14 @@ func (dm *TaskService) Add(conf *models.CronConfig) {
 		return
 	}
 	j.SetCronId(id)
+	jobList.Store(conf.Id, j)
+}
+
+// 删除任务
+func (dm *TaskService) Del(conf *models.CronConfig) {
+	if temp, ok := jobList.Load(conf.Id); ok == true {
+		job := temp.(*models.CronJob)
+		dm.cron.Remove(job.GetCronId())
+		jobList.Delete(conf.Id)
+	}
 }

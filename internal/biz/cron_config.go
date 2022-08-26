@@ -52,6 +52,9 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		Status:   models.StatusDisable,
 		Remark:   r.Remark,
 	}
+	if _, err = secondParser.Parse(d.Spec); err != nil {
+		return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
+	}
 
 	err = data.NewCronConfigData(ctx).Set(d)
 	if err != nil {
@@ -73,15 +76,8 @@ func (dm *CronConfigService) Edit(ctx context.Context, r *pb.CronConfigSetReques
 	if err != nil {
 		return nil, err
 	}
-
-	if _, ok := models.ConfStatusMap[r.Status]; ok {
-		//if conf.Status == models.StatusActive {
-		//
-		//}
-		conf.Status = r.Status
-		// 启用 到 停用 要关闭执行中的对应任务；
-		// 停用 到 启用 要把任务注册；
-		// 新旧状态一致，就不用附加操作了。
+	if conf.Status == models.StatusActive {
+		return nil, fmt.Errorf("请先停用任务后编辑")
 	}
 	if r.Name != "" {
 		conf.Name = r.Name
@@ -104,6 +100,37 @@ func (dm *CronConfigService) Edit(ctx context.Context, r *pb.CronConfigSetReques
 	return &pb.CronConfigSetResponse{
 		Id: conf.Id,
 	}, err
+}
+
+// 任务状态变更
+func (dm *CronConfigService) StatusChange(ctx context.Context, r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
+	// 同一个任务，这里要加请求锁
+	da := data.NewCronConfigData(ctx)
+	conf, err := da.GetOne(r.Id)
+	if err != nil {
+		return nil, err
+	}
+	if conf.Status == r.Status {
+		return nil, fmt.Errorf("状态相等")
+	}
+	if _, ok := models.ConfStatusMap[r.Status]; !ok {
+		return nil, fmt.Errorf("错误状态请求")
+	}
+
+	if conf.Status == models.StatusActive && r.Status == models.StatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
+		NewTaskService().Del(conf)
+	} else if conf.Status == models.StatusDisable && r.Status == models.StatusActive { // 停用 到 启用 要把任务注册；
+		NewTaskService().Add(conf)
+	}
+
+	conf.Status = r.Status
+	if err = da.Set(conf); err != nil {
+		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
+		return nil, err
+	}
+	return &pb.CronConfigSetResponse{
+		Id: conf.Id,
+	}, nil
 }
 
 func (dm *CronConfigService) Del() {

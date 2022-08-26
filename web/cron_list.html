@@ -30,7 +30,7 @@
                         <el-table-column prop="status_name" label="状态"></el-table-column>
                         <el-table-column label="操作">
                             <template slot-scope="scope">
-                                <el-button type="text" @click="editShow(scope.$index)">操作</el-button>
+                                <el-button type="text" @click="editShow(scope.$index)">编辑</el-button>
                                 <el-button type="text">日志</el-button>
                             </template>
 <!--                            // 操作，再弹窗中进行操作（小型弹窗）；-->
@@ -90,16 +90,14 @@
                     <el-input v-model="editForm.spec"></el-input>
                 </el-form-item>
                 <el-form-item label="协议">
-                    <p>{{editForm.protocol_name}}</p>
+                    <el-select v-model="editForm.protocol" placeholder="请选择命令协议">
+                        <el-option label="http" value="1"></el-option>
+                        <el-option label="rpc" value="2"></el-option>
+                        <el-option label="cmd" value="3"></el-option>
+                    </el-select>
                 </el-form-item>
                 <el-form-item label="命令内容*">
-                    <p>{{editForm.command}}</p>
-                </el-form-item>
-                <el-form-item label="状态">
-                    <el-select v-model="editForm.status" placeholder="请选择状态">
-                        <el-option label="停用" value="1"></el-option>
-                        <el-option label="激活" value="2"></el-option>
-                    </el-select>
+                    <el-input type="textarea" v-model="editForm.command" rows="5"></el-input>
                 </el-form-item>
                 <el-form-item label="备注">
                     <el-input v-model="editForm.remark"></el-input>
@@ -193,11 +191,13 @@
                 this.dialogEditConf = true
                 this.editForm = this.listData[index]
                 this.editForm.status = this.editForm.status.toString() // 这里要转字符串，否则可能显示数字
+                this.editForm.protocol = this.editForm.protocol.toString()
             },
             // 编辑提交
             editSubmit(){
                 let body = JSON.parse(JSON.stringify(this.editForm));// 深拷贝 json
                 body.status = Number(body.status)
+                body.protocol = Number(body.protocol)
 
                 api.innerPost("/config/edit", body, (res)=>{
                     if (res.code != '000000'){
@@ -206,7 +206,9 @@
                     this.dialogEditConf = false
                     this.getList(); // 刷新当前页
                 })
-
+            },
+            changeStatus(){
+                // 携带id和新状态去更新
             }
         }
     })
