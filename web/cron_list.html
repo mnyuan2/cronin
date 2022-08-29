@@ -19,7 +19,7 @@
                 </el-header>
 
                 <el-main>
-                    <el-button type="text" @click="dialogFormVisible = true">添加任务</el-button>
+                    <el-button type="text" @click="createShow()">添加任务</el-button>
 
                     <el-table :data="listData">
                         <el-table-column prop="id" label="编号"></el-table-column>
@@ -27,7 +27,16 @@
                         <el-table-column prop="name" label="任务名称"></el-table-column>
                         <el-table-column prop="protocol_name" label="协议"></el-table-column>
                         <el-table-column prop="remark" label="备注"></el-table-column>
-                        <el-table-column prop="status_name" label="状态"></el-table-column>
+                        <el-table-column prop="status_name" label="状态">
+                            <template slot-scope="scope">
+                                <el-switch
+                                        v-model="scope.row.status"
+                                        active-value="2"
+                                        inactive-value="1"
+                                        @change="changeStatus(scope.row.id, $event)"
+                                ></el-switch>
+                            </template>
+                        </el-table-column>
                         <el-table-column label="操作">
                             <template slot-scope="scope">
                                 <el-button type="text" @click="editShow(scope.$index)">编辑</el-button>
@@ -51,9 +60,7 @@
             </el-container>
         </el-container>
 
-
-
-        <el-dialog title="添加任务" :visible.sync="dialogFormVisible">
+        <el-dialog :title="formTitle" :visible.sync="dialogFormVisible">
             <el-form :model="form">
                 <el-form-item label="活动名称*">
                     <el-input v-model="form.name"></el-input>
@@ -61,15 +68,29 @@
                 <el-form-item label="时间*">
                     <el-input v-model="form.spec"></el-input>
                 </el-form-item>
-                <el-form-item label="协议*">
-                    <el-select v-model="form.protocol" placeholder="请选择命令协议">
-                        <el-option label="http" value="1"></el-option>
-                        <el-option label="rpc" value="2"></el-option>
-                        <el-option label="cmd" value="3"></el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="命令内容*">
-                    <el-input type="textarea" v-model="form.command" rows="5"></el-input>
+                <el-form-item>
+                    <el-tabs type="border-card" v-model="form.protocol">
+                        <el-tab-pane label="http" name="1">
+                            <el-form-item label="请求方式">
+                                <el-select v-model="form.command.http.method" placeholder="请选请求方式">
+                                    <el-option label="GET" value="GET"></el-option>
+                                    <el-option label="POST" value="POST"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="请求url地址">
+                                <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址"></el-input>
+                            </el-form-item>
+                            <el-form-item label="请求body参数">
+                                <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
+                            </el-form-item>
+                        </el-tab-pane>
+                        <el-tab-pane label="rpc" name="2">
+                            <el-input type="textarea" v-model="form.command.rpc" rows="5" placeholder="请输入请求地址"></el-input>
+                        </el-tab-pane>
+                        <el-tab-pane label="cmd" name="3">
+                            <el-input type="textarea" v-model="form.command.cmd" rows="5" placeholder="请输入执行命令行内容"></el-input>
+                        </el-tab-pane>
+                    </el-tabs>
                 </el-form-item>
                 <el-form-item label="备注">
                     <el-input v-model="form.remark"></el-input>
@@ -77,35 +98,7 @@
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="dialogFormVisible = false">取 消</el-button>
-                <el-button type="primary" @click="createCron()">确 定</el-button>
-            </div>
-        </el-dialog>
-
-        <el-dialog title="编辑任务" :visible.sync="dialogEditConf">
-            <el-form :model="form">
-                <el-form-item label="活动名称">
-                    <el-input v-model="editForm.name"></el-input>
-                </el-form-item>
-                <el-form-item label="时间">
-                    <el-input v-model="editForm.spec"></el-input>
-                </el-form-item>
-                <el-form-item label="协议">
-                    <el-select v-model="editForm.protocol" placeholder="请选择命令协议">
-                        <el-option label="http" value="1"></el-option>
-                        <el-option label="rpc" value="2"></el-option>
-                        <el-option label="cmd" value="3"></el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="命令内容*">
-                    <el-input type="textarea" v-model="editForm.command" rows="5"></el-input>
-                </el-form-item>
-                <el-form-item label="备注">
-                    <el-input v-model="editForm.remark"></el-input>
-                </el-form-item>
-            </el-form>
-            <div slot="footer" class="dialog-footer">
-                <el-button @click="dialogEditConf = false">取 消</el-button>
-                <el-button type="primary" @click="editSubmit()">确 定</el-button>
+                <el-button type="primary" @click="setCron()">确 定</el-button>
             </div>
         </el-dialog>
     </div>
@@ -125,14 +118,8 @@
                 },
                 dialogFormVisible: false, // 新增弹窗
                 dialogEditConf: false, // 编辑弹窗
-                form:{
-                    name: '',
-                    spec: '',
-                    protocol: null,
-                    command: '',
-                    remark: '',
-                },
-                editForm: {}, // 编辑内容
+                formTitle: '',
+                form:{command:{http:{method:''}}},
             };
         },
         created(){
@@ -146,6 +133,9 @@
                     if (res.code != "000000"){
                         return this.$message.error(res.message);
                     }
+                    for (i in res.data.list){
+                        res.data.list[i].status = res.data.list[i].status.toString()
+                    }
                     this.listData = res.data.list;
                     this.page = res.data.page;
                 })
@@ -156,17 +146,19 @@
             handleCurrentChange(val) {
                 console.log(`当前页: ${val}`);
             },
-            // 添加任务
-            createCron(){
+            // 添加/编辑 任务
+            setCron(){
                 if (this.form.name == ''){
                     return this.$message.error('请输入任务名称')
                 }else if (this.form.spec == ''){
                     return this.$message.error('请输入任务执行时间')
                 }else if (!this.form.protocol){
                     return this.$message.error('请选择任务协议')
-                }else if (this.form.command == ''){
-                    return this.$message.error('请输入命令类容')
                 }
+                // else if (this.form.command == ''){
+                //     return this.$message.error('请输入命令类容')
+                // }
+
                 // 主要是强制类型
                 let body = {
                     name: this.form.name,
@@ -177,38 +169,59 @@
                 }
 
                 api.innerPost("/config/set", body, (res)=>{
-                    console.log("添加响应",res)
                     if (res.code != '000000'){
                         return this.$message.error(res.message)
                     }
                     this.dialogFormVisible = false;
-                    this.form = {}; // 清空表达数据
+                    this.form = {command:{
+                            http:{
+                                method: '',
+                                url:'',
+                                body:''
+                            },
+                            rpc:'',
+                            cmd:''
+                        }}; // 清空表达数据
                     this.getList(); // 刷新当前页
                 })
             },
-            // 编辑任务
-            editShow(index){
-                this.dialogEditConf = true
-                this.editForm = this.listData[index]
-                this.editForm.status = this.editForm.status.toString() // 这里要转字符串，否则可能显示数字
-                this.editForm.protocol = this.editForm.protocol.toString()
+            // 添加弹窗
+            createShow(){
+                this.dialogFormVisible = true
+                this.formTitle = '添加任务'
+                // 应该有个地方定义空结构体
+                this.form = {
+                    command:{
+                        http:{
+                            method: '',
+                            url:'',
+                            body:''
+                        },
+                        rpc:'',
+                        cmd:''
+                    }
+                }
             },
-            // 编辑提交
-            editSubmit(){
-                let body = JSON.parse(JSON.stringify(this.editForm));// 深拷贝 json
-                body.status = Number(body.status)
-                body.protocol = Number(body.protocol)
-
-                api.innerPost("/config/edit", body, (res)=>{
+            // 编辑弹窗
+            editShow(index){
+                this.dialogFormVisible = true
+                this.formTitle = '编辑任务'
+                this.form = this.listData[index]
+                this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字
+                this.form.protocol = this.form.protocol.toString()
+                console.log(this.form)
+            },
+            // 改变状态
+            changeStatus(id,newStatus){
+                // 携带id和新状态去更新
+                console.log("状态改变",id,newStatus)
+                api.innerPost("/config/change_status", {id:id,status:Number(newStatus)}, (res)=>{
+                    console.log("状态改变响应",res)
                     if (res.code != '000000'){
                         return this.$message.error(res.message)
                     }
-                    this.dialogEditConf = false
-                    this.getList(); // 刷新当前页
+                    return this.$message.success(res.message)
                 })
-            },
-            changeStatus(){
-                // 携带id和新状态去更新
             }
         }
     })

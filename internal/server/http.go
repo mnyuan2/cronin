@@ -18,7 +18,7 @@ func InitHttp() *gin.Engine {
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/edit", httpEdit)
-	r.POST("/config/status", httpStatus)
+	r.POST("/config/change_status", httpChangeStatus)
 	r.GET("/config/get")
 	r.POST("/config/del")
 
@@ -64,12 +64,12 @@ func httpEdit(ctx *gin.Context) {
 }
 
 // 任务状态变更
-func httpStatus(ctx *gin.Context) {
+func httpChangeStatus(ctx *gin.Context) {
 	r := &pb.CronConfigSetRequest{}
 	if err := ctx.BindJSON(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewCronConfigService().Edit(ctx.Request.Context(), r)
+	rep, err := biz.NewCronConfigService().ChangeStatus(ctx.Request.Context(), r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
