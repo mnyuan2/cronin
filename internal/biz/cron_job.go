@@ -1,0 +1,145 @@
+package biz
+
+import (
+	"bytes"
+	"context"
+	"cron/internal/data"
+	"cron/internal/models"
+	"cron/internal/pb"
+	"fmt"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/robfig/cron/v3"
+	"io/ioutil"
+	"net/http"
+)
+
+type CronJob struct {
+	conf         *models.CronConfig
+	commandParse *pb.CronConfigCommand
+	cronId       cron.EntryID
+	ErrorCount   int // 连续错误
+}
+
+// 任务执行器
+func NewCronJob(conf *models.CronConfig) *CronJob {
+	com := &pb.CronConfigCommand{}
+	_ = jsoniter.UnmarshalFromString(conf.Command, com)
+
+	return &CronJob{conf: conf, commandParse: com}
+}
+
+// 设置任务执行id
+func (job *CronJob) SetCronId(cronId cron.EntryID) {
+	job.cronId = cronId
+}
+
+// 返回任务执行中的id
+func (job *CronJob) GetCronId() cron.EntryID {
+	return job.cronId
+}
+
+func (job *CronJob) Run() {
+	switch job.conf.Protocol {
+	case models.ProtocolHttp:
+		job.httpFunc()
+	case models.ProtocolRpc:
+		job.rpcFunc()
+	case models.ProtocolCmd:
+		job.cmdFunc()
+	}
+}
+
+// http 执行函数
+func (job *CronJob) httpFunc() {
+
+	// 执行请求任务，并记录结果日志
+	fmt.Println("执行http 任务")
+	/*
+		这里有三个点：1.请求类型、2.请求url、3.请求body；
+			默认只能说是get请求的一个url
+			最好的方案就是前段拼装成一个json
+		任务连续失败三次，也应该终止；
+		任务执行后，无论成功或失败，都要记录日志。
+	*/
+	ctx := context.Background()
+	g := &models.CronLog{}
+
+	switch job.commandParse.Http.Method {
+	case http.MethodPost:
+		res, err := job.httpPost(ctx, job.commandParse.Http.Url, []byte(job.commandParse.Http.Body), nil)
+		if err != nil {
+			g = models.NewErrorCronLog(job.conf, err.Error())
+		} else {
+			g = models.NewSuccessCronLog(job.conf, string(res))
+		}
+
+	case http.MethodGet:
+		res, err := job.httpGet(ctx, job.commandParse.Http.Url, nil)
+		if err != nil {
+			g = models.NewErrorCronLog(job.conf, err.Error())
+		} else {
+			g = models.NewSuccessCronLog(job.conf, string(res))
+		}
+
+	default:
+		// 任务设置有问题，提出执行队列，记录日志。
+		job.ErrorCount = -2
+		g = models.NewErrorCronLog(job.conf, "未支持的http method，任务已终止。")
+	}
+	if g.Status == models.StatusDisable {
+		job.ErrorCount++
+	} else {
+		job.ErrorCount = 0
+	}
+	if job.ErrorCount >= 5 || job.ErrorCount == -1 {
+		jobList.Delete(job.conf.Id)
+		cronRun.Remove(job.cronId)
+	}
+
+	data.NewCronLogData(ctx).Add(g)
+}
+
+// rpc 执行函数
+func (job *CronJob) rpcFunc() {
+	fmt.Println("执行rpc 任务")
+}
+
+// rpc 执行函数
+func (job *CronJob) cmdFunc() {
+	// 这个最后兼容
+	fmt.Println("执行cmd 任务")
+}
+
+// get请求
+func (job *CronJob) httpGet(ctx context.Context, url string, header http.Header) (resp []byte, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("请求构建失败,%w", err)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("请求执行失败，%w", err)
+	}
+	defer res.Body.Close()
+
+	b, _ := ioutil.ReadAll(res.Body)
+	return b, nil
+}
+
+// post请求
+func (job *CronJob) httpPost(ctx context.Context, url string, body []byte, header http.Header) (resp []byte, err error) {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, fmt.Errorf("请求构建失败,%w", err)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("请求执行失败，%w", err)
+	}
+	defer res.Body.Close()
+
+	resp, _ = ioutil.ReadAll(res.Body)
+	return resp, nil
+}

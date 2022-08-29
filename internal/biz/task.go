@@ -47,7 +47,7 @@ func (dm *TaskService) Init() (err error) {
 
 // 添加任务
 func (dm *TaskService) Add(conf *models.CronConfig) {
-	j := models.NewCronJob(conf)
+	j := NewCronJob(conf)
 	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
 		// 这里记录，不做任何返回(db日志写入失败，就一块要写入到文件了)。
@@ -62,7 +62,7 @@ func (dm *TaskService) Add(conf *models.CronConfig) {
 // 删除任务
 func (dm *TaskService) Del(conf *models.CronConfig) {
 	if temp, ok := jobList.Load(conf.Id); ok == true {
-		job := temp.(*models.CronJob)
+		job := temp.(*CronJob)
 		dm.cron.Remove(job.GetCronId())
 		jobList.Delete(conf.Id)
 	}
