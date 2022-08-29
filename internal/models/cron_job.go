@@ -41,6 +41,12 @@ func (job *CronJob) httpFunc() {
 
 	// 执行请求任务，并记录结果日志
 	fmt.Println("执行http 任务")
+	/*
+		这里有三个点：1.请求类型、2.请求url、3.请求body；
+			默认只能说是get请求的一个url
+			最好的方案就是前段拼装成一个json
+	*/
+
 }
 
 // rpc 执行函数

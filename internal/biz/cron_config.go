@@ -7,6 +7,7 @@ import (
 	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 )
 
 type CronConfigService struct {
@@ -32,6 +33,8 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 	for _, item := range resp.List {
 		item.StatusName = models.ConfStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
+		item.Command = &pb.CronConfigCommand{}
+		jsoniter.UnmarshalFromString(item.CommandStr, item.Command)
 	}
 
 	return resp, err
@@ -48,12 +51,15 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		Name:     r.Name,
 		Spec:     r.Spec,
 		Protocol: r.Protocol,
-		Command:  r.Command,
 		Status:   models.StatusDisable,
 		Remark:   r.Remark,
 	}
+	d.Command, _ = jsoniter.MarshalToString(r.Command)
 	if _, err = secondParser.Parse(d.Spec); err != nil {
 		return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
+	}
+	if r.Protocol == models.ProtocolHttp {
+		// 这里要校验一下协议的规范性；
 	}
 
 	err = data.NewCronConfigData(ctx).Set(d)
@@ -103,7 +109,7 @@ func (dm *CronConfigService) Edit(ctx context.Context, r *pb.CronConfigSetReques
 }
 
 // 任务状态变更
-func (dm *CronConfigService) StatusChange(ctx context.Context, r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
+func (dm *CronConfigService) ChangeStatus(ctx context.Context, r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
 	// 同一个任务，这里要加请求锁
 	da := data.NewCronConfigData(ctx)
 	conf, err := da.GetOne(r.Id)
