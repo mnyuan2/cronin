@@ -9,6 +9,8 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -93,7 +95,7 @@ func (job *CronJob) httpFunc() {
 	} else {
 		job.ErrorCount = 0
 	}
-	if job.ErrorCount >= 5 || job.ErrorCount == -1 {
+	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
 		jobList.Delete(job.conf.Id)
 		cronRun.Remove(job.cronId)
 	}
@@ -103,7 +105,41 @@ func (job *CronJob) httpFunc() {
 
 // rpc 执行函数
 func (job *CronJob) rpcFunc() {
-	fmt.Println("执行rpc 任务")
+	startTime := time.Now()
+	ctx := context.Background()
+	g := &models.CronLog{}
+
+	switch job.commandParse.Rpc.Method {
+	case "GRPC":
+		// 进行grpc处理
+		res, err := job.rpcGrpc(ctx, job.commandParse.Rpc.Addr, job.commandParse.Rpc.Action, job.commandParse.Rpc.Body)
+		if err != nil {
+			g = models.NewErrorCronLog(job.conf, err.Error(), startTime)
+		} else {
+			g = models.NewSuccessCronLog(job.conf, string(res), startTime)
+		}
+
+	case "RPC":
+		job.ErrorCount = -2
+		g = models.NewErrorCronLog(job.conf, "未支持的rpc method，任务已终止。", startTime)
+		// 手头目前没有rpc的服务，不好测试验证。
+
+	default:
+		job.ErrorCount = -2
+		g = models.NewErrorCronLog(job.conf, "未支持的rpc method，任务已终止。", startTime)
+	}
+
+	if g.Status == models.StatusDisable {
+		job.ErrorCount++
+	} else {
+		job.ErrorCount = 0
+	}
+	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
+		jobList.Delete(job.conf.Id)
+		cronRun.Remove(job.cronId)
+	}
+
+	data.NewCronLogData(ctx).Add(g)
 }
 
 // rpc 执行函数
@@ -144,4 +180,25 @@ func (job *CronJob) httpPost(ctx context.Context, url string, body []byte, heade
 
 	resp, _ = ioutil.ReadAll(res.Body)
 	return resp, nil
+}
+
+// grpc调用
+func (job *CronJob) rpcGrpc(ctx context.Context, addr, action, param string) (resp []byte, err error) {
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("地址(%s)连接失败,%w", addr, err)
+	}
+	defer conn.Close()
+
+	req := &models.GrpcRequest{}
+	req.SetParam(param)
+	res := &models.GrpcRequest{}
+
+	err = conn.Invoke(ctx, action, req, resp)
+	if err != nil {
+		panic(fmt.Errorf("调用失败，%w", err))
+		return nil, fmt.Errorf("%s 调用失败，%w", action, err)
+	}
+
+	return []byte(res.String()), nil
 }
