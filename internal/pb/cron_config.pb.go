@@ -46,6 +46,11 @@ type CronConfigCommand struct {
 		Url    string `json:"url"`
 		Body   string `json:"body"`
 	} `json:"http"`
-	Rpc string `json:"rpc"`
+	Rpc struct {
+		Method string `json:"method"` // 执行类型：rpc、grpc
+		Addr   string `json:"addr"`   // 地址，包含端口
+		Action string `json:"action"` // 方法
+		Body   string `json:"body"`   // 请求参数
+	} `json:"rpc"`
 	Cmd string `json:"cmd"`
 }

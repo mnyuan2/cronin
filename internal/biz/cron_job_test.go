@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/models"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,24 +33,6 @@ func TestCronJob_Rpc(t *testing.T) {
 	fmt.Println(resp)
 }
 
-type EchoRequest struct {
-}
-
-// grpc必须实现
-func (m *EchoRequest) Reset() {
-
-}
-
-// grpc必须实现
-func (m *EchoRequest) String() string {
-	return ""
-}
-
-// grpc必须实现
-func (m *EchoRequest) ProtoMessage() {
-
-}
-
 // 构建rpc请求
 func TestCronJob_Grpc(t *testing.T) {
 
@@ -59,8 +42,9 @@ func TestCronJob_Grpc(t *testing.T) {
 	}
 	defer conn.Close()
 
-	req := &EchoRequest{}
-	resp := &EchoRequest{}
+	req := &models.GrpcRequest{}
+	req.SetParam("abc") // 这个参数的传递，还要验证一下。
+	resp := &models.GrpcRequest{}
 
 	err = conn.Invoke(context.Background(), "/merchantpush.Merchantpush/Echo", req, resp)
 	if err != nil {

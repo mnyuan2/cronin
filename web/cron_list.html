@@ -86,7 +86,20 @@
                             </el-form-item>
                         </el-tab-pane>
                         <el-tab-pane label="rpc" name="2">
-                            <el-input type="textarea" v-model="form.command.rpc" rows="5" placeholder="请输入请求地址"></el-input>
+                            <el-form-item label="请求模式">
+                                <el-select v-model="form.command.rpc.method" placeholder="请选请求方式">
+                                    <el-option label="GRPC" value="GRPC"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="地址">
+                                <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
+                            </el-form-item>
+                            <el-form-item label="方法">
+                                <el-input v-model="form.command.rpc.action" placeholder="请输入服务方法; 示例：/merchantpush.Merchantpush/Echo"></el-input>
+                            </el-form-item>
+                            <el-form-item label="请求参数">
+                                <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
+                            </el-form-item>
                         </el-tab-pane>
                         <el-tab-pane label="cmd" name="3">
                             <el-input type="textarea" v-model="form.command.cmd" rows="5" placeholder="请输入执行命令行内容"></el-input>
@@ -120,7 +133,7 @@
                 dialogFormVisible: false, // 新增弹窗
                 dialogEditConf: false, // 编辑弹窗
                 formTitle: '',
-                form:{command:{http:{method:''}}},
+                form:{command:{http:{method:''},rpc:{method:''}}},
             };
         },
         created(){
@@ -180,7 +193,12 @@
                                 url:'',
                                 body:''
                             },
-                            rpc:'',
+                            rpc:{
+                                method: 'GRPC',
+                                addr: '',
+                                action: '',
+                                body: ''
+                            },
                             cmd:''
                         }}; // 清空表达数据
                     this.getList(); // 刷新当前页
@@ -198,7 +216,12 @@
                             url:'',
                             body:''
                         },
-                        rpc:'',
+                        rpc:{
+                            method: 'GRPC',
+                            addr: '',
+                            action: '',
+                            body: ''
+                        },
                         cmd:''
                     }
                 }
