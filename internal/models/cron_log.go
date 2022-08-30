@@ -7,12 +7,13 @@ import (
 )
 
 type CronLog struct {
-	Id       int    `json:"id"`        // 主键
-	ConfId   int    `json:"conf_id"`   // 配置id
-	CreateDt string `json:"create_dt"` // 创建时间
-	Status   int    `json:"status"`    // 状态：1.错误、2.正常
-	Body     string `json:"body"`      // 日志文本
-	Snap     string `json:"snap"`      // 任务快照
+	Id       int     `json:"id"`        // 主键
+	ConfId   int     `json:"conf_id"`   // 配置id
+	CreateDt string  `json:"create_dt"` // 完成时间
+	Duration float64 `json:"duration"`  // 耗时
+	Status   int     `json:"status"`    // 状态：1.错误、2.正常
+	Body     string  `json:"body"`      // 日志文本
+	Snap     string  `json:"snap"`      // 任务快照
 }
 
 var LogStatusMap = map[int]string{
@@ -21,11 +22,13 @@ var LogStatusMap = map[int]string{
 }
 
 // 新建一个错误日志
-func NewErrorCronLog(conf *CronConfig, body string) *CronLog {
+func NewErrorCronLog(conf *CronConfig, body string, startTime time.Time) *CronLog {
 	str, _ := jsoniter.MarshalToString(conf)
+	t := time.Now()
 	return &CronLog{
 		ConfId:   conf.Id,
-		CreateDt: time.Now().Format(conv.FORMAT_DATETIME),
+		CreateDt: t.Format(conv.FORMAT_DATETIME),
+		Duration: startTime.Sub(t).Seconds(),
 		Status:   StatusDisable,
 		Body:     body,
 		Snap:     str,
@@ -33,11 +36,13 @@ func NewErrorCronLog(conf *CronConfig, body string) *CronLog {
 }
 
 // 新建一个成功日志
-func NewSuccessCronLog(conf *CronConfig, body string) *CronLog {
+func NewSuccessCronLog(conf *CronConfig, body string, startTime time.Time) *CronLog {
 	str, _ := jsoniter.MarshalToString(conf)
+	t := time.Now()
 	return &CronLog{
 		ConfId:   conf.Id,
-		CreateDt: time.Now().Format(conv.FORMAT_DATETIME),
+		CreateDt: t.Format(conv.FORMAT_DATETIME),
+		Duration: startTime.Sub(t).Seconds(),
 		Status:   StatusActive,
 		Body:     body,
 		Snap:     str,

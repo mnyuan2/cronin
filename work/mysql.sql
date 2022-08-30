@@ -17,6 +17,7 @@ CREATE TABLE `cron_log` (
     `id` INT ( 11 ) NOT NULL AUTO_INCREMENT COMMENT '主键',
     `conf_id` INT ( 11 ) NOT NULL COMMENT '任务编号',
     `create_dt` datetime NULL COMMENT '创建时间',
+    `duration` double(10, 3) NULL default 0 COMMENT '耗时/秒',
     `status` TINYINT ( 2 ) NULL COMMENT '状态：1.错误、2.成功',
     `body` text NULL COMMENT '日志内容',
     `snap` text NULL COMMENT '任务快照',

@@ -7,6 +7,7 @@ import (
 	"cron/internal/models"
 	"fmt"
 	"github.com/robfig/cron/v3"
+	"time"
 )
 
 type TaskService struct {
@@ -47,11 +48,11 @@ func (dm *TaskService) Init() (err error) {
 
 // 添加任务
 func (dm *TaskService) Add(conf *models.CronConfig) {
+	st := time.Now()
 	j := NewCronJob(conf)
 	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
-		// 这里记录，不做任何返回(db日志写入失败，就一块要写入到文件了)。
-		g := models.NewErrorCronLog(conf, err.Error())
+		g := models.NewErrorCronLog(conf, fmt.Sprintf("任务启动失败，%s；", err.Error()), st)
 		data.NewCronLogData(context.Background()).Add(g)
 		return
 	}
