@@ -11,6 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type CronJob struct {
@@ -61,6 +62,7 @@ func (job *CronJob) httpFunc() {
 		任务连续失败三次，也应该终止；
 		任务执行后，无论成功或失败，都要记录日志。
 	*/
+	startTime := time.Now()
 	ctx := context.Background()
 	g := &models.CronLog{}
 
@@ -68,23 +70,23 @@ func (job *CronJob) httpFunc() {
 	case http.MethodPost:
 		res, err := job.httpPost(ctx, job.commandParse.Http.Url, []byte(job.commandParse.Http.Body), nil)
 		if err != nil {
-			g = models.NewErrorCronLog(job.conf, err.Error())
+			g = models.NewErrorCronLog(job.conf, err.Error(), startTime)
 		} else {
-			g = models.NewSuccessCronLog(job.conf, string(res))
+			g = models.NewSuccessCronLog(job.conf, string(res), startTime)
 		}
 
 	case http.MethodGet:
 		res, err := job.httpGet(ctx, job.commandParse.Http.Url, nil)
 		if err != nil {
-			g = models.NewErrorCronLog(job.conf, err.Error())
+			g = models.NewErrorCronLog(job.conf, err.Error(), startTime)
 		} else {
-			g = models.NewSuccessCronLog(job.conf, string(res))
+			g = models.NewSuccessCronLog(job.conf, string(res), startTime)
 		}
 
 	default:
 		// 任务设置有问题，提出执行队列，记录日志。
 		job.ErrorCount = -2
-		g = models.NewErrorCronLog(job.conf, "未支持的http method，任务已终止。")
+		g = models.NewErrorCronLog(job.conf, "未支持的http method，任务已终止。", startTime)
 	}
 	if g.Status == models.StatusDisable {
 		job.ErrorCount++

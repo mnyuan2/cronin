@@ -30,6 +30,7 @@
                         <el-table-column prop="status_name" label="状态">
                             <template slot-scope="scope">
                                 <el-switch
+                                        validate-event="true"
                                         v-model="scope.row.status"
                                         active-value="2"
                                         inactive-value="1"
@@ -213,6 +214,7 @@
             },
             // 改变状态
             changeStatus(id,newStatus){
+                // 这里要做一个二次确认
                 // 携带id和新状态去更新
                 console.log("状态改变",id,newStatus)
                 api.innerPost("/config/change_status", {id:id,status:Number(newStatus)}, (res)=>{
