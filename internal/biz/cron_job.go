@@ -112,6 +112,7 @@ func (job *CronJob) rpcFunc() {
 	switch job.commandParse.Rpc.Method {
 	case "GRPC":
 		// 进行grpc处理
+		// 目前还存在问题，无法通用性的提交和接收参数！
 		res, err := job.rpcGrpc(ctx, job.commandParse.Rpc.Addr, job.commandParse.Rpc.Action, job.commandParse.Rpc.Body)
 		if err != nil {
 			g = models.NewErrorCronLog(job.conf, err.Error(), startTime)

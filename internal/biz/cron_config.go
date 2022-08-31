@@ -46,14 +46,23 @@ func (dm *CronConfigService) Get() {
 
 // 任务配置
 func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
-	d := &models.CronConfig{
-		Id:       r.Id,
-		Name:     r.Name,
-		Spec:     r.Spec,
-		Protocol: r.Protocol,
-		Status:   models.StatusDisable,
-		Remark:   r.Remark,
+
+	d := &models.CronConfig{}
+	if r.Id > 0 {
+		da := data.NewCronConfigData(ctx)
+		d, err = da.GetOne(r.Id)
+		if err != nil {
+			return nil, err
+		}
+		if d.Status == models.StatusActive {
+			return nil, fmt.Errorf("请先停用任务后编辑")
+		}
 	}
+
+	d.Name = r.Name
+	d.Spec = r.Spec
+	d.Protocol = r.Protocol
+	d.Remark = r.Remark
 	d.Command, _ = jsoniter.MarshalToString(r.Command)
 	if _, err = secondParser.Parse(d.Spec); err != nil {
 		return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
@@ -68,43 +77,6 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 	}
 	return &pb.CronConfigSetResponse{
 		Id: d.Id,
-	}, err
-}
-
-// 编辑任务
-func (dm *CronConfigService) Edit(ctx context.Context, r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
-	if r.Id <= 0 {
-		return nil, fmt.Errorf("未指定配置")
-	}
-
-	da := data.NewCronConfigData(ctx)
-	conf, err := da.GetOne(r.Id)
-	if err != nil {
-		return nil, err
-	}
-	if conf.Status == models.StatusActive {
-		return nil, fmt.Errorf("请先停用任务后编辑")
-	}
-	if r.Name != "" {
-		conf.Name = r.Name
-	}
-	if r.Spec != "" {
-		conf.Spec = r.Spec
-	}
-	if r.Remark != "" {
-		conf.Remark = r.Remark
-	}
-	if _, err = secondParser.Parse(conf.Spec); err != nil {
-		return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
-	}
-
-	if err = da.Set(conf); err != nil {
-		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
-		return nil, err
-	}
-
-	return &pb.CronConfigSetResponse{
-		Id: conf.Id,
 	}, err
 }
 

@@ -22,3 +22,10 @@ func NewCronLogData(ctx context.Context) *CronLogData {
 func (m *CronLogData) Add(data *models.CronLog) error {
 	return m.db.Write.Create(data).Error
 }
+
+// 查询列表数据
+func (m *CronLogData) GetList(where *db.Where, page, size int, list interface{}) (total int64, err error) {
+	str, args := where.Build()
+
+	return m.db.Read.Paginate(list, page, size, m.tableName, "*", "id desc", str, args...)
+}

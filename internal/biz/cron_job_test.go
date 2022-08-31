@@ -41,10 +41,15 @@ func TestCronJob_Grpc(t *testing.T) {
 		panic(err)
 	}
 	defer conn.Close()
+	//39;
 
 	req := &models.GrpcRequest{}
-	req.SetParam("abc") // 这个参数的传递，还要验证一下。
+	req.SetParam(`{"a":"a","b":1}`) // 这个参数的传递，还要验证一下。
 	resp := &models.GrpcRequest{}
+	//resp := &models.GrpcResponse{}
+
+	conf := conn.GetMethodConfig("/merchantpush.Merchantpush/Echo")
+	fmt.Println(conf)
 
 	err = conn.Invoke(context.Background(), "/merchantpush.Merchantpush/Echo", req, resp)
 	if err != nil {
