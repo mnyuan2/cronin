@@ -8,6 +8,7 @@ import (
 	"cron/internal/pb"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"time"
 )
 
 type CronConfigService struct {
@@ -30,11 +31,26 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 		},
 	}
 	resp.Page.Total, err = data.NewCronConfigData(ctx).GetList(w, 1, 20, &resp.List)
+	topList := map[int]*data.SumConfTop{}
+	if len(resp.List) > 0 {
+		endTime := time.Now()
+		startTime := time.Now().Add(-time.Hour * 24 * 7) // 取七天前
+		ids := make([]int, len(resp.List))
+		for i, temp := range resp.List {
+			ids[i] = temp.Id
+		}
+		topList, _ = data.NewCronLogData(ctx).SumConfTopError(ids, startTime, endTime, 5)
+	}
+
 	for _, item := range resp.List {
+		item.Command = &pb.CronConfigCommand{}
 		item.StatusName = models.ConfStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
-		item.Command = &pb.CronConfigCommand{}
 		jsoniter.UnmarshalFromString(item.CommandStr, item.Command)
+		if top, ok := topList[item.Id]; ok {
+			item.TopNumber = top.TotalNumber
+			item.TopErrorNumber = top.ErrorNumber
+		}
 	}
 
 	return resp, err

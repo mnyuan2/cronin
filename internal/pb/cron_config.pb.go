@@ -14,18 +14,19 @@ type CronConfigListReply struct {
 	Page *Page                 `json:"page"`
 }
 type CronConfigListItem struct {
-	Id           int                `json:"id"`
-	Name         string             `json:"name"`
-	Spec         string             `json:"spec"`
-	Protocol     int                `json:"protocol"`
-	ProtocolName string             `json:"protocol_name"`
-	Remark       string             `json:"remark"`
-	Status       int                `json:"status"`
-	StatusName   string             `json:"status_name"`
-	ErrorNumber  int                `json:"error_number"` // 错误次数，为执行-1标记
-	UpdateDt     string             `json:"update_dt"`
-	Command      *CronConfigCommand `json:"command" gorm:"-"`
-	CommandStr   string             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
+	Id             int                `json:"id"`
+	Name           string             `json:"name"`
+	Spec           string             `json:"spec"`
+	Protocol       int                `json:"protocol"`
+	ProtocolName   string             `json:"protocol_name"`
+	Remark         string             `json:"remark"`
+	Status         int                `json:"status"`
+	StatusName     string             `json:"status_name"`
+	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
+	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
+	UpdateDt       string             `json:"update_dt"`
+	Command        *CronConfigCommand `json:"command" gorm:"-"`
+	CommandStr     string             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
 }
 
 // 任务设置

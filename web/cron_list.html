@@ -8,6 +8,20 @@
     <script src="/static/js/element-ui@2.15.9.js"></script>
     <script src="/static/js/home.js"></script>
     <script src="/static/js/jquery.min.js"></script>
+    <style>
+        .icon{
+            font-size: 24px;
+        }
+        .warning{
+            color: #e6a23c;
+        }
+        .success{
+            color: #67c23a;
+        }
+        .danger{
+            color: #f56c6c;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -15,7 +29,7 @@
             <!-- <el-aside width="200px">边栏</el-aside> -->
             <el-container>
                 <el-header>
-                    <a href="https://cron.qqe2.com/">6位 时间格式生成器</a>
+                    <a href="https://cron.qqe2.com/" target="_blank">6位 时间格式生成器</a>
                 </el-header>
 
                 <el-main>
@@ -23,6 +37,14 @@
 
                     <el-table :data="listData">
                         <el-table-column prop="id" label="编号"></el-table-column>
+                        <el-table-column prop="" label="执行成功率">
+                            <template slot-scope="scope">
+                                <el-tooltip placement="top-start">
+                                    <div slot="content">{{scope.row.topRatio}}%<br/>近期{{scope.row.top_number}}次执行，{{scope.row.top_error_number}}次失败。</div>
+                                    <i :class="getTopIcon(scope.row.top_number, scope.row.topRatio)"></i>
+                                </el-tooltip>
+                            </template>
+                        </el-table-column>
                         <el-table-column prop="spec" label="执行时间"></el-table-column>
                         <el-table-column prop="name" label="任务名称"></el-table-column>
                         <el-table-column prop="protocol_name" label="协议"></el-table-column>
@@ -41,7 +63,7 @@
                         <el-table-column label="操作">
                             <template slot-scope="scope">
                                 <el-button type="text" @click="editShow(scope.$index)">编辑</el-button>
-                                <el-button type="text" @click="logByConfig(scope.row.id)">日志</el-button>
+                                <el-button type="text" @click="logByConfig(scope.row.id, scope.row.name)">日志</el-button>
                             </template>
 <!--                            // 操作，再弹窗中进行操作（小型弹窗）；-->
 <!--                            // 日志，侧边栏弹窗查看完整日志；-->
@@ -62,7 +84,7 @@
         </el-container>
 
         <!-- 任务设置表单 -->
-        <el-dialog :title="formTitle" :visible.sync="setConfigShow" :close-on-click-modal="false">
+        <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false">
             <el-form :model="form">
                 <el-form-item label="活动名称*">
                     <el-input v-model="form.name"></el-input>
@@ -117,7 +139,7 @@
             </div>
         </el-dialog>
         <!-- 任务日志弹窗 -->
-        <el-drawer title="任务日志" :visible.sync="configLogShow" direction="rtl" size="40%" wrapperClosable="false">
+        <el-drawer :title="configLogTitle" :visible.sync="configLogShow" direction="rtl" size="40%" wrapperClosable="false">
             <el-table :data="logListData">
                 <el-table-column property="create_dt" label="记录时间"></el-table-column>
                 <el-table-column property="status_name" label="状态">
@@ -154,9 +176,10 @@
                     size: 20,
                 },
                 logListData: [], // 日志列表，没有分页；
-                setConfigShow: false, // 新增弹窗
                 configLogShow: false, // 任务日志弹窗
-                formTitle: '',
+                configLogTitle: '',
+                setConfigShow: false, // 新增弹窗
+                setConfigTitle: '',
                 form:{command:{http:{method:''},rpc:{method:''}}},
             };
         },
@@ -172,10 +195,17 @@
                         return this.$message.error(res.message);
                     }
                     for (i in res.data.list){
+                        let ratio = 0
+                        if (res.data.list[i].top_number){
+                            ratio = res.data.list[i].top_error_number / res.data.list[i].top_number
+                        }
+
+
                         res.data.list[i].status = res.data.list[i].status.toString()
+                        res.data.list[i].topRatio = 100 - ratio * 100
                     }
                     this.listData = res.data.list;
-                    this.page = res.data.page;
+                    this.listPage = res.data.page;
                 })
             },
             handleSizeChange(val) {
@@ -232,7 +262,7 @@
             // 添加弹窗
             createShow(){
                 this.setConfigShow = true
-                this.formTitle = '添加任务'
+                this.setConfigTitle = '添加任务'
                 // 应该有个地方定义空结构体
                 this.form = {
                     command:{
@@ -254,7 +284,7 @@
             // 编辑弹窗
             editShow(index){
                 this.setConfigShow = true
-                this.formTitle = '编辑任务'
+                this.setConfigTitle = '编辑任务'
                 this.form = this.listData[index]
                 this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字
                 this.form.protocol = this.form.protocol.toString()
@@ -279,14 +309,36 @@
                 })
             },
             // 配置日志
-            logByConfig(id){
+            logByConfig(id, title){
                 this.configLogShow = true;
-                api.innerGet("/log/by_config", {conf_id:id}, (res)=>{
+                this.configLogTitle = title+' 任务日志';
+                api.innerGet("/log/by_config", {conf_id:id, limit:15}, (res)=>{
                     if (res.code != "000000"){
                         return this.$message.error(res.message);
                     }
                     this.logListData = res.data.list;
                 })
+            },
+            // 成功率图标
+            getTopIcon(total, ratio){
+                // 没有执行
+                if (total == 0){
+                    return "icon el-icon-remove-outline" // 0
+                }
+                // 成功率100
+                if (ratio == 100){
+                    return "icon el-icon-circle-check success"
+                }
+                // 成功率66以上
+                if (ratio < 100 && ratio > 66){
+                    return "icon el-icon-warning-outline warning"
+                }
+                // 成功率33以上
+                if (ratio < 66 && ratio > 33){
+                    return "icon el-icon-circle-plus-outline danger"
+                }
+                // 成功率33一下
+                return "icon el-icon-circle-close danger"
             }
         }
     })
