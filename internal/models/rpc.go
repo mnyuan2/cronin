@@ -1,17 +1,17 @@
 package models
 
 type GrpcRequest struct {
-	body string
+	Body string `protobuf:"bytes,3,opt,name=body"`
 }
 
 // grpc必须实现
 func (m *GrpcRequest) Reset() {
-	m.body = ""
+	m.Body = ""
 }
 
 // grpc必须实现
 func (m *GrpcRequest) String() string {
-	return m.body
+	return m.Body
 }
 
 // grpc必须实现
@@ -20,5 +20,5 @@ func (m *GrpcRequest) ProtoMessage() {
 }
 
 func (m *GrpcRequest) SetParam(param string) {
-	m.body = param
+	m.Body = param
 }

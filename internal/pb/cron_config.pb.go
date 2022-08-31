@@ -22,6 +22,7 @@ type CronConfigListItem struct {
 	Remark       string             `json:"remark"`
 	Status       int                `json:"status"`
 	StatusName   string             `json:"status_name"`
+	ErrorNumber  int                `json:"error_number"` // 错误次数，为执行-1标记
 	UpdateDt     string             `json:"update_dt"`
 	Command      *CronConfigCommand `json:"command" gorm:"-"`
 	CommandStr   string             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
