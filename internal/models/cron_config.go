@@ -36,3 +36,11 @@ type CronConfig struct {
 	CreateDt string `json:"create_dt,omitempty"` // 创建时间
 	UpdateDt string `json:"update_dt,omitempty"` // 更新时间
 }
+
+func (m *CronConfig) GetProtocolName() string {
+	return ProtocolMap[m.Protocol]
+}
+
+func (m *CronConfig) GetStatusName() string {
+	return ConfStatusMap[m.Status]
+}

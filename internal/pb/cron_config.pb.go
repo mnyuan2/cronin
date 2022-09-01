@@ -56,3 +56,9 @@ type CronConfigCommand struct {
 	} `json:"rpc"`
 	Cmd string `json:"cmd"`
 }
+
+// 已注册列表
+type CronConfigRegisterListRequest struct{}
+type CronConfigRegisterListResponse struct {
+	List []*CronConfigListItem `json:"list"`
+}

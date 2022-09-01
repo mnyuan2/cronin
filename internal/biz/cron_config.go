@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/data"
 	"cron/internal/models"
@@ -58,6 +59,34 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 
 func (dm *CronConfigService) Get() {
 
+}
+
+// 已注册任务列表
+func (dm *CronConfigService) RegisterList(ctx context.Context, r *pb.CronConfigRegisterListRequest) (resp *pb.CronConfigRegisterListResponse, err error) {
+	resp = &pb.CronConfigRegisterListResponse{List: []*pb.CronConfigListItem{}}
+	jobList.Range(func(key, value interface{}) bool {
+		conf := value.(*CronJob).conf
+
+		next := ""
+		if s, err := secondParser.Parse(conf.Spec); err == nil {
+			next = s.Next(time.Now()).Format(conv.FORMAT_DATETIME)
+		}
+		resp.List = append(resp.List, &pb.CronConfigListItem{
+			Id:           conf.Id,
+			Name:         conf.Name,
+			Spec:         conf.Spec,
+			Protocol:     conf.Protocol,
+			ProtocolName: conf.GetProtocolName(),
+			Remark:       conf.Remark,
+			Status:       conf.Status,
+			StatusName:   conf.GetStatusName(),
+			UpdateDt:     next, // 下一次时间
+			Command:      value.(*CronJob).commandParse,
+		})
+		return true
+	})
+
+	return resp, err
 }
 
 // 任务配置

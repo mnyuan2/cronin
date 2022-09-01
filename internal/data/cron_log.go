@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/models"
 	"time"
@@ -44,11 +45,11 @@ func (m *CronLogData) SumConfTopError(confId []int, startTime, endTime time.Time
 FROM 
 	cron_log t1 
 WHERE 
-	?>(SELECT count(*) FROM cron_log WHERE t1.conf_id=conf_id and t1.id<id) and t1.conf_id in(?) GROUP BY t1.conf_id`
+	?>(SELECT count(*) FROM cron_log WHERE t1.conf_id=conf_id and t1.id<id) and t1.conf_id in(?) and create_dt between ? and ? GROUP BY t1.conf_id`
 
 	temps := []*SumConfTop{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Read.Raw(sql, models.StatusDisable, maxNumber, confId).Take(&temps).Error
+	err = m.db.Read.Raw(sql, models.StatusDisable, maxNumber, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Take(&temps).Error
 	if err != nil {
 		return list, err
 	}

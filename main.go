@@ -12,7 +12,7 @@ var (
 
 func main() {
 	// 初始化任务
-	//server.InitTask()
+	server.InitTask()
 	// 初始化http
 	r := server.InitHttp(Resource)
 	r.Run(":9003")

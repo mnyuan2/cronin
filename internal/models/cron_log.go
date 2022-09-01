@@ -28,7 +28,7 @@ func NewErrorCronLog(conf *CronConfig, body string, startTime time.Time) *CronLo
 	return &CronLog{
 		ConfId:   conf.Id,
 		CreateDt: t.Format(conv.FORMAT_DATETIME),
-		Duration: startTime.Sub(t).Seconds(),
+		Duration: t.Sub(startTime).Seconds(),
 		Status:   StatusDisable,
 		Body:     body,
 		Snap:     str,
@@ -42,7 +42,7 @@ func NewSuccessCronLog(conf *CronConfig, body string, startTime time.Time) *Cron
 	return &CronLog{
 		ConfId:   conf.Id,
 		CreateDt: t.Format(conv.FORMAT_DATETIME),
-		Duration: startTime.Sub(t).Seconds(),
+		Duration: t.Sub(startTime).Seconds(),
 		Status:   StatusActive,
 		Body:     body,
 		Snap:     str,
