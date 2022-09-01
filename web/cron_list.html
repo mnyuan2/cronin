@@ -309,7 +309,7 @@
             },
             // 改变状态
             changeStatus(index, id, newStatus){
-                this.$confirm(newStatus=='2'? '确认关闭任务': '确认开启任务', '提示',{
+                this.$confirm(newStatus=='1'? '确认关闭任务': '确认开启任务', '提示',{
                     type: 'warning',
                 }).then(()=>{
                     // 确认操作

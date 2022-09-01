@@ -102,6 +102,8 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		if d.Status == models.StatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
+	} else {
+		d.Status = models.StatusDisable
 	}
 
 	d.Name = r.Name
