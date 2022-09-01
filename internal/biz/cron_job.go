@@ -42,6 +42,14 @@ func (job *CronJob) GetCronId() cron.EntryID {
 }
 
 func (job *CronJob) Run() {
+	st := time.Now()
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("任务 %v %s 异常，%s\n", job.conf.Id, job.conf.Name, fmt.Sprintf("%v", err))
+			data.NewCronLogData(context.Background()).Add(models.NewErrorCronLog(job.conf, fmt.Sprintf("%v", err), st))
+		}
+	}()
+	fmt.Println("执行 "+job.conf.GetProtocolName()+" 任务", job.conf.Id, job.conf.Name)
 	switch job.conf.Protocol {
 	case models.ProtocolHttp:
 		job.httpFunc()
@@ -56,7 +64,6 @@ func (job *CronJob) Run() {
 func (job *CronJob) httpFunc() {
 
 	// 执行请求任务，并记录结果日志
-	fmt.Println("执行http 任务")
 	/*
 		这里有三个点：1.请求类型、2.请求url、3.请求body；
 			默认只能说是get请求的一个url
@@ -108,7 +115,6 @@ func (job *CronJob) rpcFunc() {
 	startTime := time.Now()
 	ctx := context.Background()
 	g := &models.CronLog{}
-
 	switch job.commandParse.Rpc.Method {
 	case "GRPC":
 		// 进行grpc处理

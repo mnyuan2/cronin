@@ -34,6 +34,7 @@
 
                 <el-main>
                     <el-button type="text" @click="createShow()">添加任务</el-button>
+                    <el-button type="text" @click="registerList()">已注册任务</el-button>
 
                     <el-table :data="listData">
                         <el-table-column prop="id" label="编号"></el-table-column>
@@ -160,6 +161,20 @@
                 </el-table-column>
             </el-table>
         </el-drawer>
+        <!-- 注册任务列表弹窗 -->
+        <el-drawer title="已注册任务" :visible.sync="registerListShow" direction="rtl" size="40%" wrapperClosable="false">
+            <el-table :data="registerListData">
+                <el-table-column property="id" label="编号"></el-table-column>
+                <el-table-column property="spec" label="执行时间"></el-table-column>
+                <el-table-column property="update_dt" label="下一次执行"></el-table-column>
+                <el-table-column property="name" label="任务名称"></el-table-column>
+                <el-table-column property="" label="">
+                    <template slot-scope="scope">
+                        <el-button type="text" @click="logByConfig(scope.row.id, scope.row.name)">日志</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-drawer>
     </div>
 
 
@@ -178,6 +193,8 @@
                 logListData: [], // 日志列表，没有分页；
                 configLogShow: false, // 任务日志弹窗
                 configLogTitle: '',
+                registerListData: [],
+                registerListShow: false,
                 setConfigShow: false, // 新增弹窗
                 setConfigTitle: '',
                 form:{command:{http:{method:''},rpc:{method:''}}},
@@ -317,6 +334,15 @@
                         return this.$message.error(res.message);
                     }
                     this.logListData = res.data.list;
+                })
+            },
+            registerList(){
+                this.registerListShow = true;
+                api.innerGet("/config/register_list", {}, (res)=>{
+                    if (res.code != "000000"){
+                        return this.$message.error(res.message);
+                    }
+                    this.registerListData = res.data.list;
                 })
             },
             // 成功率图标
