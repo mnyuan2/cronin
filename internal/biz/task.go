@@ -2,33 +2,33 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/config"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/data"
 	"cron/internal/models"
+	"cron/internal/pb"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
+	"net/http"
 	"time"
 )
 
 type TaskService struct {
 	cron *cron.Cron // 任务计划 组件
+	conf config.Main
 }
 
-func NewTaskService() *TaskService {
+func NewTaskService(conf config.Main) *TaskService {
 	return &TaskService{
 		cron: cronRun,
+		conf: conf,
 	}
 }
 
+// Init 初始化任务
 func (dm *TaskService) Init() (err error) {
-	/*
-		1.读取所有已经配置有效的任务；
-		2.全部注册到任务服务；
-			注册后，会返回一个任务id；
-			要维护一个内存队列，配置id对应一个任务id；
-				配置任务关闭，就要结束对应的任务id；
-		3.对已经注册的任务，要能够进行关闭控制；
-	*/
 	pageSize, total := 500, int64(500)
 	cronDb := data.NewCronConfigData(context.Background())
 	for page := 1; total >= int64(pageSize*page); page++ {
@@ -43,11 +43,17 @@ func (dm *TaskService) Init() (err error) {
 		}
 	}
 
+	// 系统内置任务
+	dm.Add(dm.sysLogRetentionConf())
+
 	return nil
 }
 
 // 添加任务
 func (dm *TaskService) Add(conf *models.CronConfig) {
+	if conf == nil {
+		return
+	}
 	st := time.Now()
 	j := NewCronJob(conf)
 	id, err := dm.cron.AddJob(conf.Spec, j)
@@ -67,4 +73,42 @@ func (dm *TaskService) Del(conf *models.CronConfig) {
 		dm.cron.Remove(job.GetCronId())
 		jobList.Delete(conf.Id)
 	}
+}
+
+// sysLogDurationConf 内置任务，日志删除
+func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
+	retention := dm.conf.Task.LogRetention
+	if retention == "" {
+		return nil
+	}
+	re, err := time.ParseDuration(retention)
+	if err != nil {
+		panic(fmt.Sprintf("log_retention 日志存续配置有误, %s", err.Error()))
+	} else if re.Hours() < 24 {
+		panic("log_retention 日志存续不得小于24h")
+	}
+
+	var sysLogRetention = &models.CronConfig{
+		Id:       -1,
+		Name:     "日志留存时间",
+		Spec:     "0 0 5 * * *", // 每天5点执行
+		Protocol: models.ProtocolHttp,
+		Status:   models.StatusActive,
+		Remark:   "系统内置任务",
+		CreateDt: time.Now().Format(conv.FORMAT_DATETIME),
+		UpdateDt: time.Now().Format(conv.FORMAT_DATETIME),
+	}
+	cmd := &pb.CronConfigCommand{
+		Http: struct {
+			Method string `json:"method"`
+			Url    string `json:"url"`
+			Body   string `json:"body"`
+		}{
+			Method: http.MethodPost,
+			Url:    dm.conf.Http.Local() + "/log/del",
+			Body:   fmt.Sprintf(`{"retention":"%s"}`, dm.conf.Task.LogRetention),
+		},
+	}
+	sysLogRetention.Command, _ = jsoniter.MarshalToString(cmd)
+	return sysLogRetention
 }

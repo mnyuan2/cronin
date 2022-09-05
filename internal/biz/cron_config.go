@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/data"
@@ -143,9 +144,9 @@ func (dm *CronConfigService) ChangeStatus(ctx context.Context, r *pb.CronConfigS
 	}
 
 	if conf.Status == models.StatusActive && r.Status == models.StatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
-		NewTaskService().Del(conf)
+		NewTaskService(config.MainConf()).Del(conf)
 	} else if conf.Status == models.StatusDisable && r.Status == models.StatusActive { // 停用 到 启用 要把任务注册；
-		NewTaskService().Add(conf)
+		NewTaskService(config.MainConf()).Add(conf)
 	}
 
 	conf.Status = r.Status

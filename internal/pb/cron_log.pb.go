@@ -20,3 +20,11 @@ type CronLogItem struct {
 	Body       string  `json:"body"`
 	Snap       string  `json:"snap"`
 }
+
+// 删除日志
+type CronLogDelRequest struct {
+	Retention string `json:"retention"`
+}
+type CronLogDelResponse struct {
+	Count int `json:"count"`
+}

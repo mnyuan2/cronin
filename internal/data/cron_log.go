@@ -59,3 +59,15 @@ WHERE
 	}
 	return list, nil
 }
+
+// 批量删除
+func (m *CronLogData) DelBatch(end time.Time) (count int, err error) {
+
+	err = m.db.Write.Model(&models.CronLog{}).Where("create_dt <= ?", end.Format(conv.FORMAT_DATETIME)).Take(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	err = m.db.Write.Where("create_dt <= ?", end.Format(conv.FORMAT_DATETIME)).Delete(&models.CronLog{}).Error
+	return 0, err
+}
