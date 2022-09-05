@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cron/internal/basic/config"
 	"cron/internal/server"
 	"embed"
 )
@@ -15,5 +16,5 @@ func main() {
 	server.InitTask()
 	// 初始化http
 	r := server.InitHttp(Resource)
-	r.Run(":9003")
+	r.Run(":" + config.MainConf().Http.Port)
 }

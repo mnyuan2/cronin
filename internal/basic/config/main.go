@@ -5,18 +5,15 @@ import (
 )
 
 type Main struct {
-	UploadRootPath string             `yaml:"upload_root_path"`
-	InnerService   map[string]Service `yaml:"inner_service"`
-	Token          TokenConfig        `json:"token"`
+	Http *HttpConf `yaml:"http"`
+	Task *TaskConf `yaml:"task"`
 }
 
-type Service struct {
-	BaseUrl string `yaml:"base_url"`
+type HttpConf struct {
+	Port string `yaml:"port"`
 }
-
-type TokenConfig struct {
-	Secret string `json:"secret"`
-	Expire int    `json:"expire"`
+type TaskConf struct {
+	LogRetention string `yaml:"log_retention"`
 }
 
 var mainConf Main
@@ -25,9 +22,14 @@ var mainOnce sync.Once
 func MainConf() Main {
 	mainOnce.Do(func() {
 		mainConf = Main{}
-		if err := YamlParse("./configs/main.yaml", &mainConf); err != nil {
+		if err := YamlParse("configs/main.yaml", &mainConf); err != nil {
 			panic(err)
 		}
 	})
 	return mainConf
+}
+
+// Local 本机地址
+func (m *HttpConf) Local() string {
+	return "http://localhost:" + m.Port
 }

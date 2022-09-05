@@ -153,6 +153,7 @@ func (job *CronJob) rpcFunc() {
 func (job *CronJob) cmdFunc() {
 	// 这个最后兼容
 	fmt.Println("执行cmd 任务")
+
 }
 
 // get请求

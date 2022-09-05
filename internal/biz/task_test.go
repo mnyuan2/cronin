@@ -1,6 +1,7 @@
 package biz
 
 import (
+	"cron/internal/basic/config"
 	"fmt"
 	"log"
 	"os"
@@ -13,7 +14,7 @@ func init() {
 }
 
 func TestInitTask(t *testing.T) {
-	task := NewTaskService()
+	task := NewTaskService(config.MainConf())
 	task.Init()
 
 	time.Sleep(time.Second * 20)
@@ -23,4 +24,8 @@ func TestInitTask(t *testing.T) {
 func TestParseTime(t *testing.T) {
 	su, err := secondParser.Parse("* 0/5 * * * ?")
 	fmt.Println(su, err)
+
+	d, err := time.ParseDuration("24h")
+	t1 := time.Now().Add(-d)
+	fmt.Println(err, d, d.Hours(), d.Hours() < 24, t1)
 }
