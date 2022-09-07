@@ -7,12 +7,15 @@ import (
 	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
+	"github.com/axgle/mahonia"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io/ioutil"
 	"net/http"
+	"os/exec"
+	"runtime"
 	"time"
 )
 
@@ -41,119 +44,105 @@ func (job *CronJob) GetCronId() cron.EntryID {
 	return job.cronId
 }
 
+// 执行任务
 func (job *CronJob) Run() {
+	var g *models.CronLog
+	var res []byte
+	var err error
 	st := time.Now()
+	ctx := context.Background()
+
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("任务 %v %s 异常，%s\n", job.conf.Id, job.conf.Name, fmt.Sprintf("%v", err))
 			data.NewCronLogData(context.Background()).Add(models.NewErrorCronLog(job.conf, fmt.Sprintf("%v", err), st))
 		}
+
+		data.NewCronLogData(ctx).Add(g)
 	}()
+
 	fmt.Println("执行 "+job.conf.GetProtocolName()+" 任务", job.conf.Id, job.conf.Name)
 	switch job.conf.Protocol {
 	case models.ProtocolHttp:
-		job.httpFunc()
+		res, err = job.httpFunc(ctx)
 	case models.ProtocolRpc:
-		job.rpcFunc()
+		res, err = job.rpcFunc(ctx)
 	case models.ProtocolCmd:
-		job.cmdFunc()
+		res, err = job.cmdFunc(ctx)
+	}
+
+	if err != nil {
+		g = models.NewErrorCronLog(job.conf, err.Error(), st)
+		job.ErrorCount++
+	} else {
+		g = models.NewSuccessCronLog(job.conf, string(res), st)
+		job.ErrorCount = 0
+	}
+	// 连续错误达到5次，任务终止。
+	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
+		jobList.Delete(job.conf.Id)
+		cronRun.Remove(job.cronId)
 	}
 }
 
 // http 执行函数
-func (job *CronJob) httpFunc() {
-
-	// 执行请求任务，并记录结果日志
-	/*
-		这里有三个点：1.请求类型、2.请求url、3.请求body；
-			默认只能说是get请求的一个url
-			最好的方案就是前段拼装成一个json
-		任务连续失败三次，也应该终止；
-		任务执行后，无论成功或失败，都要记录日志。
-	*/
-	startTime := time.Now()
-	ctx := context.Background()
-	g := &models.CronLog{}
-
+func (job *CronJob) httpFunc(ctx context.Context) (res []byte, err error) {
 	switch job.commandParse.Http.Method {
 	case http.MethodPost:
-		res, err := job.httpPost(ctx, job.commandParse.Http.Url, []byte(job.commandParse.Http.Body), nil)
-		if err != nil {
-			g = models.NewErrorCronLog(job.conf, err.Error(), startTime)
-		} else {
-			g = models.NewSuccessCronLog(job.conf, string(res), startTime)
-		}
-
+		return job.httpPost(ctx, job.commandParse.Http.Url, []byte(job.commandParse.Http.Body), nil)
 	case http.MethodGet:
-		res, err := job.httpGet(ctx, job.commandParse.Http.Url, nil)
-		if err != nil {
-			g = models.NewErrorCronLog(job.conf, err.Error(), startTime)
-		} else {
-			g = models.NewSuccessCronLog(job.conf, string(res), startTime)
-		}
-
+		return job.httpGet(ctx, job.commandParse.Http.Url, nil)
 	default:
 		// 任务设置有问题，提出执行队列，记录日志。
 		job.ErrorCount = -2
-		g = models.NewErrorCronLog(job.conf, "未支持的http method，任务已终止。", startTime)
+		return nil, fmt.Errorf("未支持的http method，任务已终止。")
 	}
-	if g.Status == models.StatusDisable {
-		job.ErrorCount++
-	} else {
-		job.ErrorCount = 0
-	}
-	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
-		jobList.Delete(job.conf.Id)
-		cronRun.Remove(job.cronId)
-	}
-
-	data.NewCronLogData(ctx).Add(g)
 }
 
 // rpc 执行函数
-func (job *CronJob) rpcFunc() {
-	startTime := time.Now()
-	ctx := context.Background()
-	g := &models.CronLog{}
+func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err error) {
 	switch job.commandParse.Rpc.Method {
 	case "GRPC":
 		// 进行grpc处理
 		// 目前还存在问题，无法通用性的提交和接收参数！
-		res, err := job.rpcGrpc(ctx, job.commandParse.Rpc.Addr, job.commandParse.Rpc.Action, job.commandParse.Rpc.Body)
-		if err != nil {
-			g = models.NewErrorCronLog(job.conf, err.Error(), startTime)
-		} else {
-			g = models.NewSuccessCronLog(job.conf, string(res), startTime)
-		}
-
+		return job.rpcGrpc(ctx, job.commandParse.Rpc.Addr, job.commandParse.Rpc.Action, job.commandParse.Rpc.Body)
 	case "RPC":
 		job.ErrorCount = -2
-		g = models.NewErrorCronLog(job.conf, "未支持的rpc method，任务已终止。", startTime)
+		return nil, fmt.Errorf("未支持的rpc method，任务已终止。")
 		// 手头目前没有rpc的服务，不好测试验证。
-
 	default:
 		job.ErrorCount = -2
-		g = models.NewErrorCronLog(job.conf, "未支持的rpc method，任务已终止。", startTime)
+		return nil, fmt.Errorf("未支持的rpc method，任务已终止。")
 	}
-
-	if g.Status == models.StatusDisable {
-		job.ErrorCount++
-	} else {
-		job.ErrorCount = 0
-	}
-	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
-		jobList.Delete(job.conf.Id)
-		cronRun.Remove(job.cronId)
-	}
-
-	data.NewCronLogData(ctx).Add(g)
 }
 
 // rpc 执行函数
-func (job *CronJob) cmdFunc() {
-	// 这个最后兼容
-	fmt.Println("执行cmd 任务")
+func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err error) {
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("cmd.exe", "/c", job.commandParse.Cmd) // 合并 winds 命令
+		if res, err = cmd.Output(); err != nil {
+			return nil, err
+		} else {
+			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(res))
+			return []byte(srcCoder), nil
+		}
 
+		// windows下安装了sh.exe 可以使用；就是git；但要添加环境变量 git/bin
+		//cmd := exec.Command("sh.exe","-c", job.commandParse.Cmd)
+		//if res, err = cmd.Output(); err != nil{
+		//	return nil, err
+		//}else {
+		//	return res, nil
+		//}
+
+	} else {
+		cmd := exec.Command("/bin/bash", "-c", job.commandParse.Cmd)
+		if res, err = cmd.Output(); err != nil {
+			return nil, err
+		} else {
+			return res, nil
+		}
+	}
 }
 
 // get请求

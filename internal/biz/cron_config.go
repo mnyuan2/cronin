@@ -10,6 +10,7 @@ import (
 	"cron/internal/pb"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"strings"
 	"time"
 )
 
@@ -116,7 +117,13 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
 	}
 	if r.Protocol == models.ProtocolHttp {
-		// 这里要校验一下协议的规范性；
+		if !strings.HasPrefix(r.Command.Http.Url, "http://") && !strings.HasPrefix(r.Command.Http.Url, "https://") {
+			return nil, fmt.Errorf("请输入 http:// 或 https:// 开头的规范地址")
+		}
+	} else if r.Protocol == models.ProtocolCmd {
+		if r.Command.Cmd == "" {
+			return nil, fmt.Errorf("请输入 cmd 命令类容")
+		}
 	}
 
 	err = data.NewCronConfigData(ctx).Set(d)

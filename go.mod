@@ -3,6 +3,7 @@ module cron
 go 1.16
 
 require (
+	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
 	github.com/gin-gonic/gin v1.8.1
 	github.com/json-iterator/go v1.1.12
 	github.com/robfig/cron/v3 v3.0.1

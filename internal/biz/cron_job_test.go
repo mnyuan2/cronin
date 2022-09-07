@@ -4,13 +4,13 @@ import (
 	"context"
 	"cron/internal/models"
 	"fmt"
+	"github.com/axgle/mahonia"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io/ioutil"
 	"net/rpc"
 	"os/exec"
 	"runtime"
-	"syscall"
 	"testing"
 )
 
@@ -66,24 +66,26 @@ func TestCronJob_Grpc(t *testing.T) {
 
 // 构建sell执行
 func TestCronJob_Cmd(t *testing.T) {
-	name := "curl"
-	arg := "http://baidu.com"
+	//name := "curl"
+	//arg := "http://baidu.com"
 
 	// 参数：1.命令名称、2.参数；
-	//cmd := exec.Command(name, arg)
-	cmd := exec.Command("sh.exe", fmt.Sprintf("%s %s", name, arg))
+	//cmd := exec.Command(name, arg) // 命令和参数
+	//cmd := exec.Command("sh.exe","-c", "echo abc") // 合并 linux 命令
+	cmd := exec.Command("cmd.exe", "/c", "echo abc大王") // 合并 winds 命令
 
 	// windows 平台执行时，隐藏cmd窗口
 	if runtime.GOOS == "windows" {
-		fmt.Println("windows")
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		//	fmt.Println("windows")
+		//	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	}
 
-	//if b,err := cmd.Output(); err != nil{
-	//	t.Error("结果获取失败",err)
-	//}else {
-	//	fmt.Println(string(b))
-	//}
+	if b, err := cmd.Output(); err != nil {
+		t.Fatal("结果获取失败", err)
+	} else {
+		fmt.Printf("结果 |%s|", str2gbk(b))
+		return
+	}
 
 	//获取输出对象
 	stdout, err := cmd.StdoutPipe()
@@ -101,4 +103,11 @@ func TestCronJob_Cmd(t *testing.T) {
 	} else {
 		fmt.Println(string(b))
 	}
+}
+
+// 字符串GBK2312编码方式解码方法
+func str2gbk(text []byte) []byte {
+
+	srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(text))
+	return []byte(srcCoder)
 }
