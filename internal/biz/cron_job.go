@@ -6,6 +6,7 @@ import (
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"errors"
 	"fmt"
 	"github.com/axgle/mahonia"
 	jsoniter "github.com/json-iterator/go"
@@ -16,6 +17,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -119,7 +121,12 @@ func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err error) {
 // rpc 执行函数
 func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err error) {
 	if runtime.GOOS == "windows" {
-		cmd := exec.Command("cmd.exe", "/c", job.commandParse.Cmd) // 合并 winds 命令
+		data := strings.Split(job.commandParse.Cmd, " ")
+		if len(data) < 2 {
+			return nil, errors.New("命令参数不合法，已跳过")
+		}
+
+		cmd := exec.Command(data[0], data[1:]...) // 合并 winds 命令
 		if res, err = cmd.Output(); err != nil {
 			return nil, err
 		} else {
