@@ -65,7 +65,7 @@ func TestCronJob_Grpc(t *testing.T) {
 	fmt.Println(resp)
 }
 
-// 构建sell执行
+// 构建shell执行
 func TestCronJob_Cmd(t *testing.T) {
 	//name := "curl"
 	//arg := "http://baidu.com"
@@ -110,6 +110,91 @@ func TestCronJob_Cmd(t *testing.T) {
 		}
 	}
 
+}
+
+// 执行shell脚本
+func TestCronJob_Cmd2(t *testing.T) {
+	/*
+		127 找不到可执行文件；
+		126 没有操作权限；
+		也可以直接去执行脚本文件，但我认为并不适用当前程序，直接把脚本的文件复制出来好一点。
+	*/
+	//os.Chdir("e:\\WorkApps\\go\\src\\incron")
+	//shell := `./test_shell.sh`
+	//	shell := `#!/bin/bash
+	//echo 'abc'`
+	//	ph, err := exec.LookPath("internal/biz/test_shell.sh")
+	//	if err != nil {
+	//		t.Fatal("文件错误", err.Error())
+	//	}
+	//	fmt.Println(ph)
+
+	if runtime.GOOS == "windows" {
+		ph := `dir;
+echo 258;` // 这里目前的问题是，没有执行第二行
+		e := exec.Command("cmd", "/C", ph)
+		cmd, err := e.Output()
+		if err != nil {
+			t.Fatal("命令执行错误：", err.Error())
+		}
+		srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(cmd))
+		fmt.Println("执行结果：", string(srcCoder))
+	} else {
+		// 对于linux 脚本文件 是支持的
+		ph := `#!/bin/bash
+dir
+echo 258`
+		e := exec.Command("sh", "-c", ph) // "/bin/bash"
+		cmd, err := e.Output()
+		if err != nil {
+			t.Fatal("命令执行错误：", err.Error())
+		}
+		srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(cmd))
+		fmt.Println("执行结果：", string(srcCoder))
+	}
+}
+
+// 执行shell脚本
+func TestCronJob_Cmd3(t *testing.T) {
+	shell := `#!/bin/bash
+list="dev-jaeger-span-2022-11-10
+dev-jaeger-span-2022-11-09
+dev-jaeger-span-2022-11-08
+dev-jaeger-span-2022-11-07
+dev-jaeger-span-2022-11-06
+dev-jaeger-span-2022-11-05
+dev-jaeger-span-2022-11-04
+dev-jaeger-span-2022-11-03
+dev-jaeger-span-2022-11-02
+dev-jaeger-span-2022-11-01"
+index=5 # 保留最近的指定数量
+echo "-----------------------"
+for item in $list; do
+ if ((index>0)); then
+   ((index--))
+   echo "index: $index"
+   continue
+ fi
+ echo "echo: $item" # 执行删除语句
+done
+echo "任务执行完毕..."`
+	//data := strings.Split(shell, " ")
+	//shell = "test_shell.sh"
+
+	//os.Chdir("e:\\WorkApps\\go\\src\\incron")
+	//ph, err := exec.LookPath("internal/biz/test_shell.sh")
+	//if err != nil {
+	//	t.Fatal("文件错误", err.Error())
+	//}
+
+	cmd, err := exec.Command("sh", "-c", shell).Output()
+	if err != nil {
+		t.Fatal("命令执行错误：", err.Error())
+	}
+	for true {
+		continue
+	}
+	fmt.Println("执行结果：", string(cmd))
 }
 
 // 字符串GBK2312编码方式解码方法
