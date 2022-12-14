@@ -30,7 +30,7 @@ func (dm *CronLogService) ByConfig(ctx context.Context, r *pb.CronLogByConfigReq
 	return resp, err
 }
 
-// 通过配置查询日志
+// 删除日志
 func (dm *CronLogService) Del(ctx context.Context, r *pb.CronLogDelRequest) (resp *pb.CronLogDelResponse, err error) {
 	if r.Retention == "" {
 		return nil, fmt.Errorf("retention 参数为必须")
