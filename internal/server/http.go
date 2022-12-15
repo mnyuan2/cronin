@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"runtime"
 )
 
 // Init http 初始化
@@ -38,6 +39,15 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	gv := r.Group("view")
 	gv.GET("/cron/list", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "cron_list.html", map[string]string{})
+	})
+	r.GET("/system/info", func(ctx *gin.Context) {
+		cmd_name := "sh"
+		if runtime.GOOS == "windows" {
+			cmd_name = "cmd"
+		}
+		NewReply(ctx).SetSuccess(map[string]string{
+			"cmd_name": cmd_name,
+		}).RenderJson()
 	})
 
 	return r

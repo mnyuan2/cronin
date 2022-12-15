@@ -126,7 +126,7 @@
                             </el-form-item>
                         </el-tab-pane>
                         <el-tab-pane label="cmd" name="3">
-                            <el-input type="textarea" v-model="form.command.cmd" rows="5" placeholder="请输入执行命令行内容"></el-input>
+                            <el-input type="textarea" v-model="form.command.cmd" rows="5" :placeholder="sysInfo.cmd_name + ': 请输入命令行执行内容'"></el-input>
                         </el-tab-pane>
                     </el-tabs>
                 </el-form-item>
@@ -198,10 +198,17 @@
                 setConfigShow: false, // 新增弹窗
                 setConfigTitle: '',
                 form:{command:{http:{method:''},rpc:{method:''}}},
+                sysInfo: {cmd_name:""},
             };
         },
         created(){
             this.getList()
+            api.innerGet("/system/info",{}, (res)=>{
+                if (res.code != "000000"){
+                    return this.$message.error(res.message);
+                }
+                this.sysInfo = res.data;
+            })
         },
         methods:{
             // 任务列表

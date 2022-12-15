@@ -5,6 +5,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/models"
+	"fmt"
 	"time"
 )
 
@@ -62,12 +63,19 @@ WHERE
 
 // 批量删除
 func (m *CronLogData) DelBatch(end time.Time) (count int, err error) {
-
-	err = m.db.Write.Model(&models.CronLog{}).Where("create_dt <= ?", end.Format(conv.FORMAT_DATETIME)).Take(&count).Error
+	count = 0
+	endDate := end.Format(conv.FORMAT_DATETIME)
+	err = m.db.Write.Model(&models.CronLog{}).Where("create_dt <= ?", endDate).Select("count(*)").Find(&count).Error
 	if err != nil {
 		return 0, err
 	}
+	if count == 0 {
+		return count, nil
+	}
 
-	err = m.db.Write.Where("create_dt <= ?", end.Format(conv.FORMAT_DATETIME)).Delete(&models.CronLog{}).Error
-	return 0, err
+	err = m.db.Write.Where("create_dt <= ?", endDate).Delete(&models.CronLog{}).Error
+	if err != nil {
+		return 0, fmt.Errorf("删除失败，%w", err)
+	}
+	return count, nil
 }
