@@ -5,12 +5,11 @@ index=10 # 保留最近的指定数量
 for item in $list; do
   if ((index>0)); then
     ((index--))
-    echo "跳过索引: $index $item \r\n"
+    echo "跳过索引: $index $item "
     continue
   fi
-  echo "删除索引: $item " # 执行删除语句
-  res=$(curl --location --request DELETE "http://iot.admin.jiaoranyouxuan.com:9201/$item" --header='Authorization: Basic ZWxhc3RpYzpsamgyMDIyLg==')
-  echo "$res \r\n"
+  res=$(curl --location --request DELETE "http://iot.admin.jiaoranyouxuan.com:9201/$item" --header 'Authorization: Basic ZWxhc3RpYzpsamgyMDIyLg==')
+  echo "删除索引: $item $res " # 执行删除语句
 done
 echo "任务执行完毕..."
 
