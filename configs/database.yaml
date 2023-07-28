@@ -1,0 +1,15 @@
+# 数据库配置
+# 读写库连接
+write:
+  # 驱动名称（写死mysql）
+  driver: mysql
+  # 数据库连接字符串
+  source: root:123456@tcp(127.0.0.1:3306)/table?charset=utf8mb4&parseTime=false&loc=Local
+  # 是否调试模式，发布生产注意修改为 false
+  debug: true
+# 只读库连接
+read:
+  driver: mysql
+  source: root:123456@tcp(127.0.0.1:3306)/table?charset=utf8mb4&parseTime=false&loc=Local
+  # 是否调试模式，发布生产注意修改为 false
+  debug: true
