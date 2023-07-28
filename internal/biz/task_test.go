@@ -22,7 +22,7 @@ func TestInitTask(t *testing.T) {
 }
 
 func TestParseTime(t *testing.T) {
-	su, err := secondParser.Parse("* 0/5 * * * ?")
+	su, err := secondParser.Parse("2022-11-02 00:25:24")
 	fmt.Println(su, err)
 
 	d, err := time.ParseDuration("24h")

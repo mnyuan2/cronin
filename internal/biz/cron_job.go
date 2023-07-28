@@ -21,10 +21,36 @@ import (
 	"time"
 )
 
+type ScheduleOnce struct {
+	s        string // 单次时间标志 YYYY-mm-dd hh:ii:ss
+	execTime time.Time
+}
+
+func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
+	m = &ScheduleOnce{
+		s: dateTime,
+	}
+	m.execTime, err = time.ParseInLocation(time.DateTime, dateTime, time.Local)
+	if err != nil {
+		return nil, fmt.Errorf("执行时间格式不规范，%s", err.Error())
+	}
+	if m.execTime.Unix()-60*60*1 < time.Now().Unix() {
+		return nil, fmt.Errorf("时间至少当前1小时以后")
+	}
+
+	return m, nil
+}
+
+func (m *ScheduleOnce) Next(t time.Time) time.Time {
+	if m.execTime.Unix() < t.Unix() {
+		return t
+	}
+	return m.execTime
+}
+
 type CronJob struct {
 	conf         *models.CronConfig
 	commandParse *pb.CronConfigCommand
-	cronId       cron.EntryID
 	ErrorCount   int // 连续错误
 }
 
@@ -36,16 +62,6 @@ func NewCronJob(conf *models.CronConfig) *CronJob {
 	return &CronJob{conf: conf, commandParse: com}
 }
 
-// 设置任务执行id
-func (job *CronJob) SetCronId(cronId cron.EntryID) {
-	job.cronId = cronId
-}
-
-// 返回任务执行中的id
-func (job *CronJob) GetCronId() cron.EntryID {
-	return job.cronId
-}
-
 // 执行任务
 func (job *CronJob) Run() {
 	var g *models.CronLog
@@ -53,14 +69,24 @@ func (job *CronJob) Run() {
 	var err error
 	st := time.Now()
 	ctx := context.Background()
+	if job.conf.Type == models.TypeOnce { // 单次任务，自行移除
+		e := cronRun.Entry(cron.EntryID(job.conf.EntryId))
+		cronRun.Remove(cron.EntryID(job.conf.EntryId))
+		if e.ID == 0 {
+			return
+		}
+	}
 
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("任务 %v %s 异常，%s\n", job.conf.Id, job.conf.Name, fmt.Sprintf("%v", err))
-			data.NewCronLogData(context.Background()).Add(models.NewErrorCronLog(job.conf, fmt.Sprintf("%v", err), st))
+			data.NewCronLogData(ctx).Add(models.NewErrorCronLog(job.conf, fmt.Sprintf("异常：%v", err), st))
 		}
-
 		data.NewCronLogData(ctx).Add(g)
+		if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
+			job.conf.Status = models.StatusDisable
+			job.conf.EntryId = 0
+			data.NewCronConfigData(ctx).ChangeStatus(job.conf)
+		}
 	}()
 
 	fmt.Println("执行 "+job.conf.GetProtocolName()+" 任务", job.conf.Id, job.conf.Name)
@@ -82,8 +108,10 @@ func (job *CronJob) Run() {
 	}
 	// 连续错误达到5次，任务终止。
 	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
-		jobList.Delete(job.conf.Id)
-		cronRun.Remove(job.cronId)
+		cronRun.Remove(cron.EntryID(job.conf.EntryId))
+		job.conf.Status = models.StatusDisable
+		job.conf.EntryId = 0
+		data.NewCronConfigData(ctx).ChangeStatus(job.conf)
 	}
 }
 

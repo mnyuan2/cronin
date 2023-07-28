@@ -5,14 +5,17 @@ import (
 	"cron/internal/models"
 	"fmt"
 	"github.com/axgle/mahonia"
+	"github.com/robfig/cron/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io/ioutil"
+	"log"
 	"net/rpc"
 	"os/exec"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 // 构建rpc请求
@@ -195,6 +198,44 @@ echo "任务执行完毕..."`
 		continue
 	}
 	fmt.Println("执行结果：", string(cmd))
+}
+
+type J struct {
+	cronId cron.EntryID // 任务id
+}
+
+func (j *J) Run() {
+	e := cronRun.Entry(j.cronId)
+	cronRun.Remove(j.cronId)
+	if e.ID == j.cronId {
+		return
+	}
+
+	fmt.Println("任务被执行了", j.cronId)
+	//自行移除队列
+}
+
+// 特别研究
+func TestCronJob_Demo(t *testing.T) {
+	/*
+			研究一下单次定时任务
+				也可以叫做临时任务。
+			最好也是把任务创建在表中，会好维护点。
+				否则就要放内存，总是不太稳定。
+			时间就是标准年月日时分秒了。
+		验证没有问题
+	*/
+	ti := time.Now().Add(time.Second - 10)
+
+	s, err := NewScheduleOnce(ti.Format(time.DateTime))
+	if err != nil {
+		t.Fatal(err)
+	}
+	j := &J{}
+	j.cronId = cronRun.Schedule(s, j)
+	log.Println("等待执行...")
+	time.Sleep(time.Minute * 2)
+	t.Log("end...")
 }
 
 // 字符串GBK2312编码方式解码方法
