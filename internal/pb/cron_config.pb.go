@@ -8,6 +8,9 @@ type Page struct {
 
 // 任务列表
 type CronConfigListRequest struct {
+	Type int `form:"type"`
+	Page int `form:"page"`
+	Size int `form:"size"`
 }
 type CronConfigListReply struct {
 	List []*CronConfigListItem `json:"list"`
@@ -15,6 +18,7 @@ type CronConfigListReply struct {
 }
 type CronConfigListItem struct {
 	Id             int                `json:"id"`
+	EntryId        int                `json:"entry_id"`
 	Name           string             `json:"name"`
 	Spec           string             `json:"spec"`
 	Protocol       int                `json:"protocol"`
@@ -22,6 +26,7 @@ type CronConfigListItem struct {
 	Remark         string             `json:"remark"`
 	Status         int                `json:"status"`
 	StatusName     string             `json:"status_name"`
+	Type           int                `json:"type"`
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
@@ -33,6 +38,7 @@ type CronConfigListItem struct {
 type CronConfigSetRequest struct {
 	Id       int                `json:"id,omitempty"`       // 主键
 	Name     string             `json:"name,omitempty"`     // 任务名称
+	Type     int                `json:"type"`               // 类型
 	Spec     string             `json:"spec"`               // 执行时间表达式
 	Protocol int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
 	Command  *CronConfigCommand `json:"command,omitempty"`  // 命令

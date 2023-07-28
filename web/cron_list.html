@@ -29,13 +29,18 @@
             <!-- <el-aside width="200px">边栏</el-aside> -->
             <el-container>
                 <el-header>
-                    <a href="https://cron.qqe2.com/" target="_blank">6位 时间格式生成器</a>
+                    <el-button type="text" @click="createShow()">添加任务</el-button>
+                    <el-button type="text" @click="registerList()">已注册任务</el-button>
+                    <a href="https://cron.qqe2.com/" target="_blank" style="float: right">6位 时间格式生成器</a>
                 </el-header>
 
                 <el-main>
-                    <el-button type="text" @click="createShow()">添加任务</el-button>
-                    <el-button type="text" @click="registerList()">已注册任务</el-button>
 
+
+                    <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
+                        <el-menu-item index="1">周期任务</el-menu-item>
+                        <el-menu-item index="2">单次任务</el-menu-item>
+                    </el-menu>
                     <el-table :data="listData">
                         <el-table-column prop="id" label="编号"></el-table-column>
                         <el-table-column prop="" label="执行成功率">
@@ -90,8 +95,16 @@
                 <el-form-item label="活动名称*">
                     <el-input v-model="form.name"></el-input>
                 </el-form-item>
+                <el-form-item label="类型*">
+                    <el-select v-model="form.type" placeholder="请选请求方式" @change="changeType">
+                        <el-option label="周期" value="1"></el-option>
+                        <el-option label="单次" value="2"></el-option>
+                    </el-select>
+                </el-form-item>
+
+
                 <el-form-item label="时间*">
-                    <el-input v-model="form.spec"></el-input>
+                    <el-input v-model="form.spec" :placeholder="hintSpec"></el-input>
                 </el-form-item>
                 <el-form-item>
                     <el-tabs type="border-card" v-model="form.protocol">
@@ -190,6 +203,11 @@
                     page: 1,
                     size: 20,
                 },
+                listParam:{
+                  type: 1,
+                  page: 1,
+                  size: 20,
+                },
                 logListData: [], // 日志列表，没有分页；
                 configLogShow: false, // 任务日志弹窗
                 configLogTitle: '',
@@ -197,8 +215,10 @@
                 registerListShow: false,
                 setConfigShow: false, // 新增弹窗
                 setConfigTitle: '',
-                form:{command:{http:{method:''},rpc:{method:''}}},
+                form:{type:1,command:{http:{method:''},rpc:{method:''}}},
                 sysInfo: {cmd_name:""},
+                hintSpec: "* * * * * *",
+                labelType: '1',
             };
         },
         created(){
@@ -210,10 +230,13 @@
                 this.sysInfo = res.data;
             })
         },
+        watch:{
+
+        },
         methods:{
             // 任务列表
             getList(){
-                api.innerGet("/config/list", {}, (res)=>{
+                api.innerGet("/config/list", this.listParam, (res)=>{
                     console.log("列表响应",res)
                     if (res.code != "000000"){
                         return this.$message.error(res.message);
@@ -237,6 +260,13 @@
             },
             handleCurrentChange(val) {
                 console.log(`当前页: ${val}`);
+                this.listParam.page = val
+                this.getList()
+            },
+            handleClickTypeLabel(tab, event) {
+                this.listParam.type = tab
+                this.getList()
+                console.log("类型标签页点击", tab, event);
             },
             // 添加/编辑 任务
             setCron(){
@@ -255,6 +285,7 @@
                 let body = {
                     id: this.form.id,
                     name: this.form.name,
+                    type: Number(this.form.type),
                     spec: this.form.spec,
                     protocol: Number(this.form.protocol),
                     command: this.form.command,
@@ -310,9 +341,11 @@
                 this.setConfigShow = true
                 this.setConfigTitle = '编辑任务'
                 this.form = this.listData[index]
+                this.form.type = this.form.type.toString()
                 this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字
                 this.form.protocol = this.form.protocol.toString()
-                console.log(this.form)
+                console.log("编辑：",this.form)
+                this.changeType()
             },
             // 改变状态
             changeStatus(index, id, newStatus){
@@ -331,6 +364,14 @@
                 }).catch(()=>{
                     // 取消操作
                 })
+            },
+            // 改变类型
+            changeType: function (){
+                if (this.form.type == 2 || this.form.type == '2'){
+                    this.hintSpec = "YYYY-mm-dd HH:MM:SS"
+                }else{
+                    this.hintSpec = "* * * * * *"
+                }
             },
             // 配置日志
             logByConfig(id, title){

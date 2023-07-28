@@ -8,6 +8,7 @@ import (
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
@@ -39,7 +40,11 @@ func (dm *TaskService) Init() (err error) {
 			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
 		}
 		for _, conf := range list {
-			dm.Add(conf)
+			// 启用成功，更新任务id；启动失败，置空任务id
+			if err := dm.Add(conf); err != nil {
+				conf.EntryId = 0
+			}
+			cronDb.ChangeStatus(conf)
 		}
 	}
 
@@ -50,29 +55,41 @@ func (dm *TaskService) Init() (err error) {
 }
 
 // 添加任务
-func (dm *TaskService) Add(conf *models.CronConfig) {
+func (dm *TaskService) Add(conf *models.CronConfig) error {
 	if conf == nil {
-		return
+		return errors.New("未指定任务")
 	}
-	st := time.Now()
 	j := NewCronJob(conf)
+	if conf.Type == models.TypeOnce {
+		return dm.addOnce(j)
+	}
 	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
-		g := models.NewErrorCronLog(conf, fmt.Sprintf("任务启动失败，%s；", err.Error()), st)
+		g := models.NewErrorCronLog(conf, fmt.Sprintf("任务启动失败，%s；", err.Error()), time.Now())
 		data.NewCronLogData(context.Background()).Add(g)
-		return
+		return err
 	}
-	j.SetCronId(id)
-	jobList.Store(conf.Id, j)
+	conf.EntryId = int(id)
+	return nil
+}
+
+// 添加单次任务
+func (dm *TaskService) addOnce(j *CronJob) error {
+	s, err := NewScheduleOnce(j.conf.Spec)
+	if err != nil {
+		return err
+	}
+	id := dm.cron.Schedule(s, j)
+	j.conf.EntryId = int(id)
+	return nil
 }
 
 // 删除任务
 func (dm *TaskService) Del(conf *models.CronConfig) {
-	if temp, ok := jobList.Load(conf.Id); ok == true {
-		job := temp.(*CronJob)
-		dm.cron.Remove(job.GetCronId())
-		jobList.Delete(conf.Id)
+	if conf.EntryId == 0 {
+		return
 	}
+	dm.cron.Remove(cron.EntryID(conf.EntryId))
 }
 
 // sysLogDurationConf 内置任务，日志删除

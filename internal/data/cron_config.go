@@ -29,11 +29,16 @@ func (m *CronConfigData) GetList(where *db.Where, page, size int, list interface
 func (m *CronConfigData) Set(data *models.CronConfig) error {
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	if data.Id > 0 {
-		return m.db.Write.Where("id=?", data.Id).Updates(data).Error
+		return m.db.Write.Where("id=?", data.Id).Omit("status", "entry_id").Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
 		return m.db.Write.Create(data).Error
 	}
+}
+
+func (m *CronConfigData) ChangeStatus(data *models.CronConfig) error {
+	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
+	return m.db.Write.Where("id=?", data.Id).Select("status", "update_dt", "entry_id").Updates(data).Error
 }
 
 func (m *CronConfigData) GetOne(Id int) (data *models.CronConfig, err error) {

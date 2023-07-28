@@ -1,12 +1,14 @@
 -- 任务表创建
 CREATE TABLE `cron_config`  (
     `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `entry_id` int(11) NULL DEFAULT 0 COMMENT '执行队列id，status启用时有效',
     `name` varchar(255) default '' COMMENT '任务名称',
     `spec` varchar(32) default '' COMMENT '执行时间，表达式',
     `protocol` tinyint(2) default 0 COMMENT '协议:1.http、2.grpc、3.系统命令行',
     `command` json null COMMENT '命令',
     `remark` varchar(255) default '' COMMENT '备注',
     `status` tinyint(2) DEFAULT 1 COMMENT '状态：1.停止、2.启用',
+    `type` tinyint(2) NULL DEFAULT 1 COMMENT '类型：1.周期任务（默认）、2.单次任务',
     `create_dt` datetime NULL COMMENT '创建时间',
     `update_dt` datetime NULL COMMENT '更新时间',
     PRIMARY KEY (`id`)

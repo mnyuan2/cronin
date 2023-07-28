@@ -23,17 +23,25 @@ func NewCronConfigService() *CronConfigService {
 
 // 任务配置列表
 func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListRequest) (resp *pb.CronConfigListReply, err error) {
-	w := db.NewWhere()
+	if r.Type == 0 {
+		r.Type = models.TypeCycle
+	}
+	w := db.NewWhere().Eq("type", r.Type)
 	// 构建查询条件
-
+	if r.Page <= 1 {
+		r.Page = 1
+	}
+	if r.Size <= 10 {
+		r.Size = 10
+	}
 	resp = &pb.CronConfigListReply{
 		List: []*pb.CronConfigListItem{},
 		Page: &pb.Page{
-			Page: 1,
-			Size: 10,
+			Page: r.Page,
+			Size: r.Size,
 		},
 	}
-	resp.Page.Total, err = data.NewCronConfigData(ctx).GetList(w, 1, 20, &resp.List)
+	resp.Page.Total, err = data.NewCronConfigData(ctx).GetList(w, r.Page, r.Size, &resp.List)
 	topList := map[int]*data.SumConfTop{}
 	if len(resp.List) > 0 {
 		endTime := time.Now()
@@ -65,15 +73,25 @@ func (dm *CronConfigService) Get() {
 
 // 已注册任务列表
 func (dm *CronConfigService) RegisterList(ctx context.Context, r *pb.CronConfigRegisterListRequest) (resp *pb.CronConfigRegisterListResponse, err error) {
-	resp = &pb.CronConfigRegisterListResponse{List: []*pb.CronConfigListItem{}}
-	jobList.Range(func(key, value interface{}) bool {
-		conf := value.(*CronJob).conf
 
+	list := cronRun.Entries()
+	resp = &pb.CronConfigRegisterListResponse{List: make([]*pb.CronConfigListItem, len(list))}
+	for i, v := range list {
+		c, ok := v.Job.(*CronJob)
+		if !ok {
+			resp.List[i] = &pb.CronConfigListItem{
+				Id:       int(v.ID),
+				Name:     "未识别注册任务",
+				UpdateDt: v.Next.Format(time.DateTime),
+			}
+			continue
+		}
+		conf := c.conf
 		next := ""
 		if s, err := secondParser.Parse(conf.Spec); err == nil {
 			next = s.Next(time.Now()).Format(conv.FORMAT_DATETIME)
 		}
-		resp.List = append(resp.List, &pb.CronConfigListItem{
+		resp.List[i] = &pb.CronConfigListItem{
 			Id:           conf.Id,
 			Name:         conf.Name,
 			Spec:         conf.Spec,
@@ -83,10 +101,30 @@ func (dm *CronConfigService) RegisterList(ctx context.Context, r *pb.CronConfigR
 			Status:       conf.Status,
 			StatusName:   conf.GetStatusName(),
 			UpdateDt:     next, // 下一次时间
-			Command:      value.(*CronJob).commandParse,
-		})
-		return true
-	})
+			Command:      c.commandParse,
+		}
+	}
+	//jobList.Range(func(key, value interface{}) bool {
+	//	conf := value.(*CronJob).conf
+	//
+	//	next := ""
+	//	if s, err := secondParser.Parse(conf.Spec); err == nil {
+	//		next = s.Next(time.Now()).Format(conv.FORMAT_DATETIME)
+	//	}
+	//	resp.List = append(resp.List, &pb.CronConfigListItem{
+	//		Id:           conf.Id,
+	//		Name:         conf.Name,
+	//		Spec:         conf.Spec,
+	//		Protocol:     conf.Protocol,
+	//		ProtocolName: conf.GetProtocolName(),
+	//		Remark:       conf.Remark,
+	//		Status:       conf.Status,
+	//		StatusName:   conf.GetStatusName(),
+	//		UpdateDt:     next, // 下一次时间
+	//		Command:      value.(*CronJob).commandParse,
+	//	})
+	//	return true
+	//})
 
 	return resp, err
 }
@@ -113,9 +151,19 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
 	d.Command, _ = jsoniter.MarshalToString(r.Command)
-	if _, err = secondParser.Parse(d.Spec); err != nil {
-		return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
+	d.Type = r.Type
+	if r.Type == models.TypeCycle {
+		if _, err = secondParser.Parse(d.Spec); err != nil {
+			return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
+		}
+	} else if r.Type == models.TypeOnce {
+		if _, err = NewScheduleOnce(d.Spec); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("类型输入有误")
 	}
+
 	if r.Protocol == models.ProtocolHttp {
 		if !strings.HasPrefix(r.Command.Http.Url, "http://") && !strings.HasPrefix(r.Command.Http.Url, "https://") {
 			return nil, fmt.Errorf("请输入 http:// 或 https:// 开头的规范地址")
@@ -152,12 +200,15 @@ func (dm *CronConfigService) ChangeStatus(ctx context.Context, r *pb.CronConfigS
 
 	if conf.Status == models.StatusActive && r.Status == models.StatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
 		NewTaskService(config.MainConf()).Del(conf)
+		conf.EntryId = 0
 	} else if conf.Status == models.StatusDisable && r.Status == models.StatusActive { // 停用 到 启用 要把任务注册；
-		NewTaskService(config.MainConf()).Add(conf)
+		if err = NewTaskService(config.MainConf()).Add(conf); err != nil {
+			return nil, err
+		}
 	}
 
 	conf.Status = r.Status
-	if err = da.Set(conf); err != nil {
+	if err = da.ChangeStatus(conf); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
 		return nil, err
 	}
