@@ -18,6 +18,7 @@ var ProtocolMap = map[int]string{
 const (
 	StatusDisable = 1 // 停用
 	StatusActive  = 2 // 激活
+	StatusDelete  = 9 // 删除
 )
 
 var ConfStatusMap = map[int]string{

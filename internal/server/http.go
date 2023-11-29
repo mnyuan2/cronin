@@ -36,6 +36,9 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	r.GET("/config/register_list", httpRegister)
 	r.GET("/log/by_config", httpLogByConfig)
 	r.POST("/log/del", httpLogDel)
+	r.GET("/setting/sql_source_list", routerSqlList)
+	r.POST("/setting/sql_source_set", routerSqlSet)
+	r.POST("/setting/sql_source_change_status", routerSqlChangeStatus)
 
 	gv := r.Group("view")
 	gv.GET("/cron/list", func(ctx *gin.Context) {

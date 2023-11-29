@@ -1,11 +1,5 @@
 package pb
 
-type Page struct {
-	Size  int   `json:"size"`
-	Page  int   `json:"page"`
-	Total int64 `json:"total"`
-}
-
 // 任务列表
 type CronConfigListRequest struct {
 	Type int `form:"type"`
