@@ -18,6 +18,7 @@ type TaskConf struct {
 
 var mainConf Main
 var mainOnce sync.Once
+var Version = "未定义" // 版本号
 
 func MainConf() Main {
 	mainOnce.Do(func() {

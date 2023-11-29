@@ -1,6 +1,7 @@
 package server
 
 import (
+	"cron/internal/basic/config"
 	"cron/internal/biz"
 	"cron/internal/pb"
 	"embed"
@@ -38,7 +39,7 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 
 	gv := r.Group("view")
 	gv.GET("/cron/list", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "cron_list.html", map[string]string{})
+		ctx.HTML(http.StatusOK, "cron_list.html", map[string]string{"version": config.Version})
 	})
 	r.GET("/system/info", func(ctx *gin.Context) {
 		cmd_name := "sh"

@@ -21,6 +21,11 @@
         .danger{
             color: #f56c6c;
         }
+        .version{
+            margin: 0;
+            text-align: right;
+            color: #f2f2f2;
+        }
     </style>
 </head>
 <body>
@@ -31,7 +36,10 @@
                 <el-header>
                     <el-button type="text" @click="createShow()">添加任务</el-button>
                     <el-button type="text" @click="registerList()">已注册任务</el-button>
-                    <a href="https://cron.qqe2.com/" target="_blank" style="float: right">6位 时间格式生成器</a>
+                    <div style="float: right">
+                        <a href="https://cron.qqe2.com/" target="_blank" >6位 时间格式生成器</a>
+                        <p class="version">[[.version]]</p>
+                    </div>
                 </el-header>
 
                 <el-main>
