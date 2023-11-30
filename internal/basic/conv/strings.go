@@ -11,6 +11,10 @@ type Str struct {
 	sep string
 }
 
+type Number interface {
+	int | int32 | int64 | float32 | float64 | string
+}
+
 func NewStr() *Str {
 	return &Str{
 		sep: ",",
@@ -54,19 +58,16 @@ func (m *Str) IsChinese(str string) bool {
 }
 
 // 分切字符串
-func (m *Str) Slice(val string, out []any) error {
+func (m *Str) Slice(val string, out any) error {
 	if val == "" {
 		return nil
 	}
 	fmt.Println("输入", out)
+	o := out.([]interface{}) // 断言out为切片类型
 
 	for _, v := range strings.Split(val, m.sep) {
-		fmt.Println(v)
-		//iv, err := i.Parse(v)
-		//if err != nil {
-		//	return out, err
-		//}
-		//out = append(out, iv)
+		o = append(o, v)
 	}
+	out = o
 	return nil
 }

@@ -14,12 +14,12 @@ func ConvertAA[To, From int | int8 | int16 | int32](from From) To {
 }
 
 func TestNewStr_Slice(t *testing.T) {
-	//list := []int{}
+	list := []int{}
 
-	//err := NewStr().
-	//	Slice("1,2,3", list)
-	//t.Log(err)
+	err := NewStr().
+		Slice("1,2,3", list)
+	t.Log(err)
 
-	a := ConvertAA(5)
+	a := ConvertAA[int](5)
 	fmt.Println(a)
 }
