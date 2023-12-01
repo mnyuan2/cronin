@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <title>任务列表</title>
     <link rel="stylesheet" href="/static/css/element-ui@2.15.9.css">
-    <script src="/static/js/vue@2.7.8.js"></script>
-    <script src="/static/js/element-ui@2.15.9.js"></script>
-    <script src="/static/js/home.js"></script>
-    <script src="/static/js/jquery.min.js"></script>
+    <link href="/static/highlight/styles/default.min.css" rel="stylesheet" type="text/css">
     <style>
         .icon{
             font-size: 24px;
@@ -130,24 +127,62 @@
                                 <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                             </el-form-item>
                         </el-tab-pane>
-                        <el-tab-pane label="rpc" name="2">
-                            <el-form-item label="请求模式">
-                                <el-select v-model="form.command.rpc.method" placeholder="请选请求方式">
-                                    <el-option label="GRPC" value="GRPC"></el-option>
-                                </el-select>
-                            </el-form-item>
-                            <el-form-item label="地址">
-                                <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
-                            </el-form-item>
-                            <el-form-item label="方法">
-                                <el-input v-model="form.command.rpc.action" placeholder="请输入服务方法; 示例：/merchantpush.Merchantpush/Echo"></el-input>
-                            </el-form-item>
-                            <el-form-item label="请求参数">
-                                <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
-                            </el-form-item>
-                        </el-tab-pane>
+<!--                        <el-tab-pane label="rpc" name="2">-->
+<!--                            <el-form-item label="请求模式">-->
+<!--                                <el-select v-model="form.command.rpc.method" placeholder="请选请求方式">-->
+<!--                                    <el-option label="GRPC" value="GRPC"></el-option>-->
+<!--                                </el-select>-->
+<!--                            </el-form-item>-->
+<!--                            <el-form-item label="地址">-->
+<!--                                <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>-->
+<!--                            </el-form-item>-->
+<!--                            <el-form-item label="方法">-->
+<!--                                <el-input v-model="form.command.rpc.action" placeholder="请输入服务方法; 示例：/merchantpush.Merchantpush/Echo"></el-input>-->
+<!--                            </el-form-item>-->
+<!--                            <el-form-item label="请求参数">-->
+<!--                                <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>-->
+<!--                            </el-form-item>-->
+<!--                        </el-tab-pane>-->
                         <el-tab-pane label="cmd" name="3">
                             <el-input type="textarea" v-model="form.command.cmd" rows="5" :placeholder="sysInfo.cmd_name + ': 请输入命令行执行内容'"></el-input>
+                        </el-tab-pane>
+                        <el-tab-pane label="sql" name="4" label-position="left">
+                            <el-form-item label="驱动">
+                                <el-select v-model="form.command.sql.driver" placeholder="驱动">
+                                    <el-option label="mysql" value="mysql"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <div>
+<!--                                这块要调整，先将就着用；流程走通后再说-->
+                                <label>链接</label>
+                                <p>
+                                    <label>主机</label>
+                                    <input type="text" v-model="form.command.sql.source.hostname" placeholder="" class="el-input__inner">
+                                </p>
+                                <p>
+                                    <label>端口</label>
+                                    <input type="text" v-model="form.command.sql.source.port" placeholder="" class="el-input__inner">
+                                </p>
+                                <el-form-item label="用户名" label-position="left">
+                                    <el-input v-model="form.command.sql.source.username" placeholder=""></el-input>
+                                </el-form-item>
+                                <el-form-item label="密码" :label-position="'left'">
+                                    <el-input v-model="form.command.sql.source.password" placeholder=""></el-input>
+                                </el-form-item>
+                            </div>
+                            <el-form-item label="执行语句">
+                                <div><el-button type="text" @click="sqlSetShow(-1,'')"><i class="el-icon-plus">添加</i></el-button></div>
+                                <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;max-height: 200px;overflow: auto;background: #fff;margin-bottom: 10px;">
+                                    <pre style="margin: 0"><code class="language-sql hljs" style="min-height: 50px;">{{statement}}</code></pre>
+                                    <i class="el-icon-delete" style="font-size: 20px;position: absolute;top: 17px;right: 0px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
+                                    <i class="el-icon-edit" style="font-size: 20px;position: absolute;top: 50px;right: 0px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
+                                </div>
+                                <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
+                            </el-form-item>
+                            <el-form-item label="错误行为">
+                                <el-radio v-model="form.command.sql.err_action" label="1">错误终止任务</el-radio>
+                                <el-radio v-model="form.command.sql.err_action" label="2">错误跳过继续</el-radio>
+                            </el-form-item>
                         </el-tab-pane>
                     </el-tabs>
                 </el-form-item>
@@ -196,11 +231,26 @@
                 </el-table-column>
             </el-table>
         </el-drawer>
+        <!-- sql设置弹窗 -->
+        <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
+            <el-input type="textarea" rows="12" placeholder="请输入sql内容" v-model="sqlSet.data"></el-input>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="sqlSet.show = false">取 消</el-button>
+                <el-button type="primary" @click="sqlSetConfirm()">确 定</el-button>
+            </span>
+        </el-dialog>
     </div>
 
 
 </body>
+<script src="/static/js/vue@2.7.8.js"></script>
+<script src="/static/js/element-ui@2.15.9.js"></script>
+<script src="/static/js/home.js"></script>
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/highlight/highlight.min.js"></script>
+
 <script>
+    hljs.highlightAll();
     new Vue({
         el: '#app',
         data(){
@@ -223,7 +273,13 @@
                 registerListShow: false,
                 setConfigShow: false, // 新增弹窗
                 setConfigTitle: '',
-                form:{type:1,command:{http:{method:''},rpc:{method:''}}},
+                sqlSet: {
+                    show: false, // 是否显示
+                    title: '添加',
+                    index: -1, // 操作行号
+                    data: "", // 实际内容
+                }, // sql设置弹窗
+                form:{},
                 sysInfo: {cmd_name:""},
                 hintSpec: "* * * * * *",
                 labelType: '1',
@@ -237,6 +293,7 @@
                 }
                 this.sysInfo = res.data;
             })
+            this.initFormData()
         },
         watch:{
 
@@ -327,6 +384,9 @@
                 this.setConfigShow = true
                 this.setConfigTitle = '添加任务'
                 // 应该有个地方定义空结构体
+                this.initFormData()
+            },
+            initFormData(){
                 this.form = {
                     command:{
                         http:{
@@ -340,7 +400,18 @@
                             action: '',
                             body: ''
                         },
-                        cmd:''
+                        cmd:'',
+                        sql:{
+                            driver: "mysql",
+                            source:{
+                                hostname:"",
+                                port:"",
+                                username:"",
+                                password:""
+                            },
+                            statement:[],
+                            err_action: "1",
+                        },
                     }
                 }
             },
@@ -421,6 +492,50 @@
                 }
                 // 成功率33一下
                 return "icon el-icon-circle-close danger"
+            },
+            // sql设置弹窗
+            sqlSetShow(index, oldData){
+                if (index === "" || index == null || isNaN(index)){
+                    console.log('sqlSetShow', index, oldData)
+                    return this.$message.error("索引位标志异常");
+                }
+                if (typeof oldData != 'string'){
+                    return this.$message.error("sql内容异常");
+                }
+                this.sqlSet.show = true
+                this.sqlSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
+                this.sqlSet.data = oldData // 原来的内容
+                this.sqlSet.title = this.sqlSet.index < 0? '添加' : '编辑';
+            },
+            // sql设置确定
+            sqlSetConfirm(){
+                if (this.sqlSet.data == ""){
+                    return this.$message.error("sql内容不得为空");
+                }
+                if (typeof this.sqlSet.index !== 'number'){
+                    console.log('sqlSetShow', this.sqlSet)
+                    return this.$message.error("索引位标志异常");
+                }
+                if (this.sqlSet.index < 0){
+                    this.form.command.sql.statement.push(this.sqlSet.data)
+                }else{
+                    this.form.command.sql.statement[this.sqlSet.index] = this.sqlSet.data
+                }
+                this.sqlSet.show = false
+                this.sqlSet.data = ""
+                this.sqlSet.index = -1
+            },
+            // 删除sql元素
+            sqlSetDel(index){
+                if (index === "" || index == null || isNaN(index)){
+                    console.log('sqlSetDel', index)
+                    return this.$message.error("索引位标志异常");
+                }
+                this.$confirm('此操作将删除sql执行语句，是否继续？','提示',{
+                    type:'warning',
+                }).then(()=>{
+                    this.form.command.sql.statement.splice(index,1)
+                })
             }
         }
     })

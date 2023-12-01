@@ -1,8 +1,10 @@
 package conv
 
 import (
-	"fmt"
+	"errors"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -58,16 +60,33 @@ func (m *Str) IsChinese(str string) bool {
 }
 
 // 分切字符串
-func (m *Str) Slice(val string, out any) error {
+func (m *Str) Slice(val string, out interface{}) (err error) {
 	if val == "" {
 		return nil
 	}
-	fmt.Println("输入", out)
-	o := out.([]interface{}) // 断言out为切片类型
-
-	for _, v := range strings.Split(val, m.sep) {
-		o = append(o, v)
+	t := reflect.TypeOf(out)
+	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Slice {
+		return errors.New("请指定切片指针out")
 	}
-	out = o
+
+	vtk := t.Elem().Elem().Kind()
+	v := reflect.ValueOf(out).Elem()
+	var itemVal interface{}
+	for _, item := range strings.Split(val, m.sep) {
+		switch vtk {
+		case reflect.String:
+			itemVal = val
+		case reflect.Int, reflect.Int32:
+			itemVal, err = strconv.Atoi(item)
+			if err != nil {
+				return err
+			}
+		default:
+			return errors.New("out 不支持的元素类型")
+		}
+		v = reflect.Append(v, reflect.ValueOf(itemVal))
+	}
+
+	reflect.ValueOf(out).Elem().Set(v)
 	return nil
 }

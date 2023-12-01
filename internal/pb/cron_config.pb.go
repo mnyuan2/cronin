@@ -55,6 +55,21 @@ type CronConfigCommand struct {
 		Body   string `json:"body"`   // 请求参数
 	} `json:"rpc"`
 	Cmd string `json:"cmd"`
+	Sql struct {
+		Driver    string        `json:"driver"`     // 驱动，默认mysql
+		Source    CronSqlSource `json:"source"`     // 具体链接配置
+		ErrAction int           `json:"err_action"` // 错误后行为
+		Statement []string      `json:"statement"`  // sql语句多条
+	} `json:"sql"`
+}
+
+// CronSqlSource sql任务 来源配置
+type CronSqlSource struct {
+	Hostname string `json:"hostname"`
+	Database string `json:"database"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Port     string `json:"port"`
 }
 
 // 已注册列表
