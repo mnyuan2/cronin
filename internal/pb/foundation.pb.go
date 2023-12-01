@@ -1,16 +1,16 @@
 package pb
 
 type DicGetsRequest struct {
-	Types string `json:"types,omitempty"`
+	Types string `json:"types" form:"types"`
 }
 
 type DicGetsReply struct {
-	Maps map[int]*DicGetsExtendList
+	Maps map[int]*DicGetsList
 }
-type DicGetsExtendList struct {
-	List []*DicGetExtendItem `json:"list"`
+type DicGetsList struct {
+	List []*DicGetItem `json:"list"`
 }
-type DicGetExtendItem struct {
+type DicGetItem struct {
 	// 键
 	Id int32 `json:"id"`
 	// 值

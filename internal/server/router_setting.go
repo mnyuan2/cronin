@@ -19,7 +19,7 @@ func routerSqlList(ctx *gin.Context) {
 
 // 任务设置
 func routerSqlSet(ctx *gin.Context) {
-	r := &pb.CronConfigSetRequest{}
+	r := &pb.SettingSqlSetRequest{}
 	if err := ctx.BindJSON(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return

@@ -29,6 +29,7 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	//r.LoadHTMLGlob("web/*.html")
 	//r.Static("/static", "web/static")
 
+	r.GET("foundation/dic_gets", routerDicGets)
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)

@@ -1,0 +1,81 @@
+<template>
+<!--    必须用一个元素包裹-->
+    <div>
+        <el-table :data="list">
+            <el-table-column property="create_dt" label="记录时间"></el-table-column>
+            <el-table-column property="status_name" label="状态">
+                <template slot-scope="scope">
+                    <el-tag :type="scope.row.status == 1 ? 'danger' : 'success'">{{scope.row.status_name}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column property="duration" label="耗时/秒"></el-table-column>
+            <el-table-column property="" label="详情">
+                <template slot-scope="scope">
+                    <el-popover trigger="hover" placement="left">
+                        <div>{{scope.row.body}}</div>
+                        <div slot="reference" class="name-wrapper">
+                            <el-tag size="medium">详情</el-tag>
+                        </div>
+                    </el-popover>
+                </template>
+            </el-table-column>
+        </el-table>
+
+
+    </div>
+</template>
+
+<script>
+export default {
+    name: "SqlSource",
+    data(){
+        return {
+            list:[],
+            page:{
+                index: 1,
+                size: 10,
+                total: 0
+            }
+        }
+    },
+
+    mounted(){},
+
+    // 具体方法
+    methods:{
+        // 任务列表
+        getList(){
+            api.innerGet("/config/list", this.listParam, (res)=>{
+                console.log("列表响应",res)
+                if (res.code != "000000"){
+                    return this.$message.error(res.message);
+                }
+                for (i in res.data.list){
+                    let ratio = 0
+                    if (res.data.list[i].top_number){
+                        ratio = res.data.list[i].top_error_number / res.data.list[i].top_number
+                    }
+
+
+                    res.data.list[i].status = res.data.list[i].status.toString()
+                    res.data.list[i].topRatio = 100 - ratio * 100
+                }
+                this.listData = res.data.list;
+                this.listPage = res.data.page;
+            })
+        },
+        handleSizeChange(val) {
+            console.log(`每页 ${val} 条`);
+        },
+        handleCurrentChange(val) {
+            console.log(`当前页: ${val}`);
+            this.listParam.page = val
+            this.getList()
+        },
+    }
+}
+</script>
+
+<style scoped>
+
+</style>
