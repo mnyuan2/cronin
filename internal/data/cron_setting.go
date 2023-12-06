@@ -19,8 +19,8 @@ func NewCronSettingData(ctx context.Context) *CronSettingData {
 }
 
 // 列表查询
-func (m *CronSettingData) GetList(key string, page, size int, list interface{}) (total int64, err error) {
-	str, args := db.NewWhere().Eq("key", key, db.RequiredOption()).Build()
+func (m *CronSettingData) GetList(scene string, page, size int, list interface{}) (total int64, err error) {
+	str, args := db.NewWhere().Eq("scene", scene, db.RequiredOption()).Build()
 	total, err = m.db.Read.Paginate(list, page, size, m.tableName, "*", "update_dt,id desc", str, args...)
 
 	return total, err

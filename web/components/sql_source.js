@@ -1,6 +1,6 @@
 var SqlSource = Vue.extend({
     template: `<div>
-        <el-button type="primary" plain @click="createShow()">新增链接</el-button>
+        <el-button type="primary" plain @click="initForm(true, '添加sql链接')">新增链接</el-button>
         
         <el-table :data="sql_source_list">
             <el-table-column property="create_dt" label="链接名称"></el-table-column>
@@ -19,26 +19,26 @@ var SqlSource = Vue.extend({
         </el-table>
 
         <!--设置弹窗-->
-        <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false">
-            <el-form :model="form">
+        <el-dialog :title="form.box.title" :visible.sync="form.box.show" :close-on-click-modal="false" append-to-body="true" width="400px">
+            <el-form :model="form.data" label-position="left" label-width="80px" size="small">
                 <el-form-item label="链接名*">
-                    <el-input v-model="form.title"></el-input>
+                    <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
                 <el-form-item label="主机*">
-                    <el-input v-model="form.source.hostname"></el-input>
+                    <el-input v-model="form.data.source.hostname"></el-input>
                 </el-form-item>
                 <el-form-item label="端口*">
-                    <el-input v-model="form.source.port"></el-input>
+                    <el-input v-model="form.data.source.port"></el-input>
                 </el-form-item>
                 <el-form-item label="用户名">
-                    <el-input v-model="form.source.username"></el-input>
+                    <el-input v-model="form.data.source.username"></el-input>
                 </el-form-item>
                 <el-form-item label="密码">
-                    <el-input v-model="form.source.password"></el-input>
+                    <el-input v-model="form.data.source.password"></el-input>
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button @click="setConfigShow = false">取 消</el-button>
+                <el-button @click="initForm(false,'-')">取 消</el-button>
                 <el-button type="primary" @click="submitForm()">确 定</el-button>
             </div>
         </el-dialog>
@@ -60,16 +60,21 @@ var SqlSource = Vue.extend({
                 page: 1,
                 size: 20,
             },
-            form:{}, // 表单数据
+            form:{}, // 表单
 
         }
     },
-
+    // 模块初始化
+    created(){
+        this.initForm(false,"-")
+    },
+    // 模块初始化
     mounted(){
         console.log("sql_source:reload_list", this.reload_list)
         if (this.reload_list){
             this.getList()
         }
+
     },
 
     // 具体方法
@@ -97,28 +102,32 @@ var SqlSource = Vue.extend({
             this.getList()
         },
 
-        // 添加弹窗
-        createShow(){
-            this.setConfigShow = true
-            this.setConfigTitle = '添加任务'
-            // 应该有个地方定义空结构体
-            this.initFormData()
-        },
         submitForm(){
-            let body = this.form
+            let body = this.form.data
             api.innerPost("/setting/sql_source_set", body, (res) =>{
                 console.log("sql源设置响应",res)
+                if (res.code != '000000'){
+                    return this.$message.error(res.message)
+                }
+                this.initForm(false)
+                this.getList()
             })
         },
-        initFormData(){
+        initForm(show, title){
             this.form = {
-                id: 0,
-                title:"",
-                source:{
-                    hostname: "",
-                    port: "",
-                    username: "",
-                    password: ""
+                box:{
+                    show: show == true,
+                    title: title,
+                },
+                data: {
+                    id: 0,
+                    title:"",
+                    source:{
+                        hostname: "",
+                        port: "",
+                        username: "",
+                        password: ""
+                    }
                 }
             }
         },

@@ -35,7 +35,7 @@ func (dm *SettingSqlService) List(ctx context.Context, r *pb.SettingSqlListReque
 		},
 	}
 	list := []*models.CronSetting{}
-	resp.Page.Total, err = data.NewCronSettingData(ctx).GetList(models.KeySqlSource, r.Page, r.Size, &list)
+	resp.Page.Total, err = data.NewCronSettingData(ctx).GetList(models.SceneSqlSource, r.Page, r.Size, &list)
 	if err != nil {
 		return nil, err
 	}
@@ -62,13 +62,13 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 	ti := conv.TimeNew()
 	// 分为新增和编辑
 	if r.Id > 0 {
-		w := db.NewWhere().Eq("key", models.KeySqlSource).Eq("id", r.Id).Eq("status", models.StatusActive)
+		w := db.NewWhere().Eq("key", models.SceneSqlSource).Eq("id", r.Id).Eq("status", models.StatusActive)
 		one, err = _data.GetOne(w)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		one.Key = models.KeySqlSource
+		one.Scene = models.SceneSqlSource
 		one.Status = models.StatusActive
 		one.CreateDt = ti.String()
 	}
@@ -93,7 +93,7 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
 	// 同一个任务，这里要加请求锁
 	_data := data.NewCronSettingData(ctx)
-	w := db.NewWhere().Eq("key", models.KeySqlSource).Eq("id", r.Id, db.RequiredOption())
+	w := db.NewWhere().Eq("key", models.SceneSqlSource).Eq("id", r.Id, db.RequiredOption())
 	one, err := _data.GetOne(w)
 	if err != nil {
 		return nil, err
@@ -106,6 +106,6 @@ func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChan
 		return nil, errors.New("不支持的状态操作")
 	}
 
-	err = _data.Del(one.Key, one.Id)
+	err = _data.Del(one.Scene, one.Id)
 	return &pb.SettingChangeStatusReply{}, err
 }

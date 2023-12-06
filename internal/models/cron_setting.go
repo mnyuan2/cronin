@@ -2,7 +2,7 @@ package models
 
 type CronSetting struct {
 	Id       int    `json:"id,omitempty"`
-	Key      string `json:"key,omitempty"`
+	Scene    string `json:"scene,omitempty"`
 	Title    string `json:"title,omitempty"`
 	Env      string `json:"env,omitempty"`
 	Content  string `json:"content,omitempty"`
@@ -17,5 +17,5 @@ type SettingSqlSource struct {
 }
 
 const (
-	KeySqlSource = "sql_source" // sql数据源配置
+	SceneSqlSource = "sql_source" // sql数据源配置
 )

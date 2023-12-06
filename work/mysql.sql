@@ -1,7 +1,7 @@
 -- 任务设置
 CREATE TABLE `cron_setting`  (
     `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `key` varchar(255) NULL COMMENT '标记键',
+    `scene` varchar(255) NULL COMMENT '使用场景',
     `title` varchar(255) NULL COMMENT '名称',
     `env` varchar(255) NULL COMMENT '环境:system.系统信息、其它.业务环境信息',
     `content` text NULL COMMENT '内容',

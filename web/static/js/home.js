@@ -82,11 +82,16 @@ var api = {
                 alert(res.msg);
                 return ;
             }
+            if (data.code == '"000000"'){
+                data.status = true
+            }else{
+                data.status = false
+            }
         };
 
         var error = error || function (data) {
             // 默认Error方法
-            console.log(data);
+            console.log("请求错误响应",data);
             setTimeout(function () {
 
                 if (data.status == 404) {
