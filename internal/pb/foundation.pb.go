@@ -5,7 +5,7 @@ type DicGetsRequest struct {
 }
 
 type DicGetsReply struct {
-	Maps map[int]*DicGetsList
+	Maps map[int]*DicGetsList `json:"maps"`
 }
 type DicGetsList struct {
 	List []*DicGetItem `json:"list"`

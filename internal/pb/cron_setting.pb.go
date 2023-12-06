@@ -2,6 +2,10 @@ package pb
 
 // sql源
 type SettingSqlSource struct {
+	Hostname string
+	Port     string
+	Username string
+	Password string
 }
 
 // 任务列表

@@ -152,24 +152,12 @@
                                     <el-option label="mysql" value="mysql"></el-option>
                                 </el-select>
                             </el-form-item>
-                            <div>
-<!--                                这块要调整，先将就着用；流程走通后再说-->
-                                <label>链接</label>
-                                <p>
-                                    <label>主机</label>
-                                    <input type="text" v-model="form.command.sql.source.hostname" placeholder="" class="el-input__inner">
-                                </p>
-                                <p>
-                                    <label>端口</label>
-                                    <input type="text" v-model="form.command.sql.source.port" placeholder="" class="el-input__inner">
-                                </p>
-                                <el-form-item label="用户名" label-position="left">
-                                    <el-input v-model="form.command.sql.source.username" placeholder=""></el-input>
-                                </el-form-item>
-                                <el-form-item label="密码" :label-position="'left'">
-                                    <el-input v-model="form.command.sql.source.password" placeholder=""></el-input>
-                                </el-form-item>
-                            </div>
+                            <el-form-item label="链接">
+                                <el-select v-model="dicMap[1]" placement="请选择sql链接">
+                                    <el-option label="name" value="id"></el-option>
+                                </el-select>
+                                <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox">设置链接</el-button>
+                            </el-form-item>
                             <el-form-item label="执行语句">
                                 <div><el-button type="text" @click="sqlSetShow(-1,'')"><i class="el-icon-plus">添加</i></el-button></div>
                                 <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;max-height: 200px;overflow: auto;background: #fff;margin-bottom: 10px;">
@@ -240,7 +228,10 @@
             </span>
         </el-dialog>
 
-        Sql
+        <!-- sql链接源管理弹窗 -->
+        <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false">
+            <sql-source :reload_list="sqlSourceBoxShow"></sql-source>
+        </el-drawer>
     </div>
 
 
@@ -250,15 +241,9 @@
 <script src="/static/js/home.js"></script>
 <script src="/static/js/jquery.min.js"></script>
 <script src="/static/highlight/highlight.min.js"></script>
+<script src="/components/sql_source.js"></script>
 
 <script>
-    // 要研究一下的代码
-    // import appDetail from '@/components/business/app/appDetail'
-    // Vue.component('appDetail', appDetail);
-</script>
-<script>
-
-
 
     hljs.highlightAll();
     new Vue({
@@ -283,6 +268,7 @@
                 registerListShow: false,
                 setConfigShow: false, // 新增弹窗
                 setConfigTitle: '',
+                sqlSourceBoxShow: false,
                 sqlSet: {
                     show: false, // 是否显示
                     title: '添加',
@@ -293,6 +279,7 @@
                 sysInfo: {cmd_name:""},
                 hintSpec: "* * * * * *",
                 labelType: '1',
+                dicMap:{},
             };
         },
         created(){
@@ -304,6 +291,7 @@
                 this.sysInfo = res.data;
             })
             this.initFormData()
+            this.getDic()
         },
         watch:{
 
@@ -342,6 +330,15 @@
                 this.listParam.type = tab
                 this.getList()
                 console.log("类型标签页点击", tab, event);
+            },
+            // 枚举
+            getDic(){
+                api.innerFoundationDic("1",(res) =>{
+                    if (res.code != "000000"){
+                        return this.$message.error(res.message);
+                    }
+                    this.dicMap = res.data.maps
+                })
             },
             // 添加/编辑 任务
             setCron(){
@@ -413,12 +410,12 @@
                         cmd:'',
                         sql:{
                             driver: "mysql",
-                            source:{
-                                hostname:"",
-                                port:"",
-                                username:"",
-                                password:""
-                            },
+                            // source:{
+                            //     hostname:"",
+                            //     port:"",
+                            //     username:"",
+                            //     password:""
+                            // },
                             statement:[],
                             err_action: "1",
                         },
@@ -502,6 +499,10 @@
                 }
                 // 成功率33一下
                 return "icon el-icon-circle-close danger"
+            },
+            // sql source box
+            sqlSourceBox(){
+                this.sqlSourceBoxShow = true;
             },
             // sql设置弹窗
             sqlSetShow(index, oldData){

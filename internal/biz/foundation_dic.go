@@ -31,7 +31,7 @@ func NewDicService() *DicService {
 func (dm *DicService) Gets(ctx context.Context, r *pb.DicGetsRequest) (resp *pb.DicGetsReply, err error) {
 	dm.ctx = ctx
 	types := []int{}
-	err = conv.NewStr().Slice(r.Types, types)
+	err = conv.NewStr().Slice(r.Types, &types)
 	if err != nil {
 		return nil, err
 	}

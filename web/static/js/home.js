@@ -69,6 +69,11 @@ var api = {
         let features = "height=240, width=400, top=50, left=50, toolbar=no, menubar=no,scrollbars=no,resizable=no, location=no, status=no,toolbar=no";
         window.open(this.baseUrl+path, "_blank", features)
     },
+    // 枚举获取
+    innerFoundationDic: function(type, success){
+        // param = JSON.stringify(param)
+        this.ajax(this.baseUrl+"/foundation/dic_gets", {"types":type}, null,null, success, null, true, 'get')
+    },
 
     ajax: function (url, data, beforeSend, complete, success, error, async=true, type='post', dataType='json') {
         var success = success || function (data) {

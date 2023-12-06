@@ -6,8 +6,6 @@ import (
 	"cron/internal/pb"
 	"embed"
 	"github.com/gin-gonic/gin"
-	"html/template"
-	"io/fs"
 	"net/http"
 	"runtime"
 )
@@ -18,18 +16,19 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	r := gin.Default()
 
 	// 二进制版本,打包使用（优点，静态资源将被打包至二进制文件）
-	s, e := fs.Sub(Resource, "web/static")
-	if e != nil {
-		panic("资源错误 " + e.Error())
-	}
-	r.StaticFS("/static", http.FS(s))
-	r.SetHTMLTemplate(template.Must(template.New("").Delims("[[", "]]").ParseFS(Resource, "web/*.html")))
+	//s, e := fs.Sub(Resource, "web/static")
+	//if e != nil {
+	//	panic("资源错误 " + e.Error())
+	//}
+	//r.StaticFS("/static", http.FS(s))
+	//r.SetHTMLTemplate(template.Must(template.New("").Delims("[[", "]]").ParseFS(Resource, "web/*.html")))
 
-	//r.Delims("[[", "]]")
-	//r.LoadHTMLGlob("web/*.html")
-	//r.Static("/static", "web/static")
+	r.Delims("[[", "]]")
+	r.LoadHTMLGlob("web/*.html")
+	r.Static("/static", "web/static")
+	r.Static("/components", "web/components")
 
-	r.GET("foundation/dic_gets", routerDicGets)
+	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)
