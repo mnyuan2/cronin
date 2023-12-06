@@ -5,6 +5,7 @@ import (
 	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -34,7 +35,7 @@ func (dm *TaskService) Init() (err error) {
 	cronDb := data.NewCronConfigData(context.Background())
 	for page := 1; total >= int64(pageSize*page); page++ {
 		list := []*models.CronConfig{}
-		w := db.NewWhere().Eq("status", models.StatusActive)
+		w := db.NewWhere().Eq("status", enum.StatusActive)
 		total, err = cronDb.GetList(w, page, pageSize, &list)
 		if err != nil {
 			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
@@ -110,7 +111,7 @@ func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 		Name:     "日志留存时间",
 		Spec:     "0 0 5 * * *", // 每天5点执行
 		Protocol: models.ProtocolHttp,
-		Status:   models.StatusActive,
+		Status:   enum.StatusActive,
 		Remark:   "系统内置任务",
 		CreateDt: time.Now().Format(conv.FORMAT_DATETIME),
 		UpdateDt: time.Now().Format(conv.FORMAT_DATETIME),

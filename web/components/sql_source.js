@@ -1,20 +1,17 @@
 var SqlSource = Vue.extend({
     template: `<div>
-        <el-button type="primary" plain @click="initForm(true, '添加sql链接')">新增链接</el-button>
+        <el-button type="primary" plain @click="initForm(true)" style="margin-left: 20px">新增链接</el-button>
         
         <el-table :data="sql_source_list">
-            <el-table-column property="create_dt" label="链接名称"></el-table-column>
-           
-            <el-table-column property="duration" label="主机"></el-table-column>
-            <el-table-column property="" label="操作">
+            <el-table-column property="title" label="链接名称"></el-table-column>
+            <el-table-column property="create_dt" label="创建时间"></el-table-column>
+            <el-table-column property="update_dt" label="更新时间"></el-table-column>
+            <el-table-column label="操作">
                 <template slot-scope="scope">
-                    <el-popover trigger="hover" placement="left">
-                        <div>{{scope.row.body}}</div>
-                        <div slot="reference" class="name-wrapper">
-                            <el-tag size="medium">详情</el-tag>
-                        </div>
-                    </el-popover>
+                    <el-button plain @click="initForm(true, scope.row)">编辑</el-button>
+                    <el-button plain @click="deleteSqlSource(scope.row.id)">删除</el-button>
                 </template>
+                
             </el-table-column>
         </el-table>
 
@@ -83,11 +80,8 @@ var SqlSource = Vue.extend({
         getList(){
             api.innerGet("/setting/sql_source_list", this.listParam, (res)=>{
                 console.log("sql_source:sql_source_list 响应", this.reload_list)
-                if (res.code != "000000"){
+                if (!res.status){
                     return this.$message.error(res.message);
-                }
-                for (i in res.data.list){
-                    res.data.list[i].status = res.data.list[i].status.toString()
                 }
                 this.sql_source_list = res.data.list;
                 this.page = res.data.page;
@@ -101,23 +95,36 @@ var SqlSource = Vue.extend({
             this.listParam.page = val
             this.getList()
         },
-
+        // 删除连接
+        deleteSqlSource(id){
+            if (!isNaN(id)){
+                return this.$message.warning('参数异常，操作取消')
+            }
+            api.innerPost("/setting/sql_source_change_status", {id:id, status: 9}, (res) =>{
+                console.log("sql源设置响应",res)
+                if (!res.status){
+                    return this.$message.error(res.message)
+                }
+                this.getList()
+            })
+        },
         submitForm(){
             let body = this.form.data
             api.innerPost("/setting/sql_source_set", body, (res) =>{
                 console.log("sql源设置响应",res)
-                if (res.code != '000000'){
+                if (!res.status){
                     return this.$message.error(res.message)
                 }
                 this.initForm(false)
                 this.getList()
             })
         },
-        initForm(show, title){
+        // 初始化表单数据
+        initForm(show, data){
             this.form = {
                 box:{
                     show: show == true,
-                    title: title,
+                    title: "添加sql链接",
                 },
                 data: {
                     id: 0,
@@ -130,7 +137,16 @@ var SqlSource = Vue.extend({
                     }
                 }
             }
+            if ( typeof data === 'object' && data["id"] != undefined && data["source"] != undefined
+                && data.id > 0 && typeof data.source === 'object'){
+                this.form.box.title = '编辑sql连接'
+                this.form.data = data
+                console.log("编辑源",data)
+            }
         },
+        close(){
+            this.$emit('update:visible', false) // 向外传递关闭表示
+        }
     }
 })
 

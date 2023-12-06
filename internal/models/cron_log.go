@@ -2,6 +2,7 @@ package models
 
 import (
 	"cron/internal/basic/conv"
+	"cron/internal/basic/enum"
 	jsoniter "github.com/json-iterator/go"
 	"time"
 )
@@ -17,8 +18,8 @@ type CronLog struct {
 }
 
 var LogStatusMap = map[int]string{
-	StatusDisable: "错误",
-	StatusActive:  "正常",
+	enum.StatusDisable: "错误",
+	enum.StatusActive:  "正常",
 }
 
 // 新建一个错误日志
@@ -29,7 +30,7 @@ func NewErrorCronLog(conf *CronConfig, body string, startTime time.Time) *CronLo
 		ConfId:   conf.Id,
 		CreateDt: t.Format(conv.FORMAT_DATETIME),
 		Duration: t.Sub(startTime).Seconds(),
-		Status:   StatusDisable,
+		Status:   enum.StatusDisable,
 		Body:     body,
 		Snap:     str,
 	}
@@ -43,7 +44,7 @@ func NewSuccessCronLog(conf *CronConfig, body string, startTime time.Time) *Cron
 		ConfId:   conf.Id,
 		CreateDt: t.Format(conv.FORMAT_DATETIME),
 		Duration: t.Sub(startTime).Seconds(),
-		Status:   StatusActive,
+		Status:   enum.StatusActive,
 		Body:     body,
 		Snap:     str,
 	}

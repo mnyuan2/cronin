@@ -1,5 +1,7 @@
 package models
 
+import "cron/internal/basic/enum"
+
 type CronProtocol int
 type CronStatus int
 
@@ -7,23 +9,14 @@ const (
 	ProtocolHttp = 1 // http
 	ProtocolRpc  = 2 // rpc
 	ProtocolCmd  = 3 // 命令行 cmd
+	ProtocolSql  = 4 // sql 执行
 )
 
 var ProtocolMap = map[int]string{
 	ProtocolHttp: "http",
 	ProtocolRpc:  "rpc",
 	ProtocolCmd:  "cmd",
-}
-
-const (
-	StatusDisable = 1 // 停用
-	StatusActive  = 2 // 激活
-	StatusDelete  = 9 // 删除
-)
-
-var ConfStatusMap = map[int]string{
-	StatusDisable: "停用",
-	StatusActive:  "激活",
+	ProtocolSql:  "sql",
 }
 
 const (
@@ -55,7 +48,7 @@ func (m *CronConfig) GetProtocolName() string {
 }
 
 func (m *CronConfig) GetStatusName() string {
-	return ConfStatusMap[m.Status]
+	return enum.StatusMap[m.Status]
 }
 
 func (m *CronConfig) GetTypeName() string {

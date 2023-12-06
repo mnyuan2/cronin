@@ -153,10 +153,10 @@
                                 </el-select>
                             </el-form-item>
                             <el-form-item label="链接">
-                                <el-select v-model="dicMap[1]" placement="请选择sql链接">
-                                    <el-option label="name" value="id"></el-option>
+                                <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
+                                    <el-option v-for="(dic_v,dic_k) in dicMap[1]" :label="dic_v.name" :value="dic_v.id"></el-option>
                                 </el-select>
-                                <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox">设置链接</el-button>
+                                <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
                             </el-form-item>
                             <el-form-item label="执行语句">
                                 <div><el-button type="text" @click="sqlSetShow(-1,'')"><i class="el-icon-plus">添加</i></el-button></div>
@@ -229,7 +229,7 @@
         </el-dialog>
 
         <!-- sql链接源管理弹窗 -->
-        <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false">
+        <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
             <sql-source :reload_list="sqlSourceBoxShow"></sql-source>
         </el-drawer>
     </div>
@@ -337,7 +337,13 @@
                     if (res.code != "000000"){
                         return this.$message.error(res.message);
                     }
-                    this.dicMap = res.data.maps
+                    let list = {};
+                    for (k in res.data.maps){
+                        console.log("枚举----", k)
+                        list[k] = res.data.maps[k].list
+                    }
+                    this.dicMap = list
+                    console.log("枚举", this.dicMap, res)
                 })
             },
             // 添加/编辑 任务
@@ -363,26 +369,15 @@
                     command: this.form.command,
                     remark: this.form.remark,
                 }
+                body.command.sql.err_action = Number(body.command.sql.err_action)
+                body.command.sql.source.id = Number(body.command.sql.source.id)
 
                 api.innerPost("/config/set", body, (res)=>{
-                    if (res.code != '000000'){
+                    if (!res.status){
                         return this.$message.error(res.message)
                     }
                     this.setConfigShow = false;
-                    this.form = {command:{
-                            http:{
-                                method: '',
-                                url:'',
-                                body:''
-                            },
-                            rpc:{
-                                method: 'GRPC',
-                                addr: '',
-                                action: '',
-                                body: ''
-                            },
-                            cmd:''
-                        }}; // 清空表达数据
+                    this.initFormData()
                     this.getList(); // 刷新当前页
                 })
             },
@@ -410,12 +405,14 @@
                         cmd:'',
                         sql:{
                             driver: "mysql",
-                            // source:{
-                            //     hostname:"",
-                            //     port:"",
-                            //     username:"",
-                            //     password:""
-                            // },
+                            source:{
+                                id: "",
+                                // title: "",
+                                // hostname:"",
+                                // port:"",
+                                // username:"",
+                                // password:""
+                            },
                             statement:[],
                             err_action: "1",
                         },
@@ -501,8 +498,11 @@
                 return "icon el-icon-circle-close danger"
             },
             // sql source box
-            sqlSourceBox(){
-                this.sqlSourceBoxShow = true;
+            sqlSourceBox(show){
+                this.sqlSourceBoxShow = show == true;
+                if (!this.sqlSourceBoxShow){
+                    this.getDic() // 关闭弹窗要重载枚举
+                }
             },
             // sql设置弹窗
             sqlSetShow(index, oldData){

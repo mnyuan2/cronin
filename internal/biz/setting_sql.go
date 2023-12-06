@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -28,7 +29,6 @@ func (dm *SettingSqlService) List(ctx context.Context, r *pb.SettingSqlListReque
 		r.Size = 20
 	}
 	resp = &pb.SettingSqlListReply{
-		List: []*pb.SettingSqlListItem{},
 		Page: &pb.Page{
 			Page: r.Page,
 			Size: r.Size,
@@ -41,7 +41,8 @@ func (dm *SettingSqlService) List(ctx context.Context, r *pb.SettingSqlListReque
 	}
 
 	// 格式化
-	for _, item := range list {
+	resp.List = make([]*pb.SettingSqlListItem, len(list))
+	for i, item := range list {
 		data := &pb.SettingSqlListItem{
 			Id:       item.Id,
 			Title:    item.Title,
@@ -50,6 +51,7 @@ func (dm *SettingSqlService) List(ctx context.Context, r *pb.SettingSqlListReque
 			Source:   &pb.SettingSqlSource{},
 		}
 		jsoniter.UnmarshalFromString(item.Content, data.Source)
+		resp.List[i] = data
 	}
 
 	return resp, err
@@ -62,14 +64,14 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 	ti := conv.TimeNew()
 	// 分为新增和编辑
 	if r.Id > 0 {
-		w := db.NewWhere().Eq("key", models.SceneSqlSource).Eq("id", r.Id).Eq("status", models.StatusActive)
+		w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", r.Id).Eq("status", enum.StatusActive)
 		one, err = _data.GetOne(w)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		one.Scene = models.SceneSqlSource
-		one.Status = models.StatusActive
+		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
 	}
 
@@ -93,7 +95,7 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
 	// 同一个任务，这里要加请求锁
 	_data := data.NewCronSettingData(ctx)
-	w := db.NewWhere().Eq("key", models.SceneSqlSource).Eq("id", r.Id, db.RequiredOption())
+	w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", r.Id, db.RequiredOption())
 	one, err := _data.GetOne(w)
 	if err != nil {
 		return nil, err
@@ -102,7 +104,7 @@ func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChan
 		return nil, errors.New("操作数据不存在")
 	}
 	// 目前仅支持删除
-	if r.Status != models.StatusDelete {
+	if r.Status != enum.StatusDelete {
 		return nil, errors.New("不支持的状态操作")
 	}
 

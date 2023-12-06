@@ -5,6 +5,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/models"
 	"cron/internal/pb"
 	jsoniter "github.com/json-iterator/go"
 	"strings"
@@ -66,7 +67,8 @@ func (dm *DicService) getDb(t int) ([]*pb.DicGetItem, error) {
 
 	switch t {
 	case enum.DicSqlSource:
-		_sql = ""
+		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		w.Eq("scene", models.SceneSqlSource).Eq("status", enum.StatusActive)
 	}
 
 	items := []*pb.DicGetItem{}

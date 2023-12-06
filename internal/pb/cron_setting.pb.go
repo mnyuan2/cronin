@@ -2,10 +2,10 @@ package pb
 
 // sql源
 type SettingSqlSource struct {
-	Hostname string
-	Port     string
-	Username string
-	Password string
+	Hostname string `json:"hostname"`
+	Port     string `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // 任务列表

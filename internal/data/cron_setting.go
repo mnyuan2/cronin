@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"cron/internal/models"
 )
 
@@ -47,4 +48,10 @@ func (m *CronSettingData) Set(one *models.CronSetting) error {
 func (m *CronSettingData) Del(key string, id int) error {
 	one := &models.CronSetting{}
 	return m.db.Write.Where("key=? and id=?", key, id).Delete(one).Error
+}
+
+// 获得sql连接源
+func (m *CronSettingData) GetSqlSourceOne(id int) (one *models.CronSetting, err error) {
+	w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", id).Eq("status", enum.StatusActive)
+	return m.GetOne(w)
 }

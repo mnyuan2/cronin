@@ -65,6 +65,8 @@ type CronConfigCommand struct {
 
 // CronSqlSource sql任务 来源配置
 type CronSqlSource struct {
+	Id       int    `json:"id"`
+	Title    string `json:"title"`
 	Hostname string `json:"hostname"`
 	Database string `json:"database"`
 	Username string `json:"username"`

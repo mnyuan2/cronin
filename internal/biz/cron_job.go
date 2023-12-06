@@ -3,6 +3,7 @@ package biz
 import (
 	"bytes"
 	"context"
+	"cron/internal/basic/enum"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -83,7 +84,7 @@ func (job *CronJob) Run() {
 		}
 		data.NewCronLogData(ctx).Add(g)
 		if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
-			job.conf.Status = models.StatusDisable
+			job.conf.Status = enum.StatusDisable
 			job.conf.EntryId = 0
 			data.NewCronConfigData(ctx).ChangeStatus(job.conf)
 		}
@@ -109,7 +110,7 @@ func (job *CronJob) Run() {
 	// 连续错误达到5次，任务终止。
 	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
-		job.conf.Status = models.StatusDisable
+		job.conf.Status = enum.StatusDisable
 		job.conf.EntryId = 0
 		data.NewCronConfigData(ctx).ChangeStatus(job.conf)
 	}
