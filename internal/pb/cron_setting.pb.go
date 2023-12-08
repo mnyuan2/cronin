@@ -6,6 +6,7 @@ type SettingSqlSource struct {
 	Port     string `json:"port"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Database string `json:"database"`
 }
 
 // 任务列表

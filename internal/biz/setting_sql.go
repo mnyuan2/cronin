@@ -95,8 +95,7 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
 	// 同一个任务，这里要加请求锁
 	_data := data.NewCronSettingData(ctx)
-	w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", r.Id, db.RequiredOption())
-	one, err := _data.GetOne(w)
+	one, err := _data.GetSqlSourceOne(r.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +106,9 @@ func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChan
 	if r.Status != enum.StatusDelete {
 		return nil, errors.New("不支持的状态操作")
 	}
+	// 这里还是要做是否使用的检测；
+	// 如果使用未启用就联动置空（也不能删除，要么删除任务或者改任务），如果使用并启用禁止删除；
+	// 如果没有试用就直接删除。
 
 	err = _data.Del(one.Scene, one.Id)
 	return &pb.SettingChangeStatusReply{}, err

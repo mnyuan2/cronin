@@ -45,13 +45,13 @@ func (m *CronSettingData) Set(one *models.CronSetting) error {
 }
 
 // 删除
-func (m *CronSettingData) Del(key string, id int) error {
+func (m *CronSettingData) Del(scene string, id int) error {
 	one := &models.CronSetting{}
-	return m.db.Write.Where("key=? and id=?", key, id).Delete(one).Error
+	return m.db.Write.Where("scene=? and id=?", scene, id).Delete(one).Error
 }
 
 // 获得sql连接源
 func (m *CronSettingData) GetSqlSourceOne(id int) (one *models.CronSetting, err error) {
-	w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", id).Eq("status", enum.StatusActive)
+	w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", id, db.RequiredOption()).Eq("status", enum.StatusActive)
 	return m.GetOne(w)
 }

@@ -13,21 +13,21 @@ import (
 
 type Database struct {
 	Write *MyDB
-	Read *MyDB
+	Read  *MyDB
 }
 
 var (
 	write *gorm.DB
-	read *gorm.DB
-	once sync.Once
+	read  *gorm.DB
+	once  sync.Once
 )
 
 // 连接数据库
-func New(ctx context.Context)*Database{
+func New(ctx context.Context) *Database {
 	once.Do(func() {
 		conf := config.DbConf()
-		write = conn(conf["write"])
-		read = conn(conf["read"])
+		write = Conn(conf["write"])
+		read = Conn(conf["read"])
 	})
 
 	// 根据实例,修改上下文
@@ -37,7 +37,7 @@ func New(ctx context.Context)*Database{
 	}
 }
 
-func conn(conf config.DataBaseConf) *gorm.DB {
+func Conn(conf config.DataBaseConf) *gorm.DB {
 	// 连接数据库
 	db, err := gorm.Open(mysql.Open(conf.Source), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
@@ -46,19 +46,15 @@ func conn(conf config.DataBaseConf) *gorm.DB {
 		},
 	})
 	if err != nil {
-		panic(fmt.Errorf("数据库连接失败 %w", err))
-	}
-	// 启用连接池
-	if err = polling(db); err != nil {
-		panic(fmt.Errorf("连接池设置异常 %w", err))
-	}
-	// 调试模式
-	if conf.Debug {
+		db.AddError(err)
+	} else if err = polling(db); err != nil { // 启用连接池
+		db.AddError(fmt.Errorf("连接池设置异常 %w", err))
+	} else if conf.Debug { // 调试模式
 		db = db.Debug()
 	}
+
 	return db
 }
-
 
 // 设置程序池;
 // 这个有空要研究一下

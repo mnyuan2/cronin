@@ -196,10 +196,8 @@
                 <el-table-column property="" label="详情">
                     <template slot-scope="scope">
                         <el-popover trigger="hover" placement="left">
-                            <div>{{scope.row.body}}</div>
-                            <div slot="reference" class="name-wrapper">
-                                <el-tag size="medium">详情</el-tag>
-                            </div>
+                            <div>{{scope.row.body.substring(0, 120)+'...'}}</div>
+                            <el-button slot="reference" @click="logBodyShow(scope.row)">查看</el-button>
                         </el-popover>
                     </template>
                 </el-table-column>
@@ -232,6 +230,10 @@
         <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
             <sql-source :reload_list="sqlSourceBoxShow"></sql-source>
         </el-drawer>
+        <!-- 日志详情弹窗 -->
+        <el-dialog title="日志详情" :visible.sync="logBodyVisible" style="white-space: pre;">
+            {{logBody}}
+        </el-dialog>
     </div>
 
 
@@ -262,6 +264,8 @@
                   size: 20,
                 },
                 logListData: [], // 日志列表，没有分页；
+                logBodyVisible: false,
+                logBody: "",
                 configLogShow: false, // 任务日志弹窗
                 configLogTitle: '',
                 registerListData: [],
@@ -309,8 +313,9 @@
                         if (res.data.list[i].top_number){
                             ratio = res.data.list[i].top_error_number / res.data.list[i].top_number
                         }
-
-
+                        if (res.data.list[i].command.sql){
+                            res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
+                        }
                         res.data.list[i].status = res.data.list[i].status.toString()
                         res.data.list[i].topRatio = 100 - ratio * 100
                     }
@@ -465,6 +470,14 @@
                         return this.$message.error(res.message);
                     }
                     this.logListData = res.data.list;
+                })
+            },
+            // 日志描述展示
+            logBodyShow(logItem){
+                // this.logBody = logItem.body
+                // this.logBodyVisible=true
+                this.$alert('<div style="white-space: pre;">'+logItem.body+'<div>', '日志详情',{
+                    dangerouslyUseHTMLString: true
                 })
             },
             registerList(){

@@ -98,10 +98,16 @@ func (job *CronJob) Run() {
 		res, err = job.rpcFunc(ctx)
 	case models.ProtocolCmd:
 		res, err = job.cmdFunc(ctx)
+	case models.ProtocolSql:
+		res, err = job.sqlFunc(ctx)
 	}
 
 	if err != nil {
-		g = models.NewErrorCronLog(job.conf, err.Error(), st)
+		body := err.Error()
+		if res != nil {
+			body = string(res)
+		}
+		g = models.NewErrorCronLog(job.conf, body, st)
 		job.ErrorCount++
 	} else {
 		g = models.NewSuccessCronLog(job.conf, string(res), st)
@@ -143,7 +149,7 @@ func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err error) {
 		// 手头目前没有rpc的服务，不好测试验证。
 	default:
 		job.ErrorCount = -2
-		return nil, fmt.Errorf("未支持的rpc method，任务已终止。")
+		return nil, fmt.Errorf("未支持的rpc method %s，任务已终止。", job.commandParse.Rpc.Method)
 	}
 }
 
@@ -178,6 +184,17 @@ func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err error) {
 		} else {
 			return res, nil
 		}
+	}
+}
+
+// rpc 执行函数
+func (job *CronJob) sqlFunc(ctx context.Context) (res []byte, err error) {
+	switch job.commandParse.Sql.Driver {
+	case models.SqlSourceMysql:
+		return job.sqlMysql(ctx, job.commandParse.Sql)
+	default:
+		job.ErrorCount = -2
+		return nil, fmt.Errorf("未支持的sql 驱动 %s，任务已终止。", job.commandParse.Sql.Driver)
 	}
 }
 

@@ -33,6 +33,9 @@ var SqlSource = Vue.extend({
                 <el-form-item label="密码">
                     <el-input v-model="form.data.source.password"></el-input>
                 </el-form-item>
+                <el-form-item label="选中库名">
+                    <el-input v-model="form.data.source.database"></el-input>
+                </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="initForm(false,'-')">取 消</el-button>
@@ -97,7 +100,7 @@ var SqlSource = Vue.extend({
         },
         // 删除连接
         deleteSqlSource(id){
-            if (!isNaN(id)){
+            if (id<0){
                 return this.$message.warning('参数异常，操作取消')
             }
             api.innerPost("/setting/sql_source_change_status", {id:id, status: 9}, (res) =>{
@@ -132,6 +135,7 @@ var SqlSource = Vue.extend({
                     source:{
                         hostname: "",
                         port: "",
+                        database:"",
                         username: "",
                         password: ""
                     }

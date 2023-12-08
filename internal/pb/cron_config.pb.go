@@ -54,13 +54,16 @@ type CronConfigCommand struct {
 		Action string `json:"action"` // 方法
 		Body   string `json:"body"`   // 请求参数
 	} `json:"rpc"`
-	Cmd string `json:"cmd"`
-	Sql struct {
-		Driver    string        `json:"driver"`     // 驱动，默认mysql
-		Source    CronSqlSource `json:"source"`     // 具体链接配置
-		ErrAction int           `json:"err_action"` // 错误后行为
-		Statement []string      `json:"statement"`  // sql语句多条
-	} `json:"sql"`
+	Cmd string   `json:"cmd"`
+	Sql *CronSql `json:"sql"`
+}
+
+// sql任务配置
+type CronSql struct {
+	Driver    string        `json:"driver"`     // 驱动，默认mysql
+	Source    CronSqlSource `json:"source"`     // 具体链接配置
+	ErrAction int           `json:"err_action"` // 错误后行为
+	Statement []string      `json:"statement"`  // sql语句多条
 }
 
 // CronSqlSource sql任务 来源配置
