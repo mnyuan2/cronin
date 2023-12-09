@@ -38,3 +38,14 @@ func routerSqlChangeStatus(ctx *gin.Context) {
 	rep, err := biz.NewSettingSqlService().ChangeStatus(ctx.Request.Context(), r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+// sql连接ping
+func routerSqlPing(ctx *gin.Context) {
+	r := &pb.SettingSqlPingRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingSqlService().Ping(ctx.Request.Context(), r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
+	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
@@ -15,9 +16,18 @@ import (
 
 // mysql 命令执行
 func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, err error) {
+	source, err := data.NewCronSettingData(ctx).GetSqlSourceOne(r.Source.Id)
+	if err != nil {
+		return nil, fmt.Errorf("连接配置异常 %w", err)
+	}
+	s := &pb.CronSqlSource{}
+	if err = jsoniter.UnmarshalFromString(source.Content, s); err != nil {
+		return nil, fmt.Errorf("连接配置解析异常 %w", err)
+	}
+
 	conf := config.DataBaseConf{
 		Source: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
-			r.Source.Username, r.Source.Password, r.Source.Hostname, r.Source.Port, r.Source.Database),
+			s.Username, s.Password, s.Hostname, s.Port, s.Database),
 	}
 	_db := db.Conn(conf).WithContext(ctx)
 	if _db.Error != nil {
@@ -33,20 +43,20 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, e
 			break
 		}
 	}
-	return jsoniter.Marshal(strings.Join(res, "\r\n"))
+	return []byte(strings.Join(res, `
+`)), nil
 }
 
 func (job *CronJob) sqlMysqlItem(_db *gorm.DB, sql string) (res string, err error) {
 	startTime := time.Now()
 	defer func() {
-		endTime := time.Now()
 		status := "成功"
 		info := "ok."
 		if err != nil {
 			status = "失败"
 			info = err.Error()
 		}
-		res = fmt.Sprintf("[%s]	%v	|	%s	|	%s", startTime.Format(time.RFC3339), endTime.Unix()-startTime.Unix(), status, info)
+		res = fmt.Sprintf("[%s]	%vs	|	%s	|	%s", startTime.Format(time.RFC3339), time.Since(startTime).Seconds(), status, info)
 	}()
 
 	err = _db.Exec(sql).Error

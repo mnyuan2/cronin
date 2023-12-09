@@ -38,6 +38,7 @@ var SqlSource = Vue.extend({
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
+                <el-button @click="pingForm()" style="float: left;">连接测试</el-button>
                 <el-button @click="initForm(false,'-')">取 消</el-button>
                 <el-button type="primary" @click="submitForm()">确 定</el-button>
             </div>
@@ -120,6 +121,16 @@ var SqlSource = Vue.extend({
                 }
                 this.initForm(false)
                 this.getList()
+            })
+        },
+        // sql连接连接
+        pingForm(){
+            let body = this.form.data.source
+            api.innerPost("/setting/sql_source_ping", body, (res) =>{
+                if (!res.status){
+                    return this.$message.error(res.message)
+                }
+                return this.$message.success('连接成功');
             })
         },
         // 初始化表单数据

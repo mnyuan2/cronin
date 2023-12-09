@@ -57,7 +57,7 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 
 	for _, item := range resp.List {
 		item.Command = &pb.CronConfigCommand{}
-		item.StatusName = enum.StatusMap[item.Status]
+		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
 		jsoniter.UnmarshalFromString(item.CommandStr, item.Command)
 		if top, ok := topList[item.Id]; ok {
@@ -206,21 +206,19 @@ func (dm *CronConfigService) ChangeStatus(ctx context.Context, r *pb.CronConfigS
 	if conf.Status == r.Status {
 		return nil, fmt.Errorf("状态相等")
 	}
-	if _, ok := enum.StatusMap[r.Status]; !ok {
-		return nil, fmt.Errorf("错误状态请求")
-	}
-
-	if conf.Status == enum.StatusActive && r.Status == enum.StatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
+	if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
 		NewTaskService(config.MainConf()).Del(conf)
 		conf.EntryId = 0
-	} else if conf.Status == enum.StatusDisable && r.Status == enum.StatusActive { // 停用 到 启用 要把任务注册；
+	} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
 		if err = NewTaskService(config.MainConf()).Add(conf); err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, fmt.Errorf("错误状态请求")
 	}
 
 	conf.Status = r.Status
-	if err = da.ChangeStatus(conf); err != nil {
+	if err = da.ChangeStatus(conf, "视图操作"+models.ConfigStatusMap[r.Status]); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
 		return nil, err
 	}

@@ -44,8 +44,9 @@ func (dm *TaskService) Init() (err error) {
 			// 启用成功，更新任务id；启动失败，置空任务id
 			if err := dm.Add(conf); err != nil {
 				conf.EntryId = 0
+				conf.Status = models.ConfigStatusError
+				cronDb.ChangeStatus(conf, "初始化注册错误")
 			}
-			cronDb.ChangeStatus(conf)
 		}
 	}
 

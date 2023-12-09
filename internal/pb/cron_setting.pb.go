@@ -36,6 +36,13 @@ type SettingSqlSetReply struct {
 	Id int `json:"id"`
 }
 
+// sql连接监测
+type SettingSqlPingRequest struct {
+	*SettingSqlSource
+}
+type SettingSqlPingReply struct {
+}
+
 type SettingChangeStatusRequest struct {
 	Id     int `json:"id"`
 	Status int `json:"status"`

@@ -3,7 +3,6 @@ package biz
 import (
 	"bytes"
 	"context"
-	"cron/internal/basic/enum"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -15,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -36,7 +36,7 @@ func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
 		return nil, fmt.Errorf("执行时间格式不规范，%s", err.Error())
 	}
 	if m.execTime.Unix()-60*60*1 < time.Now().Unix() {
-		return nil, fmt.Errorf("时间至少当前1小时以后")
+		return nil, fmt.Errorf("执行时间至少间隔1小时以后")
 	}
 
 	return m, nil
@@ -84,9 +84,9 @@ func (job *CronJob) Run() {
 		}
 		data.NewCronLogData(ctx).Add(g)
 		if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
-			job.conf.Status = enum.StatusDisable
+			job.conf.Status = models.ConfigStatusFinish
 			job.conf.EntryId = 0
-			data.NewCronConfigData(ctx).ChangeStatus(job.conf)
+			data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行完成")
 		}
 	}()
 
@@ -114,11 +114,14 @@ func (job *CronJob) Run() {
 		job.ErrorCount = 0
 	}
 	// 连续错误达到5次，任务终止。
-	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
+	if job.ErrorCount >= 5 || job.ErrorCount < 0 || job.conf.Type == models.TypeOnce {
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
-		job.conf.Status = enum.StatusDisable
+		job.conf.Status = models.ConfigStatusError
 		job.conf.EntryId = 0
-		data.NewCronConfigData(ctx).ChangeStatus(job.conf)
+		err := data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行失败")
+		if err != nil {
+			log.Println("任务状态写入失败 id", job.conf.Id, err.Error())
+		}
 	}
 }
 

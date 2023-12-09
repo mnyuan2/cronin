@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
@@ -9,10 +10,13 @@ import (
 	"cron/internal/models"
 	"cron/internal/pb"
 	"errors"
+	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"strings"
 )
 
 type SettingSqlService struct {
+	db *db.Database
 }
 
 func NewSettingSqlService() *SettingSqlService {
@@ -91,8 +95,22 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 	}, err
 }
 
+func (dm *SettingSqlService) Ping(ctx context.Context, r *pb.SettingSqlPingRequest) (resp *pb.SettingSqlPingReply, err error) {
+	conf := config.DataBaseConf{
+		Source: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
+			r.Username, r.Password, r.Hostname, r.Port, r.Database),
+	}
+	err = db.Conn(conf).Error
+	if err != nil {
+		return nil, err
+	}
+	return &pb.SettingSqlPingReply{}, nil
+}
+
 // 删除源
 func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
+	dm.db = db.New(ctx)
+
 	// 同一个任务，这里要加请求锁
 	_data := data.NewCronSettingData(ctx)
 	one, err := _data.GetSqlSourceOne(r.Id)
@@ -109,6 +127,15 @@ func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChan
 	// 这里还是要做是否使用的检测；
 	// 如果使用未启用就联动置空（也不能删除，要么删除任务或者改任务），如果使用并启用禁止删除；
 	// 如果没有试用就直接删除。
+	list := []string{}
+	err = dm.db.Write.Raw(fmt.Sprintf("SELECT `name` FROM `cron_config` WHERE protocol=%v and JSON_CONTAINS(command, '%v', '$.sql.source.id') = 1", models.ProtocolSql, one.Id)).
+		Scan(&list).Error
+	if err != nil {
+		return nil, fmt.Errorf("任务检测错误，%w", err)
+	}
+	if len(list) > 0 {
+		return nil, fmt.Errorf("任务 %s 已使用连接，删除失败！", strings.Join(list, "、"))
+	}
 
 	err = _data.Del(one.Scene, one.Id)
 	return &pb.SettingChangeStatusReply{}, err

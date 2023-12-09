@@ -20,6 +20,8 @@ type CronConfigListItem struct {
 	Remark         string             `json:"remark"`
 	Status         int                `json:"status"`
 	StatusName     string             `json:"status_name"`
+	StatusRemark   string             `json:"status_remark"`
+	StatusDt       string             `json:"status_dt"`
 	Type           int                `json:"type"`
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数

@@ -9,6 +9,9 @@
         .icon{
             font-size: 24px;
         }
+        .primary{
+            color: #409EFF;
+        }
         .warning{
             color: #e6a23c;
         }
@@ -60,21 +63,30 @@
                         <el-table-column prop="name" label="任务名称"></el-table-column>
                         <el-table-column prop="protocol_name" label="协议"></el-table-column>
                         <el-table-column prop="remark" label="备注"></el-table-column>
-                        <el-table-column prop="status_name" label="状态">
+                        <el-table-column prop="" label="状态">
                             <template slot-scope="scope">
-                                <el-switch
-                                        validate-event="true"
-                                        :value="scope.row.status"
-                                        active-value="2"
-                                        inactive-value="1"
-                                        @change="changeStatus(scope.$index, scope.row.id, $event)"
-                                ></el-switch>
+                                <el-tooltip placement="top-start">
+                                    <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
+                                    <span :class="statusClass(scope.row.status)">{{scope.row.status_name}}</span>
+                                </el-tooltip>
+
+
+
+<!--                                <el-switch-->
+<!--                                        validate-event="true"-->
+<!--                                        :value="scope.row.status"-->
+<!--                                        active-value="2"-->
+<!--                                        inactive-value="1"-->
+<!--                                        @change="changeStatus(scope.$index, scope.row.id, $event)"-->
+<!--                                ></el-switch>-->
                             </template>
                         </el-table-column>
                         <el-table-column label="操作">
-                            <template slot-scope="scope">
-                                <el-button type="text" @click="editShow(scope.$index)">编辑</el-button>
-                                <el-button type="text" @click="logByConfig(scope.row.id, scope.row.name)">日志</el-button>
+                            <template slot-scope="{row}">
+                                <el-button type="text" @click="editShow(row)">编辑</el-button>
+                                <el-button type="text" @click="changeStatus(row, 2)" v-if="row.status!=2">激活</el-button>
+                                <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2">停用</el-button>
+                                <el-button type="text" @click="logByConfig(row.id, row.name)">日志</el-button>
                             </template>
 <!--                            // 操作，再弹窗中进行操作（小型弹窗）；-->
 <!--                            // 日志，侧边栏弹窗查看完整日志；-->
@@ -231,8 +243,8 @@
             <sql-source :reload_list="sqlSourceBoxShow"></sql-source>
         </el-drawer>
         <!-- 日志详情弹窗 -->
-        <el-dialog title="日志详情" :visible.sync="logBodyVisible" style="white-space: pre;">
-            {{logBody}}
+        <el-dialog title="日志详情" :visible.sync="logBodyVisible" size="30%" style="white-space: pre;">
+            <pre><code>{{logBody.replace(/\\n/g, '\n').replace(/\\t/g, '\t')}}</code></pre>
         </el-dialog>
     </div>
 
@@ -425,10 +437,10 @@
                 }
             },
             // 编辑弹窗
-            editShow(index){
+            editShow(row){
                 this.setConfigShow = true
                 this.setConfigTitle = '编辑任务'
-                this.form = this.listData[index]
+                this.form = row
                 this.form.type = this.form.type.toString()
                 this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字
                 this.form.protocol = this.form.protocol.toString()
@@ -436,17 +448,18 @@
                 this.changeType()
             },
             // 改变状态
-            changeStatus(index, id, newStatus){
-                this.$confirm(newStatus=='1'? '确认关闭任务': '确认开启任务', '提示',{
+            changeStatus(row, newStatus){
+                this.$confirm(newStatus==1? '确认关闭任务': '确认开启任务', '提示',{
                     type: 'warning',
                 }).then(()=>{
                     // 确认操作
-                    api.innerPost("/config/change_status", {id:id,status:Number(newStatus)}, (res)=>{
+                    api.innerPost("/config/change_status", {id:row.id,status:Number(newStatus)}, (res)=>{
                         console.log("状态改变响应",res)
                         if (res.code != '000000'){
                             return this.$message.error(res.message)
                         }
-                        this.listData[index].status = newStatus
+                        row.status = newStatus.toString()
+                        row.status_name = newStatus == 1 ? '停用' :'激活'
                         return this.$message.success(res.message)
                     })
                 }).catch(()=>{
@@ -474,11 +487,11 @@
             },
             // 日志描述展示
             logBodyShow(logItem){
-                // this.logBody = logItem.body
-                // this.logBodyVisible=true
-                this.$alert('<div style="white-space: pre;">'+logItem.body+'<div>', '日志详情',{
-                    dangerouslyUseHTMLString: true
-                })
+                this.logBody = logItem.body
+                this.logBodyVisible=true
+                // this.$alert('<div style="white-space: pre;">'+logItem.body+'<div>', '日志详情',{
+                //     dangerouslyUseHTMLString: true
+                // })
             },
             registerList(){
                 this.registerListShow = true;
@@ -560,6 +573,18 @@
                 }).then(()=>{
                     this.form.command.sql.statement.splice(index,1)
                 })
+            },
+            statusClass(status){
+                switch (Number(status)) {
+                    case 1:
+                        return 'warning';
+                    case 2:
+                        return 'primary';
+                    case 3:
+                        return 'success';
+                    case 4:
+                        return 'danger';
+                }
             }
         }
     })
