@@ -8,13 +8,13 @@ import (
 )
 
 type CronLog struct {
-	Id       int     `json:"id"`        // 主键
-	ConfId   int     `json:"conf_id"`   // 配置id
-	CreateDt string  `json:"create_dt"` // 完成时间
-	Duration float64 `json:"duration"`  // 耗时
-	Status   int     `json:"status"`    // 状态：1.错误、2.正常
-	Body     string  `json:"body"`      // 日志文本
-	Snap     string  `json:"snap"`      // 任务快照
+	Id       int     `json:"id" gorm:"column:id;type:int(11);primary_key;comment:主键;"`
+	ConfId   int     `json:"conf_id" gorm:"column:conf_id;type:int(11);index:conf_id;comment:配置id;"`
+	CreateDt string  `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:完成时间;"`
+	Duration float64 `json:"duration" gorm:"column:duration;type:double(10,3);default:0;comment:耗时;"`
+	Status   int     `json:"status" gorm:"column:status;type:tinyint(2);default:0;comment:状态：1.错误、2.正常;"`
+	Body     string  `json:"body" gorm:"column:body;type:text;default:'';comment:日志内容;"`
+	Snap     string  `json:"snap" gorm:"column:snap;type:text;default:'';comment:任务快照;"`
 }
 
 var LogStatusMap = map[int]string{

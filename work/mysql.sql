@@ -7,7 +7,7 @@ CREATE TABLE `cron_setting`  (
     `content` text NULL COMMENT '内容',
     `create_dt` datetime(0) NULL COMMENT '创建时间',
     `update_dt` datetime(0) NULL COMMENT '更新时间',
-    `status` tinyint(2) NULL DEFAULT 1 COMMENT '状态:枚举由业务定义',
+    `status` tinyint(2) NULL DEFAULT 2 COMMENT '状态:枚举由业务定义',
     PRIMARY KEY (`id`),
     INDEX `env`(`env`, `key`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
