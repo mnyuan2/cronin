@@ -13,10 +13,6 @@ type Str struct {
 	sep string
 }
 
-type Number interface {
-	int | int32 | int64 | float32 | float64 | string
-}
-
 func NewStr() *Str {
 	return &Str{
 		sep: ",",

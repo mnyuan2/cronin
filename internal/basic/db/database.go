@@ -26,14 +26,18 @@ var (
 func New(ctx context.Context) *Database {
 	once.Do(func() {
 		conf := config.DbConf()
-		write = Conn(conf["write"])
-		read = Conn(conf["read"])
+		if write = Conn(conf["write"]); write.Error != nil {
+			panic(write.Error)
+		}
+		if read = Conn(conf["read"]); read.Error != nil {
+			panic(read.Error)
+		}
 	})
 
 	// 根据实例,修改上下文
 	return &Database{
-		Write: &MyDB{read.WithContext(ctx)},
-		Read:  &MyDB{write.WithContext(ctx)},
+		Write: &MyDB{write.WithContext(ctx)},
+		Read:  &MyDB{read.WithContext(ctx)},
 	}
 }
 
