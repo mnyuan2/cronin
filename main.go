@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"cron/internal/basic/config"
+	"cron/internal/basic/db"
+	"cron/internal/models"
 	"cron/internal/server"
 	"embed"
 	"fmt"
@@ -16,6 +19,8 @@ var (
 func main() {
 	config.Version = version
 	fmt.Println("版本号", config.Version)
+	// 注册mysql表
+	models.AutoMigrate(db.New(context.Background()))
 	// 初始化任务
 	server.InitTask()
 	// 初始化http

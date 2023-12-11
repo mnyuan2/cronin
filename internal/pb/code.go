@@ -36,3 +36,9 @@ var CodeList = map[string]string{
 	DatalFind:        "数据查询错误！",
 	DataUpdate:       "数据更新错误！",
 }
+
+type Page struct {
+	Size  int   `json:"size"`
+	Page  int   `json:"page"`
+	Total int64 `json:"total"`
+}

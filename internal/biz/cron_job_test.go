@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"cron/internal/models"
+	"cron/internal/pb"
 	"fmt"
 	"github.com/axgle/mahonia"
 	"github.com/robfig/cron/v3"
@@ -198,6 +199,36 @@ echo "任务执行完毕..."`
 		continue
 	}
 	fmt.Println("执行结果：", string(cmd))
+}
+
+// 执行sql命令
+func TestCronJob_Mysql(t *testing.T) {
+	conf := &models.CronConfig{}
+	r := &pb.CronSql{
+		Driver: models.SqlSourceMysql,
+		Source: pb.CronSqlSource{
+			Id:       0,
+			Title:    "zby.dev",
+			Hostname: "gz-cdb-6ggn2bux.sql.tencentcdb.com",
+			Database: "zhubaoe",
+			Username: "root",
+			Password: "Zby_123456",
+			Port:     "63438",
+		},
+		ErrAction: models.SqlErrActionProceed,
+		Statement: []string{
+			"UPDATE cron_log set body='修改3' WHERE id=2247",
+			"SELECT 1、",
+		},
+	}
+
+	ctx := context.Background()
+	res, err := NewCronJob(conf).sqlMysql(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(res))
 }
 
 type J struct {
