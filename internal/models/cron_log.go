@@ -2,23 +2,24 @@ package models
 
 import (
 	"cron/internal/basic/conv"
+	"cron/internal/basic/enum"
 	jsoniter "github.com/json-iterator/go"
 	"time"
 )
 
 type CronLog struct {
-	Id       int     `json:"id"`        // 主键
-	ConfId   int     `json:"conf_id"`   // 配置id
-	CreateDt string  `json:"create_dt"` // 完成时间
-	Duration float64 `json:"duration"`  // 耗时
-	Status   int     `json:"status"`    // 状态：1.错误、2.正常
-	Body     string  `json:"body"`      // 日志文本
-	Snap     string  `json:"snap"`      // 任务快照
+	Id       int     `json:"id" gorm:"column:id;type:int(11);primary_key;comment:主键;"`
+	ConfId   int     `json:"conf_id" gorm:"column:conf_id;type:int(11);index:conf_id;comment:配置id;"`
+	CreateDt string  `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:完成时间;"`
+	Duration float64 `json:"duration" gorm:"column:duration;type:double(10,3);default:0;comment:耗时;"`
+	Status   int     `json:"status" gorm:"column:status;type:tinyint(2);default:0;comment:状态：1.错误、2.正常;"`
+	Body     string  `json:"body" gorm:"column:body;type:text;default:'';comment:日志内容;"`
+	Snap     string  `json:"snap" gorm:"column:snap;type:text;default:'';comment:任务快照;"`
 }
 
 var LogStatusMap = map[int]string{
-	StatusDisable: "错误",
-	StatusActive:  "正常",
+	enum.StatusDisable: "错误",
+	enum.StatusActive:  "正常",
 }
 
 // 新建一个错误日志
@@ -29,7 +30,7 @@ func NewErrorCronLog(conf *CronConfig, body string, startTime time.Time) *CronLo
 		ConfId:   conf.Id,
 		CreateDt: t.Format(conv.FORMAT_DATETIME),
 		Duration: t.Sub(startTime).Seconds(),
-		Status:   StatusDisable,
+		Status:   enum.StatusDisable,
 		Body:     body,
 		Snap:     str,
 	}
@@ -43,7 +44,7 @@ func NewSuccessCronLog(conf *CronConfig, body string, startTime time.Time) *Cron
 		ConfId:   conf.Id,
 		CreateDt: t.Format(conv.FORMAT_DATETIME),
 		Duration: t.Sub(startTime).Seconds(),
-		Status:   StatusActive,
+		Status:   enum.StatusActive,
 		Body:     body,
 		Snap:     str,
 	}

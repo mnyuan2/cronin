@@ -1,11 +1,5 @@
 package pb
 
-type Page struct {
-	Size  int   `json:"size"`
-	Page  int   `json:"page"`
-	Total int64 `json:"total"`
-}
-
 // 任务列表
 type CronConfigListRequest struct {
 	Type int `form:"type"`
@@ -26,6 +20,8 @@ type CronConfigListItem struct {
 	Remark         string             `json:"remark"`
 	Status         int                `json:"status"`
 	StatusName     string             `json:"status_name"`
+	StatusRemark   string             `json:"status_remark"`
+	StatusDt       string             `json:"status_dt"`
 	Type           int                `json:"type"`
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
@@ -60,7 +56,27 @@ type CronConfigCommand struct {
 		Action string `json:"action"` // 方法
 		Body   string `json:"body"`   // 请求参数
 	} `json:"rpc"`
-	Cmd string `json:"cmd"`
+	Cmd string   `json:"cmd"`
+	Sql *CronSql `json:"sql"`
+}
+
+// sql任务配置
+type CronSql struct {
+	Driver    string        `json:"driver"`     // 驱动，默认mysql
+	Source    CronSqlSource `json:"source"`     // 具体链接配置
+	ErrAction int           `json:"err_action"` // 错误后行为
+	Statement []string      `json:"statement"`  // sql语句多条
+}
+
+// CronSqlSource sql任务 来源配置
+type CronSqlSource struct {
+	Id       int    `json:"id"`
+	Title    string `json:"title"`
+	Hostname string `json:"hostname"`
+	Database string `json:"database"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Port     string `json:"port"`
 }
 
 // 已注册列表

@@ -1,30 +1,37 @@
 package conv
 
 import (
+	"errors"
+	"reflect"
 	"regexp"
+	"strconv"
+	"strings"
 	"unicode"
 )
 
-type strings struct {
+type Str struct {
+	sep string
 }
 
-func Strings() *strings {
-	return &strings{}
+func NewStr() *Str {
+	return &Str{
+		sep: ",",
+	}
 }
 
 // 是否包含数字
-func (m *strings) IsNumber(s string) bool {
+func (m *Str) IsNumber(s string) bool {
 	re, _ := regexp.MatchString(`^[\+-]?\d+$`, s)
 	return re
 }
 
 // 是否包含字母和数字
-func (m *strings) IsLettersAndNumbers(str string) bool {
+func (m *Str) IsLettersAndNumbers(str string) bool {
 	return regexp.MustCompile(`^[A-Za-z0-9]+$`).MatchString(str)
 }
 
 // 检测字符串必须是同时包含字母和数字的组合
-func (m *strings) ItIsLettersAndNumbers(str string) bool {
+func (m *Str) ItIsLettersAndNumbers(str string) bool {
 	if !m.IsLettersAndNumbers(str) {
 		return false
 	}
@@ -39,11 +46,43 @@ func (m *strings) ItIsLettersAndNumbers(str string) bool {
 }
 
 // 是否包含中文
-func (m *strings) IsChinese(str string) bool {
+func (m *Str) IsChinese(str string) bool {
 	for _, v := range str {
 		if unicode.Is(unicode.Han, v) {
 			return true
 		}
 	}
 	return false
+}
+
+// 分切字符串
+func (m *Str) Slice(val string, out interface{}) (err error) {
+	if val == "" {
+		return nil
+	}
+	t := reflect.TypeOf(out)
+	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Slice {
+		return errors.New("请指定切片指针out")
+	}
+
+	vtk := t.Elem().Elem().Kind()
+	v := reflect.ValueOf(out).Elem()
+	var itemVal interface{}
+	for _, item := range strings.Split(val, m.sep) {
+		switch vtk {
+		case reflect.String:
+			itemVal = val
+		case reflect.Int, reflect.Int32:
+			itemVal, err = strconv.Atoi(item)
+			if err != nil {
+				return err
+			}
+		default:
+			return errors.New("out 不支持的元素类型")
+		}
+		v = reflect.Append(v, reflect.ValueOf(itemVal))
+	}
+
+	reflect.ValueOf(out).Elem().Set(v)
+	return nil
 }

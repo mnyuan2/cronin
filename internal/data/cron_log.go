@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"cron/internal/models"
 	"fmt"
 	"time"
@@ -50,7 +51,7 @@ WHERE
 
 	temps := []*SumConfTop{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Read.Raw(sql, models.StatusDisable, maxNumber, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Take(&temps).Error
+	err = m.db.Read.Raw(sql, enum.StatusDisable, maxNumber, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Take(&temps).Error
 	if err != nil {
 		return list, err
 	}

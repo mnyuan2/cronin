@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -35,7 +36,7 @@ func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
 		return nil, fmt.Errorf("执行时间格式不规范，%s", err.Error())
 	}
 	if m.execTime.Unix()-60*60*1 < time.Now().Unix() {
-		return nil, fmt.Errorf("时间至少当前1小时以后")
+		return nil, fmt.Errorf("执行时间至少间隔1小时以后")
 	}
 
 	return m, nil
@@ -83,9 +84,9 @@ func (job *CronJob) Run() {
 		}
 		data.NewCronLogData(ctx).Add(g)
 		if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
-			job.conf.Status = models.StatusDisable
+			job.conf.Status = models.ConfigStatusFinish
 			job.conf.EntryId = 0
-			data.NewCronConfigData(ctx).ChangeStatus(job.conf)
+			data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行完成")
 		}
 	}()
 
@@ -97,21 +98,30 @@ func (job *CronJob) Run() {
 		res, err = job.rpcFunc(ctx)
 	case models.ProtocolCmd:
 		res, err = job.cmdFunc(ctx)
+	case models.ProtocolSql:
+		res, err = job.sqlFunc(ctx)
 	}
 
 	if err != nil {
-		g = models.NewErrorCronLog(job.conf, err.Error(), st)
+		body := err.Error()
+		if res != nil {
+			body = string(res)
+		}
+		g = models.NewErrorCronLog(job.conf, body, st)
 		job.ErrorCount++
 	} else {
 		g = models.NewSuccessCronLog(job.conf, string(res), st)
 		job.ErrorCount = 0
 	}
 	// 连续错误达到5次，任务终止。
-	if job.ErrorCount >= 5 || job.ErrorCount < 0 {
+	if job.ErrorCount >= 5 || job.ErrorCount < 0 || job.conf.Type == models.TypeOnce {
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
-		job.conf.Status = models.StatusDisable
+		job.conf.Status = models.ConfigStatusError
 		job.conf.EntryId = 0
-		data.NewCronConfigData(ctx).ChangeStatus(job.conf)
+		err := data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行失败")
+		if err != nil {
+			log.Println("任务状态写入失败 id", job.conf.Id, err.Error())
+		}
 	}
 }
 
@@ -142,7 +152,7 @@ func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err error) {
 		// 手头目前没有rpc的服务，不好测试验证。
 	default:
 		job.ErrorCount = -2
-		return nil, fmt.Errorf("未支持的rpc method，任务已终止。")
+		return nil, fmt.Errorf("未支持的rpc method %s，任务已终止。", job.commandParse.Rpc.Method)
 	}
 }
 
@@ -177,6 +187,17 @@ func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err error) {
 		} else {
 			return res, nil
 		}
+	}
+}
+
+// rpc 执行函数
+func (job *CronJob) sqlFunc(ctx context.Context) (res []byte, err error) {
+	switch job.commandParse.Sql.Driver {
+	case models.SqlSourceMysql:
+		return job.sqlMysql(ctx, job.commandParse.Sql)
+	default:
+		job.ErrorCount = -2
+		return nil, fmt.Errorf("未支持的sql 驱动 %s，任务已终止。", job.commandParse.Sql.Driver)
 	}
 }
 
