@@ -5,8 +5,9 @@ import (
 )
 
 type Main struct {
-	Http *HttpConf `yaml:"http"`
-	Task *TaskConf `yaml:"task"`
+	Http   *HttpConf   `yaml:"http"`
+	Task   *TaskConf   `yaml:"task"`
+	Crypto *CryptoConf `yaml:"crypto"`
 }
 
 type HttpConf struct {
@@ -14,6 +15,9 @@ type HttpConf struct {
 }
 type TaskConf struct {
 	LogRetention string `yaml:"log_retention"`
+}
+type CryptoConf struct {
+	Secret string `yaml:"secret"`
 }
 
 var mainConf Main
