@@ -42,5 +42,5 @@ CREATE TABLE `cron_log` (
     `body` text NULL COMMENT '日志内容',
     `snap` text NULL COMMENT '任务快照',
     PRIMARY KEY ( `id` ),
-    INDEX ( `conf_id` )
+    INDEX `conf_id` (`conf_id`,`create_dt`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
