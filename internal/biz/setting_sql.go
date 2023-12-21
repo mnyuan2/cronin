@@ -66,17 +66,26 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 	one := &models.CronSetting{}
 	_data := data.NewCronSettingData(ctx)
 	ti := conv.TimeNew()
+	oldSource := &pb.SettingSqlSource{}
 	// 分为新增和编辑
 	if r.Id > 0 {
-		w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", r.Id).Eq("status", enum.StatusActive)
-		one, err = _data.GetOne(w)
+		one, err = _data.GetSqlSourceOne(r.Id)
 		if err != nil {
 			return nil, err
 		}
+		jsoniter.UnmarshalFromString(one.Content, oldSource)
 	} else {
 		one.Scene = models.SceneSqlSource
 		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
+	}
+
+	// 提交密码与旧密码不一致就加密
+	if r.Source.Password != "" && r.Source.Password != oldSource.Password {
+		r.Source.Password, err = models.SqlSourceEncrypt(r.Source.Password)
+		if err != nil {
+			return nil, fmt.Errorf("加密失败，%w", err)
+		}
 	}
 
 	one.UpdateDt = ti.String()
@@ -96,9 +105,13 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 }
 
 func (dm *SettingSqlService) Ping(ctx context.Context, r *pb.SettingSqlPingRequest) (resp *pb.SettingSqlPingReply, err error) {
+	password, err := models.SqlSourceDecode(r.Password)
+	if err != nil {
+		return nil, fmt.Errorf("密码异常,%w", err)
+	}
 	conf := config.DataBaseConf{
 		Source: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
-			r.Username, r.Password, r.Hostname, r.Port, r.Database),
+			r.Username, password, r.Hostname, r.Port, r.Database),
 	}
 	err = db.Conn(conf).Error
 	if err != nil {

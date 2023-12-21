@@ -31,7 +31,7 @@ var SqlSource = Vue.extend({
                     <el-input v-model="form.data.source.username"></el-input>
                 </el-form-item>
                 <el-form-item label="密码">
-                    <el-input v-model="form.data.source.password"></el-input>
+                    <el-input v-model="form.data.source.password" show-password="true"></el-input>
                 </el-form-item>
                 <el-form-item label="选中库名">
                     <el-input v-model="form.data.source.database"></el-input>

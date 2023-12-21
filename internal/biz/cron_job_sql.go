@@ -25,9 +25,13 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, e
 		return nil, fmt.Errorf("连接配置解析异常 %w", err)
 	}
 
+	password, err := models.SqlSourceDecode(s.Password)
+	if err != nil {
+		return nil, fmt.Errorf("密码异常,%w", err)
+	}
 	conf := config.DataBaseConf{
 		Source: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
-			s.Username, s.Password, s.Hostname, s.Port, s.Database),
+			s.Username, password, s.Hostname, s.Port, s.Database),
 	}
 	_db := db.Conn(conf).WithContext(ctx)
 	if _db.Error != nil {
