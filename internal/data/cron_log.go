@@ -51,7 +51,7 @@ WHERE
 
 	temps := []*SumConfTop{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Read.Raw(sql, enum.StatusDisable, maxNumber, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Take(&temps).Error
+	err = m.db.Read.Raw(sql, enum.StatusDisable, maxNumber, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Find(&temps).Error
 	if err != nil {
 		return list, err
 	}

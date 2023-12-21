@@ -9,7 +9,12 @@ import (
 )
 
 func TestElasticConf(t *testing.T) {
-	fmt.Printf("%#v\n", ElasticConf())
+	a := "des"
+	fmt.Println(
+		len(a),
+		//a[:4], a[4:],
+	)
+	//fmt.Printf("%#v\n", ElasticConf())
 }
 
 func TestDbConf(t *testing.T) {
