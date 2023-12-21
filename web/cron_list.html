@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <title>任务列表</title>
     <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
+    <script src="/static/js/vue@2.7.8.js"></script>
+    <script src="/static/js/element-ui@2.15.14.js"></script>
+    <script src="/static/js/home.js"></script>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/components/sql_source.js"></script>
     <style>
         .icon{
             font-size: 24px;
@@ -45,8 +50,8 @@
 
 
                     <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
-                        <el-menu-item index="1">周期任务</el-menu-item>
-                        <el-menu-item index="2">单次任务</el-menu-item>
+                        <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>
+                        <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>
                     </el-menu>
                     <el-table :data="listData">
                         <el-table-column prop="id" label="编号"></el-table-column>
@@ -249,11 +254,6 @@
 
 
 </body>
-<script src="/static/js/vue@2.7.8.js"></script>
-<script src="/static/js/element-ui@2.15.14.js"></script>
-<script src="/static/js/home.js"></script>
-<script src="/static/js/jquery.min.js"></script>
-<script src="/components/sql_source.js"></script>
 
 <script>
 
@@ -272,6 +272,7 @@
                   page: 1,
                   size: 20,
                 },
+                listRequest: false, // 请求中标志
                 logListData: [], // 日志列表，没有分页；
                 logBodyVisible: false,
                 logBody: "",
@@ -312,8 +313,12 @@
         methods:{
             // 任务列表
             getList(){
+                if (this.listRequest){
+                    return this.$message.info('请求执行中,请稍等.');
+                }
+                this.listRequest = true
                 api.innerGet("/config/list", this.listParam, (res)=>{
-                    console.log("列表响应",res)
+                    this.listRequest = false
                     if (res.code != "000000"){
                         return this.$message.error(res.message);
                     }
@@ -342,8 +347,8 @@
             },
             handleClickTypeLabel(tab, event) {
                 this.listParam.type = tab
-                this.getList()
                 console.log("类型标签页点击", tab, event);
+                this.getList()
             },
             // 枚举
             getDic(){
