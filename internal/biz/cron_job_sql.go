@@ -53,9 +53,9 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, e
 
 func (job *CronJob) sqlMysqlItem(_db *gorm.DB, sql string) (res string, err error) {
 	startTime := time.Now()
+	info := ""
 	defer func() {
 		status := "成功"
-		info := "ok."
 		if err != nil {
 			status = "失败"
 			info = err.Error()
@@ -63,6 +63,11 @@ func (job *CronJob) sqlMysqlItem(_db *gorm.DB, sql string) (res string, err erro
 		res = fmt.Sprintf("[%s]	%vs	|	%s	|	%s", startTime.Format(time.RFC3339), time.Since(startTime).Seconds(), status, info)
 	}()
 
-	err = _db.Exec(sql).Error
+	resp := _db.Exec(sql)
+	if resp.Error != nil {
+		err = resp.Error
+	} else {
+		info = fmt.Sprintf("Affected rows: %v", resp.RowsAffected)
+	}
 	return res, err
 }
