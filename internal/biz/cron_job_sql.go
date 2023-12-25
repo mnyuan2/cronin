@@ -67,7 +67,7 @@ func (job *CronJob) sqlMysqlItem(_db *gorm.DB, sql string) (res string, err erro
 	if resp.Error != nil {
 		err = resp.Error
 	} else {
-		info = fmt.Sprintf("Affected rows: %v", resp.RowsAffected)
+		info = fmt.Sprintf("rows affected: %v", resp.RowsAffected)
 	}
 	return res, err
 }
