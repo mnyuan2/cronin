@@ -8,6 +8,7 @@ type Main struct {
 	Http   *HttpConf   `yaml:"http"`
 	Task   *TaskConf   `yaml:"task"`
 	Crypto *CryptoConf `yaml:"crypto"`
+	User   *UserConf   `yaml:"user"` // 用户配置，配置后接口访问需要登录
 }
 
 type HttpConf struct {
@@ -18,6 +19,10 @@ type TaskConf struct {
 }
 type CryptoConf struct {
 	Secret string `yaml:"secret"`
+}
+type UserConf struct {
+	AdminAccount  string `yaml:"admin_account"`
+	AdminPassword string `yaml:"admin_password"`
 }
 
 var mainConf Main
