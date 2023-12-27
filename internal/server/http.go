@@ -33,7 +33,7 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	//r.Static("/components", "web/components")
 
 	r.Use(UseAuth(nil))
-
+	// api
 	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
@@ -46,9 +46,11 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	r.POST("/setting/sql_source_set", routerSqlSet)
 	r.POST("/setting/sql_source_change_status", routerSqlChangeStatus)
 	r.POST("/setting/sql_source_ping", routerSqlPing)
-
-	gv := r.Group("view")
-	gv.GET("/cron/list", func(ctx *gin.Context) {
+	// 视图
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.Redirect(http.StatusMovedPermanently, "/index.html")
+	})
+	r.GET("/index.html", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "cron_list.html", map[string]string{"version": config.Version})
 	})
 	r.GET("/system/info", func(ctx *gin.Context) {
