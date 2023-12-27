@@ -35,6 +35,13 @@ func MainConf() Main {
 		if err := YamlParse("configs/main.yaml", &mainConf); err != nil {
 			panic(err)
 		}
+		// 配置检测
+		if mainConf.Crypto != nil {
+			l := len(mainConf.Crypto.Secret)
+			if l > 8 {
+				panic("配置 crypto.secret 长度必须是8位字符串")
+			}
+		}
 	})
 	return mainConf
 }
