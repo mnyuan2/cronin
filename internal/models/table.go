@@ -2,6 +2,7 @@ package models
 
 import (
 	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"fmt"
 	"time"
 )
@@ -15,10 +16,12 @@ func AutoMigrate(db *db.Database) {
 		panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 	}
 	// 初始化数据
-	err = db.Write.Where("scene='env' and env='system' and title='默认环境'").FirstOrCreate(&CronSetting{
+	err = db.Write.Where("scene='env' and env='public' and title='public'").FirstOrCreate(&CronSetting{
 		Scene:    "env",
-		Title:    "默认环境",
-		Env:      "system",
+		Title:    "public",
+		Env:      "public",
+		Content:  "public",
+		Status:   enum.StatusActive,
 		CreateDt: time.Now().Format(time.DateTime),
 	}).Error
 	if err != nil {

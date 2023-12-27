@@ -69,6 +69,9 @@ func (dm *DicService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicSqlSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneSqlSource).Eq("status", enum.StatusActive)
+	case enum.DicEnv:
+		_sql = "SELECT id,title 'key', content title FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		w.Eq("scene", models.SceneEnv).Eq("status", enum.StatusActive)
 	}
 
 	items := []*pb.DicGetItem{}

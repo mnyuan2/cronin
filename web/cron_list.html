@@ -9,6 +9,7 @@
     <script src="/static/js/home.js"></script>
     <script src="/static/js/jquery.min.js"></script>
     <script src="/components/sql_source.js"></script>
+    <script src="/components/env.js"></script>
     <style>
         .icon{
             font-size: 24px;
@@ -41,6 +42,20 @@
                     <el-button type="text" @click="createShow()">添加任务</el-button>
                     <el-button type="text" @click="registerList()">已注册任务</el-button>
                     <div style="float: right">
+<!--                        环境选择-->
+                        <el-dropdown @command="envClick">
+                            <span class="el-dropdown-link">
+                                下拉菜单<i class="el-icon-arrow-down el-icon--right"></i>
+                            </span>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item icon="el-icon-plus">黄金糕</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-circle-plus">狮子头</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-circle-plus-outline">螺蛳粉</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-check">双皮奶</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-circle-check">蚵仔煎</el-dropdown-item>
+                                <el-dropdown-item command="envBoxDisplay" divided>管理环境</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
                         <a href="https://cron.qqe2.com/" target="_blank" >6位 时间格式生成器</a>
                         <p class="version">[[.version]]</p>
                     </div>
@@ -250,6 +265,10 @@
         <el-dialog title="日志详情" :visible.sync="logBodyVisible" size="30%" style="white-space: pre;">
             <pre><code>{{logBody.replace(/\\n/g, '\n').replace(/\\t/g, '\t')}}</code></pre>
         </el-dialog>
+        <!-- 程序环境 管理弹窗 -->
+        <el-drawer title="环境管理" :visible.sync="envBoxShow" size="40%" wrapperClosable="false" :before-close="envBox">
+            <env :reload_list="envBoxShow"></env>
+        </el-drawer>
     </div>
 
 
@@ -289,6 +308,7 @@
                     index: -1, // 操作行号
                     data: "", // 实际内容
                 }, // sql设置弹窗
+                envBoxShow: true, // 环境管理弹窗
                 form:{},
                 sysInfo: {cmd_name:""},
                 hintSpec: "* * * * * *",
@@ -304,7 +324,7 @@
                 }
                 this.sysInfo = res.data;
             })
-            this.initFormData()
+            this.form = this.initFormData()
             this.getDic()
         },
         watch:{
@@ -352,7 +372,7 @@
             },
             // 枚举
             getDic(){
-                api.innerFoundationDic("1",(res) =>{
+                api.innerFoundationDic("1,2",(res) =>{
                     if (res.code != "000000"){
                         return this.$message.error(res.message);
                     }
@@ -396,7 +416,7 @@
                         return this.$message.error(res.message)
                     }
                     this.setConfigShow = false;
-                    this.initFormData()
+                    this.form = this.initFormData()
                     this.getList(); // 刷新当前页
                 })
             },
@@ -405,10 +425,10 @@
                 this.setConfigShow = true
                 this.setConfigTitle = '添加任务'
                 // 应该有个地方定义空结构体
-                this.initFormData()
+                this.form = this.initFormData()
             },
             initFormData(){
-                this.form = {
+                return  {
                     command:{
                         http:{
                             method: '',
@@ -443,6 +463,9 @@
                 this.setConfigShow = true
                 this.setConfigTitle = '编辑任务'
                 this.form = row
+                if (this.form.command.sql == null){ // 历史数据兼容
+                    this.form.command.sql = this.initFormData().command.sql
+                }
                 this.form.type = this.form.type.toString()
                 this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字
                 this.form.protocol = this.form.protocol.toString()
@@ -587,7 +610,19 @@
                     case 4:
                         return 'danger';
                 }
-            }
+            },
+            // env
+            envClick(cmd){
+                if (cmd == "envBoxDisplay"){
+                    return this.envBox(true)
+                }
+            },
+            envBox(show){
+                this.envBoxShow = show == true;
+                if (!this.envBoxShow){
+                    this.getDic() // 关闭弹窗要重载枚举
+                }
+            },
         }
     })
 </script>

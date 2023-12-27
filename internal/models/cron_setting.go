@@ -18,4 +18,7 @@ type SettingSqlSource struct {
 
 const (
 	SceneSqlSource = "sql_source" // sql数据源配置
+	SceneEnv       = "env"        // 程序环境
 )
+
+const EnvDefault = "public" // 默认环境 是不可以删除的

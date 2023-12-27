@@ -38,7 +38,7 @@ func (m *CronSettingData) GetOne(where *db.Where) (one *models.CronSetting, err 
 // 设置
 func (m *CronSettingData) Set(one *models.CronSetting) error {
 	if one.Id > 0 {
-		return m.db.Write.Where("id=?", one.Id).Omit("create_dt", "key", "env", "status").Updates(one).Error
+		return m.db.Write.Where("id=?", one.Id).Omit("create_dt", "scene", "env", "status").Updates(one).Error
 	} else {
 		return m.db.Write.Create(one).Error
 	}
@@ -53,5 +53,11 @@ func (m *CronSettingData) Del(scene string, id int) error {
 // 获得sql连接源
 func (m *CronSettingData) GetSqlSourceOne(id int) (one *models.CronSetting, err error) {
 	w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", id, db.RequiredOption()).Eq("status", enum.StatusActive)
+	return m.GetOne(w)
+}
+
+// 获得env信息
+func (m *CronSettingData) GetEnvOne(id int) (one *models.CronSetting, err error) {
+	w := db.NewWhere().Eq("scene", models.SceneEnv).Eq("id", id, db.RequiredOption()).Eq("status", enum.StatusActive)
 	return m.GetOne(w)
 }
