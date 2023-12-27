@@ -1,4 +1,4 @@
-# incron 内部定时任务
+# cronin 内部定时任务
 
 #### 介绍
 linux服务器下crontab的平替工具。
