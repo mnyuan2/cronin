@@ -13,7 +13,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os/exec"
@@ -129,9 +129,9 @@ func (job *CronJob) Run() {
 func (job *CronJob) httpFunc(ctx context.Context) (res []byte, err error) {
 	switch job.commandParse.Http.Method {
 	case http.MethodPost:
-		return job.httpPost(ctx, job.commandParse.Http.Url, []byte(job.commandParse.Http.Body), nil)
+		return job.httpPost(ctx, job.commandParse.Http.Url, []byte(job.commandParse.Http.Body), job.commandParse.Http.Header)
 	case http.MethodGet:
-		return job.httpGet(ctx, job.commandParse.Http.Url, nil)
+		return job.httpGet(ctx, job.commandParse.Http.Url, job.commandParse.Http.Header)
 	default:
 		// 任务设置有问题，提出执行队列，记录日志。
 		job.ErrorCount = -2
@@ -202,7 +202,7 @@ func (job *CronJob) sqlFunc(ctx context.Context) (res []byte, err error) {
 }
 
 // get请求
-func (job *CronJob) httpGet(ctx context.Context, url string, header http.Header) (resp []byte, err error) {
+func (job *CronJob) httpGet(ctx context.Context, url string, header map[string]string) (resp []byte, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("请求构建失败,%w", err)
@@ -214,15 +214,21 @@ func (job *CronJob) httpGet(ctx context.Context, url string, header http.Header)
 	}
 	defer res.Body.Close()
 
-	b, _ := ioutil.ReadAll(res.Body)
-	return b, nil
+	b, err := io.ReadAll(res.Body)
+	if err == nil && res.StatusCode != http.StatusOK {
+		err = errors.New(fmt.Sprintf("%v %s", res.StatusCode, http.StatusText(res.StatusCode)))
+	}
+	return b, err
 }
 
 // post请求
-func (job *CronJob) httpPost(ctx context.Context, url string, body []byte, header http.Header) (resp []byte, err error) {
+func (job *CronJob) httpPost(ctx context.Context, url string, body []byte, header map[string]string) (resp []byte, err error) {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("请求构建失败,%w", err)
+	}
+	for k, v := range header {
+		req.Header.Set(k, v)
 	}
 
 	res, err := http.DefaultClient.Do(req)
@@ -231,8 +237,11 @@ func (job *CronJob) httpPost(ctx context.Context, url string, body []byte, heade
 	}
 	defer res.Body.Close()
 
-	resp, _ = ioutil.ReadAll(res.Body)
-	return resp, nil
+	resp, err = io.ReadAll(res.Body)
+	if err == nil && res.StatusCode != http.StatusOK {
+		err = errors.New(fmt.Sprintf("%v %s", res.StatusCode, http.StatusText(res.StatusCode)))
+	}
+	return resp, err
 }
 
 // grpc调用

@@ -2,8 +2,10 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/config"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"encoding/base64"
 	"fmt"
 	"github.com/axgle/mahonia"
 	"github.com/robfig/cron/v3"
@@ -67,6 +69,30 @@ func TestCronJob_Grpc(t *testing.T) {
 	}
 
 	fmt.Println(resp)
+}
+
+// http任务
+func TestCronJob_Http(t *testing.T) {
+	hader := map[string]string{}
+	hader = nil
+	if config.MainConf().User.AdminAccount != "" {
+		s := base64.StdEncoding.EncodeToString([]byte(config.MainConf().User.AdminAccount + ":" + config.MainConf().User.AdminPassword))
+		fmt.Println(s)
+		hader = map[string]string{
+			"Authorization": "Basic " + s,
+		}
+	}
+
+	ctx := context.Background()
+	job := &CronJob{}
+	resp, err := job.httpPost(ctx,
+		"http://127.0.0.1:9003/log/del",
+		[]byte(fmt.Sprintf(`{"retention":"%s"}`, config.MainConf().Task.LogRetention)),
+		hader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("请求响应", string(resp))
 }
 
 // 构建shell执行

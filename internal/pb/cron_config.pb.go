@@ -46,9 +46,10 @@ type CronConfigSetResponse struct {
 }
 type CronConfigCommand struct {
 	Http struct {
-		Method string `json:"method"`
-		Url    string `json:"url"`
-		Body   string `json:"body"`
+		Method string            `json:"method"`
+		Url    string            `json:"url"`
+		Body   string            `json:"body"`
+		Header map[string]string `json:"header"`
 	} `json:"http"`
 	Rpc struct {
 		Method string `json:"method"` // 执行类型：rpc、grpc

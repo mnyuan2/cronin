@@ -9,6 +9,7 @@ import (
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -119,14 +120,21 @@ func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 	}
 	cmd := &pb.CronConfigCommand{
 		Http: struct {
-			Method string `json:"method"`
-			Url    string `json:"url"`
-			Body   string `json:"body"`
+			Method string            `json:"method"`
+			Url    string            `json:"url"`
+			Body   string            `json:"body"`
+			Header map[string]string `json:"header"`
 		}{
 			Method: http.MethodPost,
 			Url:    dm.conf.Http.Local() + "/log/del",
 			Body:   fmt.Sprintf(`{"retention":"%s"}`, dm.conf.Task.LogRetention),
 		},
+	}
+	if config.MainConf().User.AdminAccount != "" {
+		s := base64.StdEncoding.EncodeToString([]byte(config.MainConf().User.AdminAccount + ":" + config.MainConf().User.AdminPassword))
+		cmd.Http.Header = map[string]string{
+			"Authorization": "Basic " + s,
+		}
 	}
 	sysLogRetention.Command, _ = jsoniter.MarshalToString(cmd)
 	return sysLogRetention

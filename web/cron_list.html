@@ -151,10 +151,14 @@
                                     <el-option label="POST" value="POST"></el-option>
                                 </el-select>
                             </el-form-item>
-                            <el-form-item label="请求url地址">
+                            <el-form-item label="请求Header">
+                                输入 k,v 两个输入域，后面有一个删除按钮；当key存在值时自动新增一个空的元素组。
+                                method与url合并到一行（样式产考postApi7）。
+                            </el-form-item>
+                            <el-form-item label="请求Url地址">
                                 <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址"></el-input>
                             </el-form-item>
-                            <el-form-item label="请求body参数">
+                            <el-form-item label="请求Body参数">
                                 <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                             </el-form-item>
                         </el-tab-pane>

@@ -18,11 +18,11 @@ var Env = Vue.extend({
 
         <!--设置弹窗-->
         <el-dialog :title="form.box.title" :visible.sync="form.box.show" :close-on-click-modal="false" append-to-body="true" width="400px">
-            <el-form :model="form.data" label-position="left" label-width="80px" size="small">
-                <el-form-item label="key*">
+            <el-form :model="form.data" ref="form.data" :rules="form.rule" label-position="left" label-width="80px" size="small">
+                <el-form-item label="key" prop="key">
                     <el-input v-model="form.data.key"></el-input>
                 </el-form-item>
-                <el-form-item label="名称*">
+                <el-form-item label="名称" prop="title">
                     <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
             </el-form>
@@ -49,7 +49,20 @@ var Env = Vue.extend({
                 page: 1,
                 size: 20,
             },
-            form:{}, // 表单
+            form:{
+                box:{},
+                data:{},
+                rule:{
+                    title: [
+                        { required: true, message: '请输入名称', trigger: 'blur'},
+                        { min: 1, max: 60, message: '长度在 1 到 60 个字符', trigger: 'blur' }
+                    ],
+                    key: [
+                        { required: true, message: '请输入key', trigger: 'blur'},
+                        { min: 1, max: 60, message: '长度在 1 到 60 个字符', trigger: 'blur' }
+                    ],
+                }
+            }, // 表单
 
         }
     },
@@ -100,29 +113,36 @@ var Env = Vue.extend({
             })
         },
         submitForm(){
-            let body = this.form.data
-            api.innerPost("/setting/env_set", body, (res) =>{
-                console.log("sql源设置响应",res)
-                if (!res.status){
-                    return this.$message.error(res.message)
+            this.$refs['form.data'].validate((valid) => {
+                if (!valid) {
+                    return false;
                 }
-                this.initForm(false)
-                this.getList()
-            })
+                api.innerPost("/setting/env_set", body, (res) =>{
+                    console.log("sql源设置响应",res)
+                    if (!res.status){
+                        return this.$message.error(res.message)
+                    }
+                    this.initForm(false)
+                    this.getList()
+                })
+            });
+            let body = this.form.data
+
         },
 
         // 初始化表单数据
         initForm(show, data){
-            this.form = {
-                box:{
-                    show: show == true,
-                    title: "添加环境",
-                },
-                data: {
-                    id: 0,
-                    title: "",
-                    key: "",
-                }
+            // if (this.$refs['form.data'] != undefined){
+            //     this.$refs['form.data'].resetFields() // 重置验证, 慎用 容易数据错位。
+            // }
+            this.form.box = {
+                show: show == true,
+                title: "添加环境",
+            }
+            this.form.data = {
+                id: 0,
+                title: "",
+                key: "",
             }
             if ( typeof data === 'object' && data["id"] != undefined && data.id > 0){
                 this.form.box.title = '编辑环境'
