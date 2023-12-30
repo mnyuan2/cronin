@@ -56,7 +56,7 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 	}
 
 	for _, item := range resp.List {
-		item.Command = &pb.CronConfigCommand{}
+		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{}, Sql: &pb.CronSql{}}
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
 		jsoniter.UnmarshalFromString(item.CommandStr, item.Command)
@@ -169,6 +169,18 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 	if r.Protocol == models.ProtocolHttp {
 		if !strings.HasPrefix(r.Command.Http.Url, "http://") && !strings.HasPrefix(r.Command.Http.Url, "https://") {
 			return nil, fmt.Errorf("请输入 http:// 或 https:// 开头的规范地址")
+		}
+		if r.Command.Http.Method == "" {
+			return nil, errors.New("请输入请求method")
+		}
+		if models.ProtocolHttpMethodMap()[r.Command.Http.Method] == "" {
+			return nil, errors.New("未支持的请求method")
+		}
+		if r.Command.Http.Body != "" {
+			temp := map[string]any{} // 目前仅支持json
+			if err = jsoniter.UnmarshalFromString(r.Command.Http.Body, &temp); err != nil {
+				return nil, fmt.Errorf("http body 输入不规范，请确认json字符串是否规范")
+			}
 		}
 	} else if r.Protocol == models.ProtocolCmd {
 		if r.Command.Cmd == "" {

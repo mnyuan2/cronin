@@ -1,6 +1,9 @@
 package models
 
-import "cron/internal/basic/enum"
+import (
+	"cron/internal/basic/enum"
+	"net/http"
+)
 
 type CronProtocol int
 type CronStatus int
@@ -40,9 +43,17 @@ const (
 	TypeOnce  = 2 // 单次
 )
 
-var ConfTypeMap = map[int]string{
-	TypeCycle: "周期",
-	TypeOnce:  "单次",
+func ProtocolHttpMethodMap() map[string]string {
+	return map[string]string{
+		http.MethodGet:  http.MethodGet,
+		http.MethodPost: http.MethodPost,
+	}
+}
+func ConfTypeMap() map[int]string {
+	return map[int]string{
+		TypeCycle: "周期",
+		TypeOnce:  "单次",
+	}
 }
 
 type CronConfig struct {
@@ -70,5 +81,5 @@ func (m *CronConfig) GetStatusName() string {
 }
 
 func (m *CronConfig) GetTypeName() string {
-	return ConfTypeMap[m.Type]
+	return ConfTypeMap()[m.Type]
 }

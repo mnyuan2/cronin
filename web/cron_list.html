@@ -31,6 +31,30 @@
             text-align: right;
             color: #f2f2f2;
         }
+        .http_header_box .el-input-group__prepend,
+        .http_header_box .el-input-group__append,
+        .http_url_box .el-input-group__prepend{
+            background: #FFFFFF;
+        }
+        .http_url_box .el-input-group__prepend .el-input{
+            width: 120px;
+        }
+        .http_header_box .el-input-group__prepend{
+            width: 240px;
+            padding: 0 2px;
+        }
+        .http_header_box .el-input-group__prepend input{
+            line-height: 38px;
+            height: 38px;
+            border: 0;
+            padding: 0 13px;
+        }
+        .http_header_box .el-input-group__append{
+            padding: 0 5px;
+        }
+
+
+
     </style>
 </head>
 <body>
@@ -145,18 +169,25 @@
                 <el-form-item>
                     <el-tabs type="border-card" v-model="form.protocol">
                         <el-tab-pane label="http" name="1">
-                            <el-form-item label="请求方式">
-                                <el-select v-model="form.command.http.method" placeholder="请选请求方式">
-                                    <el-option label="GET" value="GET"></el-option>
-                                    <el-option label="POST" value="POST"></el-option>
-                                </el-select>
+                            <el-form-item label="请求地址" class="http_url_box">
+                                <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
+                                    <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
+                                        <el-option label="GET" value="GET"></el-option>
+                                        <el-option label="POST" value="POST"></el-option>
+                                    </el-select>
+                                </el-input>
                             </el-form-item>
-                            <el-form-item label="请求Header">
-                                输入 k,v 两个输入域，后面有一个删除按钮；当key存在值时自动新增一个空的元素组。
-                                method与url合并到一行（样式产考postApi7）。
-                            </el-form-item>
-                            <el-form-item label="请求Url地址">
-                                <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址"></el-input>
+
+                            <el-form-item label="请求Header" class="http_header_box">
+                                <el-input v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
+                                    <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
+                                    <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
+                                </el-input>
+
+
+
+<!--                                输入 k,v 两个输入域，后面有一个删除按钮；当key存在值时自动新增一个空的元素组。-->
+<!--                                method与url合并到一行（样式产考postApi7）。-->
                             </el-form-item>
                             <el-form-item label="请求Body参数">
                                 <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
@@ -312,7 +343,7 @@
                     index: -1, // 操作行号
                     data: "", // 实际内容
                 }, // sql设置弹窗
-                envBoxShow: true, // 环境管理弹窗
+                envBoxShow: false, // 环境管理弹窗
                 form:{},
                 sysInfo: {cmd_name:""},
                 hintSpec: "* * * * * *",
@@ -431,13 +462,31 @@
                 // 应该有个地方定义空结构体
                 this.form = this.initFormData()
             },
+            // http header 输入值变化时
+            httpHeaderInput(val){
+                if (val == ""){
+                    return
+                }
+                let item = this.form.command.http.header.slice(-1)[0]
+                if (item == undefined || item.key != ""){
+                    this.form.command.http.header.push({"key":"","value":""})
+                }
+            },
+            // http header 输入值删除
+            httpHeaderDel(index){
+                if ((index+1) >= this.form.command.http.header.length){
+                    return
+                }
+                this.form.command.http.header.splice(index,1)
+            },
             initFormData(){
                 return  {
                     command:{
                         http:{
-                            method: '',
+                            method: 'GET',
+                            header: [{"key":"","value":""}],
                             url:'',
-                            body:''
+                            body:'',
                         },
                         rpc:{
                             method: 'GRPC',
@@ -467,8 +516,11 @@
                 this.setConfigShow = true
                 this.setConfigTitle = '编辑任务'
                 this.form = row
-                if (this.form.command.sql == null){ // 历史数据兼容
+                if (this.form.command.sql.driver == ""){ // 历史数据兼容
                     this.form.command.sql = this.initFormData().command.sql
+                }
+                if (this.form.command.http.header.length == 0){
+                    this.form.command.http.header = this.initFormData().command.http.header
                 }
                 this.form.type = this.form.type.toString()
                 this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字

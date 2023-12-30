@@ -1,5 +1,10 @@
 package pb
 
+type KvItem struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 // 任务列表
 type CronConfigListRequest struct {
 	Type int `form:"type"`
@@ -45,28 +50,31 @@ type CronConfigSetResponse struct {
 	Id int `json:"id"`
 }
 type CronConfigCommand struct {
-	Http struct {
-		Method string            `json:"method"`
-		Url    string            `json:"url"`
-		Body   string            `json:"body"`
-		Header map[string]string `json:"header"`
-	} `json:"http"`
-	Rpc struct {
-		Method string `json:"method"` // 执行类型：rpc、grpc
-		Addr   string `json:"addr"`   // 地址，包含端口
-		Action string `json:"action"` // 方法
-		Body   string `json:"body"`   // 请求参数
-	} `json:"rpc"`
-	Cmd string   `json:"cmd"`
-	Sql *CronSql `json:"sql"`
+	Http *CronHttp `json:"http"`
+	Rpc  *CronRpc  `json:"rpc"`
+	Cmd  string    `json:"cmd"`
+	Sql  *CronSql  `json:"sql"`
+}
+
+type CronHttp struct {
+	Method string    `json:"method"`
+	Url    string    `json:"url"`
+	Body   string    `json:"body"`
+	Header []*KvItem `json:"header"`
+}
+type CronRpc struct {
+	Method string `json:"method"` // 执行类型：rpc、grpc
+	Addr   string `json:"addr"`   // 地址，包含端口
+	Action string `json:"action"` // 方法
+	Body   string `json:"body"`   // 请求参数
 }
 
 // sql任务配置
 type CronSql struct {
-	Driver    string        `json:"driver"`     // 驱动，默认mysql
-	Source    CronSqlSource `json:"source"`     // 具体链接配置
-	ErrAction int           `json:"err_action"` // 错误后行为
-	Statement []string      `json:"statement"`  // sql语句多条
+	Driver    string         `json:"driver"`     // 驱动，默认mysql
+	Source    *CronSqlSource `json:"source"`     // 具体链接配置
+	ErrAction int            `json:"err_action"` // 错误后行为
+	Statement []string       `json:"statement"`  // sql语句多条
 }
 
 // CronSqlSource sql任务 来源配置
