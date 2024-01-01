@@ -16,13 +16,14 @@ func AutoMigrate(db *db.Database) {
 		panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 	}
 	// 初始化数据
-	err = db.Write.Where("scene='env' and env='public' and title='public'").FirstOrCreate(&CronSetting{
+	err = db.Write.Where("scene='env' and status=?", enum.StatusActive).FirstOrCreate(&CronSetting{
 		Scene:    "env",
+		Name:     "public",
 		Title:    "public",
-		Env:      "public",
-		Content:  "public",
+		Content:  `{"default":2}`,
 		Status:   enum.StatusActive,
 		CreateDt: time.Now().Format(time.DateTime),
+		UpdateDt: time.Now().Format(time.DateTime),
 	}).Error
 	if err != nil {
 		panic(fmt.Sprintf("cron_setting 表默认行数据初始化失败，%s", err.Error()))

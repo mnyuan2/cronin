@@ -58,6 +58,7 @@ func ConfTypeMap() map[int]string {
 
 type CronConfig struct {
 	Id           int    `json:"id" gorm:"column:id;type:int(11);primary_key;comment:主键;"`
+	Env          string `json:"env" gorm:"column:env;type:varchar(32);index:env;comment:环境;"`
 	EntryId      int    `json:"entry_id" gorm:"column:entry_id;type:int(11);default:0;comment:执行队列编号;"`
 	Type         int    `json:"type" gorm:"column:type;type:tinyint(2);default:1;comment:类型：1.周期任务（默认）、2.单次任务;"`
 	Name         string `json:"name" gorm:"column:name;type:varchar(255);default:'';comment:任务名称;"`

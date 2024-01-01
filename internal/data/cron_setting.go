@@ -20,9 +20,12 @@ func NewCronSettingData(ctx context.Context) *CronSettingData {
 }
 
 // 列表查询
-func (m *CronSettingData) GetList(scene string, page, size int, list interface{}) (total int64, err error) {
-	str, args := db.NewWhere().Eq("scene", scene, db.RequiredOption()).Build()
-	total, err = m.db.Read.Paginate(list, page, size, m.tableName, "*", "update_dt,id desc", str, args...)
+func (m *CronSettingData) GetList(scene string, env string, page, size int, list interface{}) (total int64, err error) {
+	str, args := db.NewWhere().
+		Eq("scene", scene, db.RequiredOption()).
+		Eq("env", env, db.RequiredOption()).
+		Build()
+	total, err = m.db.Read.Paginate(list, page, size, m.tableName, "*", "update_dt desc,id desc", str, args...)
 
 	return total, err
 }
@@ -44,20 +47,29 @@ func (m *CronSettingData) Set(one *models.CronSetting) error {
 	}
 }
 
+// 设置
+func (m *CronSettingData) ChangeStatus(one *models.CronSetting) error {
+	return m.db.Write.Where("id=?", one.Id).Select("status", "update_dt").Updates(one).Error
+}
+
 // 删除
-func (m *CronSettingData) Del(scene string, id int) error {
+func (m *CronSettingData) Del(scene, env string, id int) error {
 	one := &models.CronSetting{}
-	return m.db.Write.Where("scene=? and id=?", scene, id).Delete(one).Error
+	return m.db.Write.Where("scene=? and env=? and id=?", scene, env, id).Delete(one).Error
 }
 
 // 获得sql连接源
-func (m *CronSettingData) GetSqlSourceOne(id int) (one *models.CronSetting, err error) {
-	w := db.NewWhere().Eq("scene", models.SceneSqlSource).Eq("id", id, db.RequiredOption()).Eq("status", enum.StatusActive)
+func (m *CronSettingData) GetSqlSourceOne(env string, id int) (one *models.CronSetting, err error) {
+	w := db.NewWhere().
+		Eq("scene", models.SceneSqlSource).
+		Eq("env", env, db.RequiredOption()).
+		Eq("id", id, db.RequiredOption()).
+		Eq("status", enum.StatusActive)
 	return m.GetOne(w)
 }
 
 // 获得env信息
 func (m *CronSettingData) GetEnvOne(id int) (one *models.CronSetting, err error) {
-	w := db.NewWhere().Eq("scene", models.SceneEnv).Eq("id", id, db.RequiredOption()).Eq("status", enum.StatusActive)
+	w := db.NewWhere().Eq("scene", models.SceneEnv).Eq("id", id, db.RequiredOption())
 	return m.GetOne(w)
 }

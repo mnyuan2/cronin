@@ -9,6 +9,7 @@ import (
 
 type CronLog struct {
 	Id       int     `json:"id" gorm:"column:id;type:int(11);primary_key;comment:主键;"`
+	Env      string  `json:"env" gorm:"column:env;type:varchar(32);index:env;comment:环境;"`
 	ConfId   int     `json:"conf_id" gorm:"column:conf_id;type:int(11);index:conf_id,priority:11;comment:配置id;"`
 	CreateDt string  `json:"create_dt" gorm:"column:create_dt;type:datetime;index:conf_id,priority:12;default:null;comment:完成时间;"`
 	Duration float64 `json:"duration" gorm:"column:duration;type:double(10,3);default:0;comment:耗时;"`

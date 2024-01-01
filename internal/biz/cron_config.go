@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/auth"
 	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
@@ -17,18 +18,23 @@ import (
 )
 
 type CronConfigService struct {
+	ctx  context.Context
+	user *auth.UserToken
 }
 
-func NewCronConfigService() *CronConfigService {
-	return &CronConfigService{}
+func NewCronConfigService(ctx context.Context, user *auth.UserToken) *CronConfigService {
+	return &CronConfigService{
+		ctx:  ctx,
+		user: user,
+	}
 }
 
 // 任务配置列表
-func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListRequest) (resp *pb.CronConfigListReply, err error) {
+func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronConfigListReply, err error) {
 	if r.Type == 0 {
 		r.Type = models.TypeCycle
 	}
-	w := db.NewWhere().Eq("type", r.Type)
+	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption())
 	// 构建查询条件
 	if r.Page <= 1 {
 		r.Page = 1
@@ -43,7 +49,7 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 			Size: r.Size,
 		},
 	}
-	resp.Page.Total, err = data.NewCronConfigData(ctx).GetList(w, r.Page, r.Size, &resp.List)
+	resp.Page.Total, err = data.NewCronConfigData(dm.ctx).GetList(w, r.Page, r.Size, &resp.List)
 	topList := map[int]*data.SumConfTop{}
 	if len(resp.List) > 0 {
 		endTime := time.Now()
@@ -52,7 +58,7 @@ func (dm *CronConfigService) List(ctx context.Context, r *pb.CronConfigListReque
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(ctx).SumConfTopError(ids, startTime, endTime, 5)
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(ids, startTime, endTime, 5)
 	}
 
 	for _, item := range resp.List {
@@ -74,18 +80,21 @@ func (dm *CronConfigService) Get() {
 }
 
 // 已注册任务列表
-func (dm *CronConfigService) RegisterList(ctx context.Context, r *pb.CronConfigRegisterListRequest) (resp *pb.CronConfigRegisterListResponse, err error) {
+func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (resp *pb.CronConfigRegisterListResponse, err error) {
 
 	list := cronRun.Entries()
-	resp = &pb.CronConfigRegisterListResponse{List: make([]*pb.CronConfigListItem, len(list))}
-	for i, v := range list {
+	resp = &pb.CronConfigRegisterListResponse{List: []*pb.CronConfigListItem{}}
+	for _, v := range list {
 		c, ok := v.Job.(*CronJob)
 		if !ok {
-			resp.List[i] = &pb.CronConfigListItem{
+			resp.List = append(resp.List, &pb.CronConfigListItem{
 				Id:       int(v.ID),
 				Name:     "未识别注册任务",
 				UpdateDt: v.Next.Format(time.DateTime),
-			}
+			})
+			continue
+		}
+		if c.conf.Id > 0 && dm.user.Env != c.conf.Env {
 			continue
 		}
 		conf := c.conf
@@ -93,7 +102,7 @@ func (dm *CronConfigService) RegisterList(ctx context.Context, r *pb.CronConfigR
 		if s, err := secondParser.Parse(conf.Spec); err == nil {
 			next = s.Next(time.Now()).Format(conv.FORMAT_DATETIME)
 		}
-		resp.List[i] = &pb.CronConfigListItem{
+		resp.List = append(resp.List, &pb.CronConfigListItem{
 			Id:           conf.Id,
 			Name:         conf.Name,
 			Spec:         conf.Spec,
@@ -104,40 +113,19 @@ func (dm *CronConfigService) RegisterList(ctx context.Context, r *pb.CronConfigR
 			StatusName:   conf.GetStatusName(),
 			UpdateDt:     next, // 下一次时间
 			Command:      c.commandParse,
-		}
+		})
 	}
-	//jobList.Range(func(key, value interface{}) bool {
-	//	conf := value.(*CronJob).conf
-	//
-	//	next := ""
-	//	if s, err := secondParser.Parse(conf.Spec); err == nil {
-	//		next = s.Next(time.Now()).Format(conv.FORMAT_DATETIME)
-	//	}
-	//	resp.List = append(resp.List, &pb.CronConfigListItem{
-	//		Id:           conf.Id,
-	//		Name:         conf.Name,
-	//		Spec:         conf.Spec,
-	//		Protocol:     conf.Protocol,
-	//		ProtocolName: conf.GetProtocolName(),
-	//		Remark:       conf.Remark,
-	//		Status:       conf.Status,
-	//		StatusName:   conf.GetStatusName(),
-	//		UpdateDt:     next, // 下一次时间
-	//		Command:      value.(*CronJob).commandParse,
-	//	})
-	//	return true
-	//})
 
 	return resp, err
 }
 
 // 任务配置
-func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
+func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
 
 	d := &models.CronConfig{}
 	if r.Id > 0 {
-		da := data.NewCronConfigData(ctx)
-		d, err = da.GetOne(r.Id)
+		da := data.NewCronConfigData(dm.ctx)
+		d, err = da.GetOne(dm.user.Env, r.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -146,6 +134,7 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		}
 	} else {
 		d.Status = enum.StatusDisable
+		d.Env = dm.user.Env
 	}
 
 	d.Name = r.Name
@@ -190,7 +179,7 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		if r.Command.Sql.Source.Id == 0 {
 			return nil, fmt.Errorf("请选择 sql 连接")
 		}
-		if one, _ := data.NewCronSettingData(ctx).GetSqlSourceOne(r.Command.Sql.Source.Id); one.Id == 0 {
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSqlSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
 			return nil, errors.New("sql 连接 配置有误，请确认")
 		}
 		if len(r.Command.Sql.Statement) == 0 {
@@ -198,7 +187,7 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 		}
 	}
 
-	err = data.NewCronConfigData(ctx).Set(d)
+	err = data.NewCronConfigData(dm.ctx).Set(d)
 	if err != nil {
 		return nil, err
 	}
@@ -208,10 +197,10 @@ func (dm *CronConfigService) Set(ctx context.Context, r *pb.CronConfigSetRequest
 }
 
 // 任务状态变更
-func (dm *CronConfigService) ChangeStatus(ctx context.Context, r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
+func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
 	// 同一个任务，这里要加请求锁
-	da := data.NewCronConfigData(ctx)
-	conf, err := da.GetOne(r.Id)
+	da := data.NewCronConfigData(dm.ctx)
+	conf, err := da.GetOne(dm.user.Env, r.Id)
 	if err != nil {
 		return nil, err
 	}

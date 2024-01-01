@@ -16,7 +16,7 @@ import (
 
 // mysql 命令执行
 func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, err error) {
-	source, err := data.NewCronSettingData(ctx).GetSqlSourceOne(r.Source.Id)
+	source, err := data.NewCronSettingData(ctx).GetSqlSourceOne(job.conf.Env, r.Source.Id)
 	if err != nil {
 		return nil, fmt.Errorf("连接配置异常 %w", err)
 	}

@@ -13,7 +13,7 @@ func routerEnvList(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewSettingEnvService().List(ctx.Request.Context(), r)
+	rep, err := biz.NewSettingEnvService(ctx.Request.Context()).List(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -24,7 +24,18 @@ func routerEnvSet(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewSettingEnvService().Set(ctx.Request.Context(), r)
+	rep, err := biz.NewSettingEnvService(ctx.Request.Context()).Set(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 任务设置
+func routerEnvSetContent(ctx *gin.Context) {
+	r := &pb.SettingEnvSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingEnvService(ctx.Request.Context()).SetContent(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -35,6 +46,17 @@ func routerEnvChangeStatus(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewSettingEnvService().ChangeStatus(ctx.Request.Context(), r)
+	rep, err := biz.NewSettingEnvService(ctx.Request.Context()).ChangeStatus(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 任务状态变更
+func routerEnvDel(ctx *gin.Context) {
+	r := &pb.SettingEnvDelRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingEnvService(ctx.Request.Context()).Del(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

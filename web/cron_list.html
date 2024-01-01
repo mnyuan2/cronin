@@ -6,10 +6,10 @@
     <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
     <script src="/static/js/vue@2.7.8.js"></script>
     <script src="/static/js/element-ui@2.15.14.js"></script>
-    <script src="/static/js/home.js"></script>
+    <script src="/static/js/home.js?v=[[.version]]"></script>
     <script src="/static/js/jquery.min.js"></script>
-    <script src="/components/sql_source.js"></script>
-    <script src="/components/env.js"></script>
+    <script src="/components/sql_source.js?v=[[.version]]"></script>
+    <script src="/components/env.js?v=[[.version]]"></script>
     <style>
         .icon{
             font-size: 24px;
@@ -51,8 +51,11 @@
         }
         .http_header_box .el-input-group__append{
             padding: 0 5px;
+            overflow: hidden;
         }
-
+        .el-dropdown-link{
+            cursor: pointer;
+        }
 
 
     </style>
@@ -66,17 +69,12 @@
                     <el-button type="text" @click="createShow()">添加任务</el-button>
                     <el-button type="text" @click="registerList()">已注册任务</el-button>
                     <div style="float: right">
-<!--                        环境选择-->
                         <el-dropdown @command="envClick">
                             <span class="el-dropdown-link">
-                                下拉菜单<i class="el-icon-arrow-down el-icon--right"></i>
+                                {{sysInfo.env_name}} <i class="el-icon-arrow-down el-icon--right"></i>
                             </span>
                             <el-dropdown-menu slot="dropdown">
-                                <el-dropdown-item icon="el-icon-plus">黄金糕</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-circle-plus">狮子头</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-circle-plus-outline">螺蛳粉</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-check">双皮奶</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-circle-check">蚵仔煎</el-dropdown-item>
+                                <el-dropdown-item v-for="(dic_v,dic_k) in dicMap[2]" :command="dic_v.key" :disabled="sysInfo.env==dic_v.key">{{dic_v.name}}</el-dropdown-item>
                                 <el-dropdown-item command="envBoxDisplay" divided>管理环境</el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
@@ -301,7 +299,7 @@
             <pre><code>{{logBody.replace(/\\n/g, '\n').replace(/\\t/g, '\t')}}</code></pre>
         </el-dialog>
         <!-- 程序环境 管理弹窗 -->
-        <el-drawer title="环境管理" :visible.sync="envBoxShow" size="40%" wrapperClosable="false" :before-close="envBox">
+        <el-drawer title="环境管理" :visible.sync="envBoxShow" size="50%" wrapperClosable="false" :before-close="envBox">
             <env :reload_list="envBoxShow"></env>
         </el-drawer>
     </div>
@@ -345,20 +343,27 @@
                 }, // sql设置弹窗
                 envBoxShow: false, // 环境管理弹窗
                 form:{},
-                sysInfo: {cmd_name:""},
+                sysInfo: {cmd_name:"",env:"",env_name:"", version:""},
                 hintSpec: "* * * * * *",
                 labelType: '1',
                 dicMap:{},
             };
         },
         created(){
-            this.getList()
-            api.innerGet("/system/info",{}, (res)=>{
+            let q = window.location.search
+            let searchParams = new URLSearchParams(q)
+            let env = searchParams.get("env")
+            if (env != null && env !==""){
+                api.setEnv(env,"***")
+            }
+
+            api.innerSystemInfo((res)=>{
                 if (res.code != "000000"){
                     return this.$message.error(res.message);
                 }
                 this.sysInfo = res.data;
             })
+            this.getList()
             this.form = this.initFormData()
             this.getDic()
         },
@@ -413,11 +418,20 @@
                     }
                     let list = {};
                     for (k in res.data.maps){
-                        console.log("枚举----", k)
                         list[k] = res.data.maps[k].list
                     }
                     this.dicMap = list
-                    console.log("枚举", this.dicMap, res)
+
+                    // 补充环境名称
+                    if (this.sysInfo.env_name == "***"){
+                        for (let i in list[2]){
+                            if (list[2][i].key == this.sysInfo.env){
+                                this.sysInfo.env_name = list[2][i].name
+                                api.setEnv(this.sysInfo.env, list[2][i].name)
+                                break
+                            }
+                        }
+                    }
                 })
             },
             // 添加/编辑 任务
@@ -669,9 +683,32 @@
             },
             // env
             envClick(cmd){
+                if (cmd == ""){
+                    return
+                }
+                // 环境管理
                 if (cmd == "envBoxDisplay"){
                     return this.envBox(true)
                 }
+                // 环境切换
+                if (this.sysInfo.env == cmd){
+                    return
+                }
+                let env_name = ""
+                for (let i in this.dicMap[2]){
+                    if (this.dicMap[2][i].key == cmd){
+                        env_name = this.dicMap[2][i].name
+                        break
+                    }
+                }
+                if (env_name == ""){
+                    return this.$message.error("选择环境信息异常")
+                }
+                // this.sysInfo.env = cmd
+                // this.sysInfo.env_name = env_name
+                // api.setEnv(cmd, env_name)
+                window.location.assign(window.location.protocol+"//" + window.location.host + window.location.pathname + "?env="+cmd)
+                // console.log("url",window.location.protocol, window.location.host, window.location.pathname)
             },
             envBox(show){
                 this.envBoxShow = show == true;

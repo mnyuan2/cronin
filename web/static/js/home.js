@@ -28,12 +28,15 @@ function getDatetimeString(d) {
     return d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(), 2)+ ' '+ pad(d.getHours())+':'+d.getMinutes()+':'+d.getSeconds()
 }
 
+const envKey = "env"
 /**
  * 网络请求
  * @type {{post: api.post, get: api.get}}
  */
 var api = {
     baseUrl : window.location.protocol+"//"+window.location.host,
+    env : {},
+
     /**
      * 内网get请求
      * @param path string 请求路径
@@ -42,17 +45,20 @@ var api = {
      */
     innerGet: function (path,param, success) {
         let url =  this.baseUrl+path
-        if (param){
-            url += "?"
-            for (i in param){
-                if (param[i]){
-                    url += i+"="+param[i]+"&"
-                }
-            }
-            url = url.slice(0,-1)
+        // if (param){
+        //     url += "?"
+        //     for (i in param){
+        //         if (param[i]){
+        //             url += i+"="+param[i]+"&"
+        //         }
+        //     }
+        //     url = url.slice(0,-1)
+        // }
+
+        let header = {
+            'env': this.getEnv().env
         }
-        console.log("get", url)
-        this.ajax(url, null, null,null, success, true, 'get')
+        this.ajax('get', url, param, header,success)
     },
 
     /**
@@ -61,8 +67,11 @@ var api = {
     innerPost: function (path, param, success) {
         let url =  this.baseUrl+path
         param = JSON.stringify(param)
-        console.log("post", url, param)
-        this.ajax(url, param, null,null, success,true, 'post')
+        let header = {
+            'Content-Type': 'application/json',
+            'env': this.getEnv().env
+        }
+        this.ajax('post', url, param, header, success)
     },
 
     innerGetFile: function(path){
@@ -72,21 +81,58 @@ var api = {
     // 枚举获取
     innerFoundationDic: function(type, success){
         // param = JSON.stringify(param)
-        this.ajax(this.baseUrl+"/foundation/dic_gets", {"types":type}, null,null, success, true, 'get')
+        this.innerGet("/foundation/dic_gets", {"types":type}, success)
+    },
+    innerSystemInfo: function (success){
+        this.ajax('get', this.baseUrl+"/foundation/system_info", null,null, (res) =>{
+            if (res.code != "000000"){
+                return success(res);
+            }
+
+            let envStr = localStorage.getItem(envKey)
+            if (envStr != null && envStr != ""){
+                let env = JSON.parse(envStr)
+                if (env.env != "" && env.env_name != ""){
+                    res.data.env = env.env
+                    res.data.env_name = env.env_name
+                }
+            }else {
+                this.setEnv(res.data.env, res.data.env_name)
+            }
+
+            success(res)
+        }, false)
+    },
+    setEnv(key, name){
+        console.log("设置环境", key, name)
+        this.env = {env:key, env_name:name}
+        localStorage.setItem(envKey, JSON.stringify(this.env))
+    },
+    getEnv(){
+        if (this.env.length == 0 || !this.env.env){
+            let envStr = localStorage.getItem(envKey)
+            let env = JSON.parse(envStr)
+            if (env == null || env.env == ""){
+                this.innerSystemInfo((res)=>{
+                    if (res.code != "000000"){
+                        alert(res.message);
+                    }
+                })
+            }else{
+                this.env = env
+            }
+        }
+        return this.env
     },
 
-    ajax: function (url, data, beforeSend, complete, callback, async=true, type='post', dataType='json') {
+    ajax: function (method, url, data, header, callback, async=true, dataType='json') {
         $.ajax({
             'url': url,
             'data': data,
-            'type': type,
-            'headers': {
-                'Content-Type': 'application/json'
-            },
+            'type': method,
+            'headers': header,
             'dataType': dataType,
             'async': async,
-            'beforeSend': beforeSend,
-            'complete': complete,
             'success': res => {
                 if (res.code == '000000'){
                     res.status = true

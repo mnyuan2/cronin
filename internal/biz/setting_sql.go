@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/auth"
 	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
@@ -16,15 +17,20 @@ import (
 )
 
 type SettingSqlService struct {
-	db *db.Database
+	db   *db.Database
+	ctx  context.Context
+	user *auth.UserToken
 }
 
-func NewSettingSqlService() *SettingSqlService {
-	return &SettingSqlService{}
+func NewSettingSqlService(ctx context.Context, user *auth.UserToken) *SettingSqlService {
+	return &SettingSqlService{
+		ctx:  ctx,
+		user: user,
+	}
 }
 
 // 任务配置列表
-func (dm *SettingSqlService) List(ctx context.Context, r *pb.SettingSqlListRequest) (resp *pb.SettingSqlListReply, err error) {
+func (dm *SettingSqlService) List(r *pb.SettingSqlListRequest) (resp *pb.SettingSqlListReply, err error) {
 	// 构建查询条件
 	if r.Page <= 1 {
 		r.Page = 1
@@ -39,7 +45,7 @@ func (dm *SettingSqlService) List(ctx context.Context, r *pb.SettingSqlListReque
 		},
 	}
 	list := []*models.CronSetting{}
-	resp.Page.Total, err = data.NewCronSettingData(ctx).GetList(models.SceneSqlSource, r.Page, r.Size, &list)
+	resp.Page.Total, err = data.NewCronSettingData(dm.ctx).GetList(models.SceneSqlSource, dm.user.Env, r.Page, r.Size, &list)
 	if err != nil {
 		return nil, err
 	}
@@ -62,20 +68,21 @@ func (dm *SettingSqlService) List(ctx context.Context, r *pb.SettingSqlListReque
 }
 
 // 设置源
-func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
+func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
 	one := &models.CronSetting{}
-	_data := data.NewCronSettingData(ctx)
+	_data := data.NewCronSettingData(dm.ctx)
 	ti := conv.TimeNew()
 	oldSource := &pb.SettingSqlSource{}
 	// 分为新增和编辑
 	if r.Id > 0 {
-		one, err = _data.GetSqlSourceOne(r.Id)
+		one, err = _data.GetSqlSourceOne(dm.user.Env, r.Id)
 		if err != nil {
 			return nil, err
 		}
 		jsoniter.UnmarshalFromString(one.Content, oldSource)
 	} else {
 		one.Scene = models.SceneSqlSource
+		one.Env = dm.user.Env
 		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
 	}
@@ -104,7 +111,7 @@ func (dm *SettingSqlService) Set(ctx context.Context, r *pb.SettingSqlSetRequest
 	}, err
 }
 
-func (dm *SettingSqlService) Ping(ctx context.Context, r *pb.SettingSqlPingRequest) (resp *pb.SettingSqlPingReply, err error) {
+func (dm *SettingSqlService) Ping(r *pb.SettingSqlPingRequest) (resp *pb.SettingSqlPingReply, err error) {
 	password, err := models.SqlSourceDecode(r.Password)
 	if err != nil {
 		return nil, fmt.Errorf("密码异常,%w", err)
@@ -121,12 +128,12 @@ func (dm *SettingSqlService) Ping(ctx context.Context, r *pb.SettingSqlPingReque
 }
 
 // 删除源
-func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
-	dm.db = db.New(ctx)
+func (dm *SettingSqlService) ChangeStatus(r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
+	dm.db = db.New(dm.ctx)
 
 	// 同一个任务，这里要加请求锁
-	_data := data.NewCronSettingData(ctx)
-	one, err := _data.GetSqlSourceOne(r.Id)
+	_data := data.NewCronSettingData(dm.ctx)
+	one, err := _data.GetSqlSourceOne(dm.user.Env, r.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +157,6 @@ func (dm *SettingSqlService) ChangeStatus(ctx context.Context, r *pb.SettingChan
 		return nil, fmt.Errorf("任务 %s 已使用连接，删除失败！", strings.Join(list, "、"))
 	}
 
-	err = _data.Del(one.Scene, one.Id)
+	err = _data.Del(one.Scene, dm.user.Env, one.Id)
 	return &pb.SettingChangeStatusReply{}, err
 }

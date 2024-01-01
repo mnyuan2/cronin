@@ -5,7 +5,6 @@ import (
 	"embed"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"runtime"
 )
 
 // Init http 初始化
@@ -33,6 +32,7 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	r.Use(UseAuth(nil))
 	// api
 	r.GET("/foundation/dic_gets", routerDicGets)
+	r.GET("/foundation/system_info", routerSystemInfo)
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)
@@ -46,22 +46,15 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	r.POST("/setting/sql_source_ping", routerSqlPing)
 	r.GET("/setting/env_list", routerEnvList)
 	r.POST("/setting/env_set", routerEnvSet)
+	r.POST("/setting/env_set_content", routerEnvSetContent)
 	r.POST("/setting/env_change_status", routerEnvChangeStatus)
+	r.POST("/setting/env_del", routerEnvDel)
 	// 视图
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.Redirect(http.StatusMovedPermanently, "/index.html")
 	})
 	r.GET("/index.html", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "cron_list.html", map[string]string{"version": config.Version})
-	})
-	r.GET("/system/info", func(ctx *gin.Context) {
-		cmd_name := "sh"
-		if runtime.GOOS == "windows" {
-			cmd_name = "cmd"
-		}
-		NewReply(ctx).SetSuccess(map[string]string{
-			"cmd_name": cmd_name,
-		}).RenderJson()
 	})
 
 	return r
