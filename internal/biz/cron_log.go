@@ -25,9 +25,14 @@ func NewCronLogService(ctx context.Context, user *auth.UserToken) *CronLogServic
 
 // 通过配置查询日志
 func (dm *CronLogService) ByConfig(r *pb.CronLogByConfigRequest) (resp *pb.CronLogByConfigResponse, err error) {
+	env := dm.user.Env
+	if r.ConfId <= 0 {
+		env = ""
+	}
 	w := db.NewWhere().
 		Eq("conf_id", r.ConfId, db.RequiredOption()).
-		Eq("env", dm.user.Env, db.RequiredOption())
+		Eq("env", env, db.RequiredOption())
+
 	resp = &pb.CronLogByConfigResponse{List: []*pb.CronLogItem{}}
 
 	_, err = data.NewCronLogData(dm.ctx).GetList(w, 1, r.Limit, &resp.List)

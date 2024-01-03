@@ -1,4 +1,4 @@
-var Env = Vue.extend({
+var MyEnv = Vue.extend({
     template: `<div>
         <el-button type="primary" plain @click="initForm(true)" style="margin-left: 20px">新增环境</el-button>
         
@@ -42,7 +42,7 @@ var Env = Vue.extend({
         </el-dialog>
     </div>`,
 
-    name: "Env",
+    name: "MyEnv",
     props: {
         reload_list:false, // 重新加载列表
     },
@@ -217,4 +217,4 @@ var Env = Vue.extend({
     }
 })
 
-Vue.component("Env", Env);
+Vue.component("MyEnv", MyEnv);

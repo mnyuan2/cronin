@@ -28,7 +28,16 @@ function getDatetimeString(d) {
     return d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(), 2)+ ' '+ pad(d.getHours())+':'+d.getMinutes()+':'+d.getSeconds()
 }
 
-const envKey = "env"
+/**
+ * 业务枚举
+ * @type {{dicEnv: number, dicSqlSource: number, envKey: string}}
+ */
+const Enum ={
+    envKey: "env",
+    dicSqlSource: 1,
+    dicEnv: 2,
+}
+
 /**
  * 网络请求
  * @type {{post: api.post, get: api.get}}
@@ -80,7 +89,13 @@ var api = {
     },
     // 枚举获取
     innerFoundationDic: function(type, success){
-        // param = JSON.stringify(param)
+        if (Array.isArray(type)){
+            type = type.join(',')
+        }else if (!isNaN(type) && typeof type === 'number'){
+            // type = type.toString()
+        }else if (typeof type !== 'string'){
+            throw new Error("type 元素仅支持array、string、number类型")
+        }
         this.innerGet("/foundation/dic_gets", {"types":type}, success)
     },
     innerSystemInfo: function (success){
@@ -89,7 +104,7 @@ var api = {
                 return success(res);
             }
 
-            let envStr = localStorage.getItem(envKey)
+            let envStr = localStorage.getItem(Enum.envKey)
             if (envStr != null && envStr != ""){
                 let env = JSON.parse(envStr)
                 if (env.env != "" && env.env_name != ""){
@@ -106,11 +121,11 @@ var api = {
     setEnv(key, name){
         console.log("设置环境", key, name)
         this.env = {env:key, env_name:name}
-        localStorage.setItem(envKey, JSON.stringify(this.env))
+        localStorage.setItem(Enum.envKey, JSON.stringify(this.env))
     },
     getEnv(){
         if (this.env.length == 0 || !this.env.env){
-            let envStr = localStorage.getItem(envKey)
+            let envStr = localStorage.getItem(Enum.envKey)
             let env = JSON.parse(envStr)
             if (env == null || env.env == ""){
                 this.innerSystemInfo((res)=>{
