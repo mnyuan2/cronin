@@ -16,6 +16,7 @@ type UserToken struct {
 	//Env int    `json:"env"`
 	//UserId   int    `json:"user_id"`
 	UserName string `json:"user_name"`
+	Env      string `json:"env"`
 }
 
 // 解析http令牌

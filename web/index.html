@@ -1,29 +1,134 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <title>任务列表</title>
+    <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
+    <script src="/static/js/vue@2.7.8.js"></script>
+    <script src="/static/js/element-ui@2.15.14.js"></script>
+    <script src="/static/js/home.js?v=[[.version]]"></script>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/components/header.js?v=[[.version]]"></script>
+    <script src="/components/config.js?v=[[.version]]"></script>
+    <script src="/components/config_log.js?v=[[.version]]"></script>
+    <script src="/components/sql_source.js?v=[[.version]]"></script>
+    <script src="/components/env.js?v=[[.version]]"></script>
+    <style>
+        body{
+            margin: 0;
+        }
+        .el-header{
+            height: 50px !important;
+            line-height: 50px;
+        }
+        .icon{
+            font-size: 24px;
+        }
+        .primary{
+            color: #409EFF;
+        }
+        .warning{
+            color: #e6a23c;
+        }
+        .success{
+            color: #67c23a;
+        }
+        .danger{
+            color: #f56c6c;
+        }
+        .version{
+            margin: 0;
+            text-align: right;
+            color: #f2f2f2;
+        }
+        .http_header_box .el-input-group__prepend,
+        .http_header_box .el-input-group__append,
+        .http_url_box .el-input-group__prepend{
+            background: #FFFFFF;
+        }
+        .http_url_box .el-input-group__prepend .el-input{
+            width: 120px;
+        }
+        .http_header_box .el-input-group__prepend{
+            width: 240px;
+            padding: 0 2px;
+        }
+        .http_header_box .el-input-group__prepend input{
+            line-height: 38px;
+            height: 38px;
+            border: 0;
+            padding: 0 13px;
+        }
+        .http_header_box .el-input-group__append{
+            padding: 0 5px;
+            overflow: hidden;
+        }
+        .el-dropdown-link{
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-
-<div id="app">
-    <el-button @click="visible = true">Button</el-button>
-    <el-dialog :visible.sync="visible" title="Hello world">
-        <p>Try Element</p>
-    </el-dialog>
-</div>
-
+    <div id="app">
+        <my-header :dic_envs="dicMap[Enum.dicEnv]" :sys_info="sysInfo"></my-header>
+        <my-config :dic_sql_source="dicMap[Enum.dicSqlSource]" :sys_info="sysInfo"></my-config>
+    </div>
 </body>
-<!-- import Vue before Element -->
-<script src="https://unpkg.com/vue/dist/vue.js"></script>
-<!-- import JavaScript -->
-<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
 <script>
     new Vue({
         el: '#app',
-        data: function() {
-            return { visible: false }
+        data(){
+            return {
+                dicMap:{},
+                sysInfo:{cmd_name:"",env:"",env_name:"", version:""},
+            };
+        },
+        created(){
+            let q = window.location.search
+            let searchParams = new URLSearchParams(q)
+            let env = searchParams.get("env")
+            if (env != null && env !==""){
+                api.setEnv(env,"***")
+            }
+
+            this.getSysInfo()
+            this.getDic()
+        },
+        watch:{},
+        methods:{
+            getSysInfo(){
+                api.innerSystemInfo((res)=>{
+                    if (!res.status){
+                        return this.$message.error(res.message);
+                    }
+                    this.sysInfo = res.data;
+                })
+            },
+            // 枚举
+            getDic(){
+                api.innerFoundationDic([Enum.dicSqlSource, Enum.dicEnv], (res) =>{
+                    if (!res.status){
+                        return this.$message.error(res.message);
+                    }
+                    let list = {};
+                    for (k in res.data.maps){
+                        list[k] = res.data.maps[k].list
+                    }
+                    this.dicMap = list
+
+                    // 补充环境名称
+                    if (this.sysInfo.env_name == "***"){
+                        for (let i in list[Enum.dicEnv]){
+                            if (list[Enum.dicEnv][i].key == this.sysInfo.env){
+                                this.sysInfo.env_name = list[Enum.dicEnv][i].name
+                                api.setEnv(this.sysInfo.env, list[Enum.dicEnv][i].name)
+                                break
+                            }
+                        }
+                    }
+                })
+            },
         }
     })
 </script>

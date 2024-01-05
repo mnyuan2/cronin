@@ -16,7 +16,7 @@ import (
 
 // mysql 命令执行
 func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, err error) {
-	source, err := data.NewCronSettingData(ctx).GetSqlSourceOne(r.Source.Id)
+	source, err := data.NewCronSettingData(ctx).GetSqlSourceOne(job.conf.Env, r.Source.Id)
 	if err != nil {
 		return nil, fmt.Errorf("连接配置异常 %w", err)
 	}
@@ -39,16 +39,39 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, e
 	}
 
 	// 执行sql
-	res := make([]string, len(r.Statement))
-	for i, sql := range r.Statement {
-		str, err := job.sqlMysqlItem(_db, sql)
-		res[i] = str
-		if err != nil && r.ErrAction != models.SqlErrActionProceed {
-			break
-		}
-	}
+	res := job.sqlMysqlExec(_db, r.ErrAction, r.Statement)
 	return []byte(strings.Join(res, `
 `)), nil
+}
+
+func (job *CronJob) sqlMysqlExec(_db *gorm.DB, errAction int, statement []string) (logs []string) {
+	var tx *gorm.DB
+	if errAction == models.SqlErrActionRollback {
+		tx = tx.Begin()
+	} else {
+		tx = _db
+	}
+
+	logs = make([]string, len(statement))
+	for i, sql := range statement {
+		str, err := job.sqlMysqlItem(tx, sql)
+		logs[i] = str
+		if err != nil {
+			if errAction == models.SqlErrActionAbort { // 终止
+				return logs
+			} else if errAction == models.SqlErrActionRollback { // 回滚
+				tx.Rollback()
+				return logs
+			} else if errAction == models.SqlErrActionProceed { // 继续
+
+			}
+		}
+	}
+
+	if errAction == models.SqlErrActionRollback {
+		tx = tx.Commit()
+	}
+	return logs
 }
 
 func (job *CronJob) sqlMysqlItem(_db *gorm.DB, sql string) (res string, err error) {

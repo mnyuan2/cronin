@@ -2,6 +2,7 @@ package server
 
 import (
 	"cron/internal/basic/auth"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -27,7 +28,7 @@ func useCors() gin.HandlerFunc {
 func UseAuth(NotUserRote map[string]string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		path := ctx.FullPath()
-
+		env := ctx.GetHeader("env")
 		if _, ok := NotUserRote[path]; !ok {
 			user, err := auth.ParseHttpToken(ctx)
 			if err != nil {
@@ -36,11 +37,23 @@ func UseAuth(NotUserRote map[string]string) gin.HandlerFunc {
 				ctx.Abort() // 终止
 				return
 			}
+			user.Env = env
 			ctx.Set("user", user)
+		} else {
+			ctx.Set("user", &auth.UserToken{UserName: "无", Env: env})
 		}
 
 		ctx.Next()
 	}
+}
+
+// 获得用户信息
+func GetUser(ctx *gin.Context) (user *auth.UserToken, err error) {
+	u, ok := ctx.Get("user")
+	if !ok {
+		return nil, errors.New("用户信息未找到！")
+	}
+	return u.(*auth.UserToken), nil
 }
 
 /*认证失败*/

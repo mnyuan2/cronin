@@ -8,7 +8,12 @@ import (
 
 // 查看已注册任务
 func httpRegister(ctx *gin.Context) {
-	rep, err := biz.NewCronConfigService().RegisterList(ctx.Request.Context(), nil)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).RegisterList(nil)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -19,7 +24,13 @@ func httpList(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewCronConfigService().List(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+
+	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).List(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -30,7 +41,12 @@ func httpSet(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewCronConfigService().Set(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).Set(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -41,6 +57,11 @@ func httpChangeStatus(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewCronConfigService().ChangeStatus(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).ChangeStatus(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

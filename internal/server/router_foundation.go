@@ -13,6 +13,17 @@ func routerDicGets(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewDicService().Gets(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewDicService(ctx.Request.Context(), user).DicGets(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+func routerSystemInfo(ctx *gin.Context) {
+
+	rep, err := biz.NewDicService(ctx.Request.Context(), nil).SystemInfo(nil)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

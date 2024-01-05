@@ -13,7 +13,12 @@ func routerSqlList(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewSettingSqlService().List(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingSqlService(ctx.Request.Context(), user).List(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -24,7 +29,12 @@ func routerSqlSet(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewSettingSqlService().Set(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingSqlService(ctx.Request.Context(), user).Set(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -35,7 +45,12 @@ func routerSqlChangeStatus(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewSettingSqlService().ChangeStatus(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingSqlService(ctx.Request.Context(), user).ChangeStatus(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -46,6 +61,11 @@ func routerSqlPing(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewSettingSqlService().Ping(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingSqlService(ctx.Request.Context(), user).Ping(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
