@@ -22,7 +22,7 @@ func main() {
 	// 注册mysql表
 	models.AutoMigrate(db.New(context.Background()))
 	// 初始化任务
-	server.InitTask()
+	//server.InitTask()
 	// 初始化http
 	r := server.InitHttp(Resource)
 	r.Run(":" + config.MainConf().Http.Port)

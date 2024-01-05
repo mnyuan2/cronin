@@ -146,8 +146,9 @@ var MyConfig = Vue.extend({
                                             <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
                                         </el-form-item>
                                         <el-form-item label="错误行为">
-                                            <el-radio v-model="form.command.sql.err_action" label="1">错误终止任务</el-radio>
-                                            <el-radio v-model="form.command.sql.err_action" label="2">错误跳过继续</el-radio>
+                                            <el-radio v-model="form.command.sql.err_action" label="1">终止任务</el-radio>
+                                            <el-radio v-model="form.command.sql.err_action" label="2">跳过继续</el-radio>
+                                            <el-radio v-model="form.command.sql.err_action" label="3">事务回滚</el-radio>
                                         </el-form-item>
                                     </el-tab-pane>
                                 </el-tabs>
@@ -181,7 +182,7 @@ var MyConfig = Vue.extend({
                     </el-drawer>
                     <!-- sql设置弹窗 -->
                     <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
-                        <el-input type="textarea" rows="12" placeholder="请输入sql内容" v-model="sqlSet.data"></el-input>
+                        <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.data"></el-input>
                         <span slot="footer" class="dialog-footer">
                             <el-button @click="sqlSet.show = false">取 消</el-button>
                             <el-button type="primary" @click="sqlSetConfirm()">确 定</el-button>
@@ -488,10 +489,23 @@ var MyConfig = Vue.extend({
                 console.log('sqlSetShow', this.sqlSet)
                 return this.$message.error("索引位标志异常");
             }
+            // 支持批量添加
+            let temp = this.sqlSet.data.split(";")
+            let datas = []
+            for (let i in temp){
+                if (temp[i] != ""){
+                    datas.push(temp[i])
+                }
+            }
+
             if (this.sqlSet.index < 0){
-                this.form.command.sql.statement.push(this.sqlSet.data)
+                this.form.command.sql.statement.push(...datas)
+            }else if (datas.length > 1){
+                return this.$message.warning("不支持单sql的拆分，建议删除后批量添加");
+            }else if (datas.length == 0){
+                return this.$message.warning("不存在有效sql，请确认输入");
             }else{
-                this.form.command.sql.statement[this.sqlSet.index] = this.sqlSet.data
+                this.form.command.sql.statement[this.sqlSet.index] = datas[0]
             }
             this.sqlSet.show = false
             this.sqlSet.data = ""

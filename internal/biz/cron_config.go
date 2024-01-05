@@ -185,6 +185,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if len(r.Command.Sql.Statement) == 0 {
 			return nil, errors.New("未设置 sql 执行语句")
 		}
+		if _, ok := models.SqlErrActionMap[r.Command.Sql.ErrAction]; !ok {
+			return nil, errors.New("未设置 sql 错误行为")
+		}
 	}
 
 	err = data.NewCronConfigData(dm.ctx).Set(d)

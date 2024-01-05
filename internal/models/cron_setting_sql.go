@@ -6,13 +6,15 @@ import (
 )
 
 const (
-	SqlErrActionAbort   = 1 // 终止
-	SqlErrActionProceed = 2 // 继续
+	SqlErrActionAbort    = 1 // 终止
+	SqlErrActionProceed  = 2 // 继续
+	SqlErrActionRollback = 3 // 事务回滚
 )
 
 var SqlErrActionMap = map[int]string{
-	SqlErrActionAbort:   "错误终止任务",
-	SqlErrActionProceed: "错误跳过继续",
+	SqlErrActionAbort:    "终止任务",
+	SqlErrActionProceed:  "跳过继续",
+	SqlErrActionRollback: "事务回滚",
 }
 
 // sql驱动
