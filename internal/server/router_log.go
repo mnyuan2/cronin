@@ -13,7 +13,12 @@ func httpLogByConfig(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewCronLogService().ByConfig(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronLogService(ctx.Request.Context(), user).ByConfig(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -24,6 +29,11 @@ func httpLogDel(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewCronLogService().Del(ctx.Request.Context(), r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronLogService(ctx.Request.Context(), user).Del(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

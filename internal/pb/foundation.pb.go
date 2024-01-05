@@ -21,4 +21,15 @@ type DicGetItem struct {
 	Key string `json:"key"`
 }
 
-type DicExtendItem struct{}
+type DicExtendItem struct {
+	Default int `json:"default"` // 默认 2.有效
+}
+
+// 系统信息
+type SystemInfoRequest struct{}
+type SystemInfoReply struct {
+	Version string `json:"version"`
+	CmdName string `json:"cmd_name"`
+	Env     string `json:"env"`
+	EnvName string `json:"env_name"`
+}

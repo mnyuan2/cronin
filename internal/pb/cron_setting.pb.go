@@ -49,3 +49,41 @@ type SettingChangeStatusRequest struct {
 }
 type SettingChangeStatusReply struct {
 }
+
+// 环境列表
+type SettingEnvListRequest struct {
+	Page int `form:"page"`
+	Size int `form:"size"`
+}
+type SettingEnvListReply struct {
+	List []*SettingEnvListItem `json:"list"`
+	Page *Page                 `json:"page"`
+}
+type SettingEnvListItem struct {
+	Id         int    `json:"id"`
+	Name       string `json:"name"`
+	Title      string `json:"title"`
+	Status     int    `json:"status"`
+	StatusName string `json:"status_name"`
+	CreateDt   string `json:"create_dt"`
+	UpdateDt   string `json:"update_dt"`
+	Default    int    `json:"default"`
+}
+
+// 环境设置
+type SettingEnvSetRequest struct {
+	Id      int    `json:"id"`
+	Name    string `json:"name"`
+	Title   string `json:"title"`
+	Default int    `json:"default"`
+}
+type SettingEnvSetReply struct {
+	Id int `json:"id"`
+}
+
+// 环境设置
+type SettingEnvDelRequest struct {
+	Id int `json:"id"`
+}
+type SettingEnvDelReply struct {
+}

@@ -1,4 +1,4 @@
-var SqlSource = Vue.extend({
+var MySqlSource = Vue.extend({
     template: `<div>
         <el-button type="primary" plain @click="initForm(true)" style="margin-left: 20px">新增链接</el-button>
         
@@ -45,7 +45,7 @@ var SqlSource = Vue.extend({
         </el-dialog>
     </div>`,
 
-    name: "SqlSource",
+    name: "MySqlSource",
     props: {
         reload_list:false, // 重新加载列表
     },
@@ -165,4 +165,4 @@ var SqlSource = Vue.extend({
     }
 })
 
-Vue.component("SqlSource", SqlSource);
+Vue.component("MySqlSource", MySqlSource);

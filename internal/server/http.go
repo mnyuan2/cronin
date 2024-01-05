@@ -7,12 +7,10 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
-	"runtime"
 )
 
 // Init http 初始化
 func InitHttp(Resource embed.FS) *gin.Engine {
-
 	r := gin.Default()
 
 	// 二进制版本,打包使用（优点，静态资源将被打包至二进制文件）
@@ -33,8 +31,9 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	//r.Static("/components", "web/components")
 
 	r.Use(UseAuth(nil))
-
+	// api
 	r.GET("/foundation/dic_gets", routerDicGets)
+	r.GET("/foundation/system_info", routerSystemInfo)
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)
@@ -46,19 +45,17 @@ func InitHttp(Resource embed.FS) *gin.Engine {
 	r.POST("/setting/sql_source_set", routerSqlSet)
 	r.POST("/setting/sql_source_change_status", routerSqlChangeStatus)
 	r.POST("/setting/sql_source_ping", routerSqlPing)
-
-	gv := r.Group("view")
-	gv.GET("/cron/list", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "cron_list.html", map[string]string{"version": config.Version})
+	r.GET("/setting/env_list", routerEnvList)
+	r.POST("/setting/env_set", routerEnvSet)
+	r.POST("/setting/env_set_content", routerEnvSetContent)
+	r.POST("/setting/env_change_status", routerEnvChangeStatus)
+	r.POST("/setting/env_del", routerEnvDel)
+	// 视图
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.Redirect(http.StatusMovedPermanently, "/index.html")
 	})
-	r.GET("/system/info", func(ctx *gin.Context) {
-		cmd_name := "sh"
-		if runtime.GOOS == "windows" {
-			cmd_name = "cmd"
-		}
-		NewReply(ctx).SetSuccess(map[string]string{
-			"cmd_name": cmd_name,
-		}).RenderJson()
+	r.GET("/index.html", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "index.html", map[string]string{"version": config.Version})
 	})
 
 	return r
