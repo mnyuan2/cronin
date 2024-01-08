@@ -41,17 +41,17 @@ func (m *CronLogData) GetList(where *db.Where, page, size int, list interface{})
 }
 
 // 统计配置置顶的错误数
-func (m *CronLogData) SumConfTopError(confId []int, startTime, endTime time.Time, maxNumber int) (list map[int]*SumConfTop, err error) {
+func (m *CronLogData) SumConfTopError(env string, confId []int, startTime, endTime time.Time, maxNumber int) (list map[int]*SumConfTop, err error) {
 	sql := `SELECT 
 	t1.conf_id, count(t1.id) total_number, sum(t1.status=?) error_number
 FROM 
 	cron_log t1 
 WHERE 
-	?>(SELECT count(*) FROM cron_log WHERE t1.conf_id=conf_id and t1.id<id) and t1.conf_id in(?) and create_dt between ? and ? GROUP BY t1.conf_id`
+	?>(SELECT count(*) FROM cron_log WHERE env=t1.env and t1.conf_id=conf_id and t1.id<id) and t1.env=? and t1.conf_id in(?) and create_dt between ? and ? GROUP BY t1.conf_id`
 
 	temps := []*SumConfTop{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Read.Raw(sql, enum.StatusDisable, maxNumber, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Find(&temps).Error
+	err = m.db.Read.Raw(sql, enum.StatusDisable, maxNumber, env, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Find(&temps).Error
 	if err != nil {
 		return list, err
 	}

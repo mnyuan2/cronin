@@ -12,7 +12,7 @@ var MyConfigLog = Vue.extend({
                                 <template slot-scope="scope">
 <!--                                    <el-popover trigger="hover" placement="left">-->
 <!--                                        <div>-->
-                                        {{scope.row.body.substring(0, 120)+'...'}}
+                                        {{scope.row.body.substring(0, 105)+'...'}}
 <!--                                        </div>-->
                                         <el-button type="text" slot="reference" @click="logBodyShow(scope.row)">更多</el-button>
 <!--                                    </el-popover>-->

@@ -138,17 +138,23 @@ var MyConfig = Vue.extend({
                                         </el-form-item>
                                         <el-form-item label="执行语句">
                                             <div><el-button type="text" @click="sqlSetShow(-1,'')"><i class="el-icon-plus">添加</i></el-button></div>
-                                            <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;max-height: 200px;overflow: auto;background: #fff;margin-bottom: 10px;">
-                                                <pre style="margin: 0"><code class="language-sql hljs" style="min-height: 50px;">{{statement}}</code></pre>
-                                                <i class="el-icon-delete" style="font-size: 20px;position: absolute;top: 17px;right: 0px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
-                                                <i class="el-icon-edit" style="font-size: 20px;position: absolute;top: 50px;right: 0px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
+                                            <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;max-height: 200px;background: #f4f4f5;margin-bottom: 10px;padding: 0 20px 0 6px;border-radius: 3px;">
+                                                <pre style="margin: 0;overflow: auto;"><code class="language-sql hljs" style="min-height: 50px;">{{statement}}</code></pre>
+                                                <i class="el-icon-delete" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
+                                                <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
                                             </div>
                                             <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
                                         </el-form-item>
                                         <el-form-item label="错误行为">
-                                            <el-radio v-model="form.command.sql.err_action" label="1">终止任务</el-radio>
-                                            <el-radio v-model="form.command.sql.err_action" label="2">跳过继续</el-radio>
-                                            <el-radio v-model="form.command.sql.err_action" label="3">事务回滚</el-radio>
+                                            <el-tooltip class="item" effect="dark" content="执行到错误停止，之前的成功语句保留" placement="top-start">
+                                              <el-radio v-model="form.command.sql.err_action" label="1">终止任务</el-radio>
+                                            </el-tooltip>
+                                            <el-tooltip class="item" effect="dark" content="执行到错误跳过，继续执行后面语句" placement="top-start">
+                                              <el-radio v-model="form.command.sql.err_action" label="2">跳过继续</el-radio>
+                                            </el-tooltip>
+                                            <el-tooltip class="item" effect="dark" content="执行到错误，之前的成功语句也整体回滚" placement="top-start">
+                                              <el-radio v-model="form.command.sql.err_action" label="3">事务回滚</el-radio>
+                                            </el-tooltip>
                                         </el-form-item>
                                     </el-tab-pane>
                                 </el-tabs>
@@ -265,7 +271,6 @@ var MyConfig = Vue.extend({
                     }
                     if (res.data.list[i].command.sql){
                         res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
-                        res.data.list[i].command.sql.source = res.data.list[i].command.sql.err_action.toString()
                     }
                     res.data.list[i].status = res.data.list[i].status.toString()
                     res.data.list[i].topRatio = 100 - ratio * 100

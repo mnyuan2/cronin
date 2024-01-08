@@ -11,7 +11,7 @@ var MyHeader = Vue.extend({
                     </el-dropdown>
                     <div style="float: right">
                         <a href="https://cron.qqe2.com/" target="_blank" >6位 时间格式生成器</a>
-                        <p class="version">{{sys_info.version}}</p>
+                        <span class="version">{{sys_info.version}}</span>
                     </div>
                     
                     <!-- 环境 管理弹窗 -->

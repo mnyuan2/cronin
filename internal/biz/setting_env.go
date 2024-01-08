@@ -114,6 +114,7 @@ func (dm *SettingEnvService) Set(r *pb.SettingEnvSetRequest) (resp *pb.SettingEn
 		one.Scene = models.SceneEnv
 		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
+		one.Content = "{}"
 		one.Name = r.Name
 		old, _ := _data.GetOne(db.NewWhere().Eq("scene", models.SceneEnv).Eq("name", r.Name))
 		if old.Id > 0 {
