@@ -76,7 +76,16 @@ var MyConfig = Vue.extend({
             
             
                             <el-form-item label="时间*">
-                                <el-input v-model="form.spec" :placeholder="hintSpec"></el-input>
+                                <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
+                                <el-date-picker 
+                                    style="width: 100%"
+                                    v-show="form.type==2" 
+                                    v-model="form.spec" 
+                                    value-format="yyyy-MM-dd HH:mm:ss"
+                                    type="datetime" 
+                                    placeholder="选择运行时间" 
+                                    :picker-options="pickerOptions">
+                                </el-date-picker>
                             </el-form-item>
                             <el-form-item>
                                 <el-tabs type="border-card" v-model="form.protocol">
@@ -239,6 +248,13 @@ var MyConfig = Vue.extend({
             form:{},
             hintSpec: "* * * * * *",
             labelType: '1',
+            // 日期选择器设置
+            pickerOptions: {
+                disabledDate(time){
+                    return time.getTime() < Date.now() - 8.64e7
+                },
+                selectableRange: "00:00:00 - 23:01:59",
+            },
         }
     },
     // 模块初始化
@@ -249,6 +265,20 @@ var MyConfig = Vue.extend({
     mounted(){
 
         this.getList()
+    },
+    watch:{
+        "form.spec":{
+            handler(v){
+                if (this.form.type == 2){ // 年月日的变化控制
+                    let cur = moment()
+                    if (moment(v).format('YYYY-MM-DD') == cur.format('YYYY-MM-DD')){
+                        this.pickerOptions.selectableRange = `${cur.format('HH:mm:ss')} - 23:59:59`
+                    }else{
+                        this.pickerOptions.selectableRange = "00:00:00 - 23:59:59"
+                    }
+                }
+            }
+        }
     },
 
     // 具体方法
@@ -351,6 +381,7 @@ var MyConfig = Vue.extend({
         },
         initFormData(){
             return  {
+                type: '1',
                 command:{
                     http:{
                         method: 'GET',
