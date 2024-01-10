@@ -6,16 +6,66 @@
     <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
     <script src="/static/js/vue@2.7.8.js"></script>
     <script src="/static/js/element-ui@2.15.14.js"></script>
+    <script src="/static/js/vue-router@3.6.5.js"></script>
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/moment.min.js"></script>
     <style>
         body{
             margin: 0;
         }
-        .el-header{
-            height: 50px !important;
-            line-height: 50px;
+        .el-header {
+            background: #151515;
+            padding: 0;
+            border: 0;
         }
+        .el-header .menu-left{
+            display: inline-block;
+        }
+        .el-menu--horizontal>.el-menu-item {
+            height: 46px;
+            line-height: 46px;
+        }
+        .el-menu--horizontal>.el-submenu .el-submenu__title {
+            height:auto;
+            line-height: 46px;
+            border-bottom: inherit;
+        }
+        .el-menu-item,.el-submenu__title {
+            list-style: none;
+            height: auto;
+            line-height: inherit;
+            list-style: none
+        }
+
+        .el-header .menu-right{
+            float: right;
+            margin-right: 10px;
+        }
+        .el-header .el-dropdown-link{
+            color: #fff;
+            border: 1px solid #525252;
+            border-radius: 6px;
+            padding: 5px 10px;
+        }
+
+        .submenu ul{
+            background-color: #fff !important;
+        }
+        .submenu li{
+            background-color: inherit !important;
+            color: #303133 !important;
+        }
+        .submenu li:hover{
+            background-color: #f2f2f2 !important;
+        }
+        .submenu a{
+            text-decoration: auto;
+            color: #303133;
+        }
+        .el-menu--popup {
+            min-width: 120px;
+        }
+
         .icon{
             font-size: 24px;
         }
@@ -67,6 +117,7 @@
     <div id="app">
         <my-header :dic_envs="dicMap[Enum.dicEnv]" :sys_info="sysInfo"></my-header>
         <my-config :dic_sql_source="dicMap[Enum.dicSqlSource]" :sys_info="sysInfo"></my-config>
+        <router-view></router-view><!--路由出口-->
     </div>
 </body>
 
@@ -77,8 +128,18 @@
 <script src="/components/sql_source.js?v=[[.version]]"></script>
 <script src="/components/env.js?v=[[.version]]"></script>
 <script>
-    new Vue({
+    // 路由
+    const router = new VueRouter({
+        routes: [
+            { path: '/', redirect: '/config'},
+            {path: '/config', component: {template:'<h1>config</h1>'}},
+            {path: '/sql_source', component: {template:'<h1>sql_source</h1>'}},
+        ]
+    })
+    // vue
+    const v = new Vue({
         el: '#app',
+        router: router,
         data(){
             return {
                 dicMap:{},
