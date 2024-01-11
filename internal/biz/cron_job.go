@@ -3,19 +3,25 @@ package biz
 import (
 	"bytes"
 	"context"
+	"cron/internal/basic/grpcurl"
+	"cron/internal/basic/util"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"errors"
 	"fmt"
 	"github.com/axgle/mahonia"
+	"github.com/jhump/protoreflect/desc/protoparse"
+	"github.com/jhump/protoreflect/grpcreflect"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -79,8 +85,8 @@ func (job *CronJob) Run() {
 	}
 
 	defer func() {
-		if err := recover(); err != nil {
-			data.NewCronLogData(ctx).Add(models.NewErrorCronLog(job.conf, fmt.Sprintf("异常：%v", err), st))
+		if err := util.PanicInfo(recover()); err != "" {
+			data.NewCronLogData(ctx).Add(models.NewErrorCronLog(job.conf, fmt.Sprintf("异常：%s", err), "panic", st))
 		}
 		data.NewCronLogData(ctx).Add(g)
 		if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
@@ -100,14 +106,12 @@ func (job *CronJob) Run() {
 		res, err = job.cmdFunc(ctx)
 	case models.ProtocolSql:
 		res, err = job.sqlFunc(ctx)
+	default:
+		err = fmt.Errorf("未支持的protocol=%v", job.conf.Protocol)
 	}
 
 	if err != nil {
-		body := err.Error()
-		if res != nil {
-			body = string(res)
-		}
-		g = models.NewErrorCronLog(job.conf, body, st)
+		g = models.NewErrorCronLog(job.conf, string(res), err.Error(), st)
 		job.ErrorCount++
 	} else {
 		g = models.NewSuccessCronLog(job.conf, string(res), st)
@@ -149,7 +153,7 @@ func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err error) {
 	case "GRPC":
 		// 进行grpc处理
 		// 目前还存在问题，无法通用性的提交和接收参数！
-		return job.rpcGrpc(ctx, job.commandParse.Rpc.Addr, job.commandParse.Rpc.Action, job.commandParse.Rpc.Body)
+		return job.rpcGrpc(ctx, job.commandParse.Rpc)
 	case "RPC":
 		job.ErrorCount = -2
 		return nil, fmt.Errorf("未支持的rpc method，任务已终止。")
@@ -229,22 +233,64 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 }
 
 // grpc调用
-func (job *CronJob) rpcGrpc(ctx context.Context, addr, action, param string) (resp []byte, err error) {
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, err error) {
+	cli, err := grpcurl.BlockingDial(ctx, "tcp", r.Addr, nil)
 	if err != nil {
-		return nil, fmt.Errorf("地址(%s)连接失败,%w", addr, err)
+		return nil, fmt.Errorf("拨号目标主机 %s 失败:%w", r.Addr, err)
 	}
-	defer conn.Close()
+	// 解析描述文件
+	var descSource grpcurl.DescriptorSource
+	if r.Proto != "" {
+		p := protoparse.Parser{
+			//ImportPaths:           importPaths,
+			InferImportPaths:      false,
+			IncludeSourceCodeInfo: true,
+			Accessor:              protoparse.FileContentsFromMap(map[string]string{"*.proto": r.Proto}),
+		}
+		fds, err := p.ParseFiles("*.proto")
+		if err != nil {
+			return nil, fmt.Errorf("无法解析给定的proto文件: %w", err)
+		}
+		descSource, err = grpcurl.DescriptorSourceFromFileDescriptors(fds...)
+		if err != nil {
+			return nil, fmt.Errorf("proto描述解析错误: %w", err)
+		}
+	} else { // 大部分服务器是不支持服务端的反射解析的
+		md := grpcurl.MetadataFromHeaders(r.Header)
+		refCtx := metadata.NewOutgoingContext(ctx, md)
+		refClient := grpcreflect.NewClientAuto(refCtx, cli)
+		descSource = grpcurl.DescriptorSourceFromServer(ctx, refClient)
+	}
 
-	req := &models.GrpcRequest{}
-	req.SetParam(param)
-	res := &models.GrpcRequest{}
+	var in io.Reader
+	if r.Body == "" {
+		in = os.Stdin
+	} else {
+		in = strings.NewReader(r.Body)
+	}
 
-	err = conn.Invoke(ctx, action, req, resp)
+	// 如果不是详细输出，那么还可以在每个消息之间包含记录分隔符，这样输出就可以通过管道输送到另一个grpcurl进程
+	// 请求参数处理方法，把原json参数根据描述文件进行了转义处理。
+	rf, formatter, err := grpcurl.RequestParserAndFormatter(grpcurl.Format("json"), descSource, in, grpcurl.FormatOptions{
+		EmitJSONDefaultFields: true, // 是否json格式
+		IncludeTextSeparator:  false,
+		AllowUnknownFields:    true,
+	})
 	if err != nil {
-		panic(fmt.Errorf("调用失败，%w", err))
-		return nil, fmt.Errorf("%s 调用失败，%w", action, err)
+		return nil, fmt.Errorf("请求解析器错误 %w", err)
 	}
 
-	return []byte(res.String()), nil
+	h := grpcurl.NewMyEventHandler(formatter)
+	// 发起请求
+	err = grpcurl.InvokeRPC(ctx, descSource, cli, r.Action, r.Header, h, rf.Next)
+	// 处理错误
+	if err != nil {
+		errStatus, _ := status.FromError(err)
+		h.SetStatus(errStatus)
+	}
+	if h.GetStatus().Code() != codes.OK {
+		err = fmt.Errorf("code:%v code_name:%v message:%v", h.GetStatus().Code(), h.GetStatus().Code().String(), h.GetStatus().Message())
+	}
+
+	return []byte(h.RespMessages), err
 }

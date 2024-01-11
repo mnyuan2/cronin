@@ -63,10 +63,12 @@ type CronHttp struct {
 	Header []*KvItem `json:"header"`
 }
 type CronRpc struct {
-	Method string `json:"method"` // 执行类型：rpc、grpc
-	Addr   string `json:"addr"`   // 地址，包含端口
-	Action string `json:"action"` // 方法
-	Body   string `json:"body"`   // 请求参数
+	Proto  string   `json:"proto"`  // proto定义文件类容
+	Method string   `json:"method"` // 执行类型：rpc、grpc
+	Addr   string   `json:"addr"`   // 地址，包含端口
+	Action string   `json:"action"` // 方法
+	Header []string `json:"header"` // 请求头
+	Body   string   `json:"body"`   // 请求参数
 }
 
 // sql任务配置

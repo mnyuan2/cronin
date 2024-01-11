@@ -171,6 +171,20 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 				return nil, fmt.Errorf("http body 输入不规范，请确认json字符串是否规范")
 			}
 		}
+	} else if r.Protocol == models.ProtocolRpc {
+		if r.Command.Rpc.Method != "GRPC" {
+			return nil, fmt.Errorf("rpc 请选择请求模式")
+		}
+		if r.Command.Rpc.Proto == "" {
+			return nil, fmt.Errorf("rpc 请完善proto文件内容")
+		}
+		if r.Command.Rpc.Addr == "" {
+			return nil, fmt.Errorf("rpc 请完善请求地址")
+		}
+		if r.Command.Rpc.Action == "" {
+			return nil, fmt.Errorf("rpc 请完善请求方法")
+		}
+
 	} else if r.Protocol == models.ProtocolCmd {
 		if r.Command.Cmd == "" {
 			return nil, fmt.Errorf("请输入 cmd 命令类容")

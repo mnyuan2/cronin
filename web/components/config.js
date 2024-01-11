@@ -68,10 +68,12 @@ var MyConfig = Vue.extend({
                                 <el-input v-model="form.name"></el-input>
                             </el-form-item>
                             <el-form-item label="类型*">
-                                <el-select v-model="form.type" placeholder="请选请求方式" @change="changeType">
-                                    <el-option label="周期" value="1"></el-option>
-                                    <el-option label="单次" value="2"></el-option>
-                                </el-select>
+                                <el-radio v-model="form.type" label="1">周期</el-radio>
+                                <el-radio v-model="form.type" label="2">单次</el-radio>
+<!--                                <el-select v-model="form.type" placeholder="请选请求方式" @change="changeType">-->
+<!--                                    <el-option label="周期" value="1"></el-option>-->
+<!--                                    <el-option label="单次" value="2"></el-option>-->
+<!--                                </el-select>-->
                             </el-form-item>
             
             
@@ -114,22 +116,23 @@ var MyConfig = Vue.extend({
                                             <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                                         </el-form-item>
                                     </el-tab-pane>
-            <!--                        <el-tab-pane label="rpc" name="2">-->
-            <!--                            <el-form-item label="请求模式">-->
-            <!--                                <el-select v-model="form.command.rpc.method" placeholder="请选请求方式">-->
-            <!--                                    <el-option label="GRPC" value="GRPC"></el-option>-->
-            <!--                                </el-select>-->
-            <!--                            </el-form-item>-->
-            <!--                            <el-form-item label="地址">-->
-            <!--                                <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>-->
-            <!--                            </el-form-item>-->
-            <!--                            <el-form-item label="方法">-->
-            <!--                                <el-input v-model="form.command.rpc.action" placeholder="请输入服务方法; 示例：/merchantpush.Merchantpush/Echo"></el-input>-->
-            <!--                            </el-form-item>-->
-            <!--                            <el-form-item label="请求参数">-->
-            <!--                                <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>-->
-            <!--                            </el-form-item>-->
-            <!--                        </el-tab-pane>-->
+                                    <el-tab-pane label="rpc" name="2">
+                                        <el-form-item label="请求模式">
+                                            <el-radio v-model="form.command.rpc.method" label="GRPC">GRPC</el-radio>
+                                        </el-form-item>
+                                        <el-form-item label="proto">
+                                            <el-input type="textarea" v-model="form.command.rpc.proto" rows="5" placeholder="请输入*.proto 文件内容"></el-input>
+                                        </el-form-item>
+                                        <el-form-item label="地址">
+                                            <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
+                                        </el-form-item>
+                                        <el-form-item label="方法">
+                                            <el-input v-model="form.command.rpc.action" placeholder="请输入服务方法; 示例：user.User/Echo"></el-input>
+                                        </el-form-item>
+                                        <el-form-item label="请求参数">
+                                            <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
+                                        </el-form-item>
+                                    </el-tab-pane>
                                     <el-tab-pane label="cmd" name="3">
                                         <el-input type="textarea" v-model="form.command.cmd" rows="5" :placeholder="sys_info.cmd_name + ': 请输入命令行执行内容'"></el-input>
                                     </el-tab-pane>
@@ -147,7 +150,7 @@ var MyConfig = Vue.extend({
                                         </el-form-item>
                                         <el-form-item label="执行语句">
                                             <div><el-button type="text" @click="sqlSetShow(-1,'')"><i class="el-icon-plus">添加</i></el-button></div>
-                                            <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;max-height: 200px;background: #f4f4f5;margin-bottom: 10px;padding: 0 20px 0 6px;border-radius: 3px;">
+                                            <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                                 <pre style="margin: 0;overflow: auto;"><code class="language-sql hljs" style="min-height: 50px;">{{statement}}</code></pre>
                                                 <i class="el-icon-delete" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
                                                 <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
@@ -452,13 +455,13 @@ var MyConfig = Vue.extend({
             })
         },
         // 改变类型
-        changeType: function (){
-            if (this.form.type == 2 || this.form.type == '2'){
-                this.hintSpec = "YYYY-mm-dd HH:MM:SS"
-            }else{
-                this.hintSpec = "* * * * * *"
-            }
-        },
+        // changeType: function (){
+        //     if (this.form.type == 2 || this.form.type == '2'){
+        //         this.hintSpec = "YYYY-mm-dd HH:MM:SS"
+        //     }else{
+        //         this.hintSpec = "* * * * * *"
+        //     }
+        // },
 
         getRegisterList(){
             this.registerListShow = true;

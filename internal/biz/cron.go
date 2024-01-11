@@ -30,7 +30,7 @@ func cronInit() {
 			cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "上一步还未完成, 跳过:", log.LstdFlags))),
 		),
 	)
-	log.Println("初始化完成")
+	log.Println("cron 初始化完成")
 	cronRun.Start() // 启动程序；启动之后添加任务也是可以的；
 	//cronRun.Stop() // 停止服务
 }

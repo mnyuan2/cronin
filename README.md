@@ -10,7 +10,7 @@ cronin 以通过网页的形式进行定时任务的设置和管理，并展示�
 #### 安装教程
 1.  创建配置文件。
 2.  编译服务 或者直接下载发行版
-    GOOS=linux go build -ldflags "-X main.version=v0.4.1" -o cronin.v0.4.1 ./main.go
+    GOOS=linux go build -ldflags "-X main.version=v0.4.1 -X main.isBuildResource=true" -o cronin.v0.4.1 ./main.go
 3.  linux服务端运行服务
     ./cronin.xxx
 

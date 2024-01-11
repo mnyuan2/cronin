@@ -68,7 +68,7 @@ func (dm *TaskService) Add(conf *models.CronConfig) error {
 	}
 	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
-		g := models.NewErrorCronLog(conf, fmt.Sprintf("任务启动失败，%s；", err.Error()), time.Now())
+		g := models.NewErrorCronLog(conf, err.Error(), "任务启动失败", time.Now())
 		data.NewCronLogData(context.Background()).Add(g)
 		return err
 	}

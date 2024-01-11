@@ -47,7 +47,7 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, e
 func (job *CronJob) sqlMysqlExec(_db *gorm.DB, errAction int, statement []string) (logs []string) {
 	var tx *gorm.DB
 	if errAction == models.SqlErrActionRollback {
-		tx = tx.Begin()
+		tx = _db.Begin()
 	} else {
 		tx = _db
 	}
