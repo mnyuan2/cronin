@@ -34,6 +34,8 @@ function getDatetimeString(d) {
  */
 const Enum ={
     envKey: "env",
+    systemInfoKey: "system_info",
+    dicKey: "dic",
     dicSqlSource: 1,
     dicEnv: 2,
 }
@@ -87,21 +89,67 @@ var api = {
         let features = "height=240, width=400, top=50, left=50, toolbar=no, menubar=no,scrollbars=no,resizable=no, location=no, status=no,toolbar=no";
         window.open(this.baseUrl+path, "_blank", features)
     },
-    // 枚举获取
-    innerFoundationDic: function(type, success){
-        if (Array.isArray(type)){
-            type = type.join(',')
-        }else if (!isNaN(type) && typeof type === 'number'){
-            // type = type.toString()
-        }else if (typeof type !== 'string'){
-            throw new Error("type 元素仅支持array、string、number类型")
+
+    /**
+     * 枚举列表
+     * @param types array 枚举key列表
+     * @param callback function() 回调函数
+     * @param reload bool 是否强制重载
+     * @returns {Promise<void>}
+     */
+    dicList: async function (types, callback, reload= false) {
+
+        let list = JSON.parse(localStorage.getItem(Enum.dicKey)) ?? {}
+        let reply = {}
+        let queryInfo = []
+        // 从存储查看要请求的枚举是否存在 存在从存储取出
+        types.forEach((element, index) => {
+            if (list[element]) {
+                reply[element] = list[element]
+            } else {
+                queryInfo.push(element)
+            }
+        })
+
+        // 不存在存储的枚举继续查询
+        if (queryInfo.length > 0) {
+            // 这里的请求必须等待结果
+            await new Promise((resolve, reject) => {
+                // 查询不存在缓存的部分调取一次请求，并缓存；如果都存在缓存中就无需再次发起请求。
+                this.innerGet("/foundation/dic_gets", {"types":queryInfo.join(',')}, res =>{
+                    if (res.status) {
+                        queryInfo.forEach(element => {
+                            if (res.data.maps[element]){
+                                reply[element] = res.data.maps[element].list
+                                list[element] = reply[element]
+                            }
+                        })
+                        window.localStorage.setItem(Enum.dicKey, JSON.stringify(list))
+                    } else {
+                        console.log("枚举错误",res)
+                        alert('枚举错误:' + res.message)
+                    }
+                    resolve()
+                })
+            })
         }
-        this.innerGet("/foundation/dic_gets", {"types":type}, success)
+        callback(reply)
     },
-    innerSystemInfo: function (success){
+
+    // 系统信息
+    // 信息具有缓存功能
+    systemInfo: function (callback, reload=false) {
+        // 不重载，且缓存存在，使用缓存数据
+        if (!reload){
+            let list = JSON.parse(localStorage.getItem(Enum.systemInfoKey)) ?? {}
+            if (list){
+                return callback(list)
+            }
+        }
+
         this.ajax('get', this.baseUrl+"/foundation/system_info", null,null, (res) =>{
-            if (res.code != "000000"){
-                return success(res);
+            if (!res.status){
+                return callback(res);
             }
 
             let envStr = localStorage.getItem(Enum.envKey)
@@ -114,22 +162,23 @@ var api = {
             }else {
                 this.setEnv(res.data.env, res.data.env_name)
             }
-
-            success(res)
+            localStorage.setItem(Enum.systemInfoKey, JSON.stringify(res.data))
+            callback(res.data)
         }, false)
     },
+
     setEnv(key, name){
-        console.log("设置环境", key, name)
         this.env = {env:key, env_name:name}
         localStorage.setItem(Enum.envKey, JSON.stringify(this.env))
     },
+
     getEnv(){
         if (this.env.length == 0 || !this.env.env){
             let envStr = localStorage.getItem(Enum.envKey)
             let env = JSON.parse(envStr)
             if (env == null || env.env == ""){
-                this.innerSystemInfo((res)=>{
-                    if (res.code != "000000"){
+                this.systemInfo((res)=>{
+                    if (!res.status){
                         alert(res.message);
                     }
                 })

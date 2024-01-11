@@ -62,6 +62,7 @@ var MyConfigLog = Vue.extend({
         logByConfig(id){
             api.innerGet("/log/by_config", {conf_id:id, limit:15}, (res)=>{
                 if (!res.status){
+                    console.log("log/by_config 错误", res)
                     return this.$message.error(res.message);
                 }
                 this.list = res.data.list;

@@ -115,9 +115,10 @@
 </head>
 <body>
     <div id="app">
-        <my-header :dic_envs="dicMap[Enum.dicEnv]" :sys_info="sysInfo"></my-header>
-        <my-config :dic_sql_source="dicMap[Enum.dicSqlSource]" :sys_info="sysInfo"></my-config>
-        <router-view></router-view><!--路由出口-->
+        <el-container direction="vertical">
+            <my-header :dic_envs="dicMap[Enum.dicEnv]" :sys_info="sysInfo"></my-header>
+            <router-view></router-view>
+        </el-container>
     </div>
 </body>
 
@@ -132,8 +133,8 @@
     const router = new VueRouter({
         routes: [
             { path: '/', redirect: '/config'},
-            {path: '/config', component: {template:'<h1>config</h1>'}},
-            {path: '/sql_source', component: {template:'<h1>sql_source</h1>'}},
+            { path: '/config', component: MyConfig},
+            {path: '/sql_source', component: MySqlSource},
         ]
     })
     // vue
@@ -160,25 +161,14 @@
         watch:{},
         methods:{
             getSysInfo(){
-                api.innerSystemInfo((res)=>{
-                    if (!res.status){
-                        return this.$message.error(res.message);
-                    }
-                    this.sysInfo = res.data;
-                })
+                api.systemInfo((res)=>{
+                    this.sysInfo = res;
+                }, true)
             },
             // 枚举
             getDic(){
-                api.innerFoundationDic([Enum.dicSqlSource, Enum.dicEnv], (res) =>{
-                    if (!res.status){
-                        return this.$message.error(res.message);
-                    }
-                    let list = {};
-                    for (k in res.data.maps){
-                        list[k] = res.data.maps[k].list
-                    }
+                api.dicList([Enum.dicSqlSource, Enum.dicEnv], (list) =>{
                     this.dicMap = list
-
                     // 补充环境名称
                     if (this.sysInfo.env_name == "***"){
                         for (let i in list[Enum.dicEnv]){

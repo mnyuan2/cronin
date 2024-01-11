@@ -1,7 +1,6 @@
 var MySqlSource = Vue.extend({
-    template: `<div>
-        <el-button type="primary" plain @click="initForm(true)" style="margin-left: 20px">新增链接</el-button>
-        
+    template: `<el-main>
+        <el-button type="text" @click="initForm(true)">新增链接</el-button>
         <el-table :data="sql_source_list">
             <el-table-column property="title" label="链接名称"></el-table-column>
             <el-table-column property="create_dt" label="创建时间"></el-table-column>
@@ -43,7 +42,7 @@ var MySqlSource = Vue.extend({
                 <el-button type="primary" @click="submitForm()">确 定</el-button>
             </div>
         </el-dialog>
-    </div>`,
+    </el-main>`,
 
     name: "MySqlSource",
     props: {
@@ -128,6 +127,7 @@ var MySqlSource = Vue.extend({
             let body = this.form.data.source
             api.innerPost("/setting/sql_source_ping", body, (res) =>{
                 if (!res.status){
+                    console.log("setting/sql_source_ping 错误", res)
                     return this.$message.error(res.message)
                 }
                 return this.$message.success('连接成功');

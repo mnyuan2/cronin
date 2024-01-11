@@ -213,13 +213,10 @@ var MyConfig = Vue.extend({
                     </el-drawer>
                 </el-main>`,
     name: "MyConfig",
-    props: {
-        dic_sql_source:[],
-        sys_info:{},
-    },
     data(){
         return {
             dic_sql_source:[],
+            sys_info:{},
             list: [],
             listPage:{
                 total:0,
@@ -263,6 +260,10 @@ var MyConfig = Vue.extend({
     // 模块初始化
     created(){
         this.form = this.initFormData()
+        api.systemInfo((res)=>{
+            this.sys_info = res;
+        })
+        this.getDicSqlSource()
     },
     // 模块初始化
     mounted(){
@@ -294,7 +295,8 @@ var MyConfig = Vue.extend({
             this.listRequest = true
             api.innerGet("/config/list", this.listParam, (res)=>{
                 this.listRequest = false
-                if (res.code != "000000"){
+                if (!res.status){
+                    console.log("config/list 错误", res)
                     return this.$message.error(res.message);
                 }
                 for (i in res.data.list){
@@ -351,6 +353,7 @@ var MyConfig = Vue.extend({
 
             api.innerPost("/config/set", body, (res)=>{
                 if (!res.status){
+                    console.log("config/set 错误", res)
                     return this.$message.error(res.message)
                 }
                 this.setConfigShow = false;
@@ -443,7 +446,7 @@ var MyConfig = Vue.extend({
                 // 确认操作
                 api.innerPost("/config/change_status", {id:row.id,status:Number(newStatus)}, (res)=>{
                     console.log("状态改变响应",res)
-                    if (res.code != '000000'){
+                    if (res.status){
                         return this.$message.error(res.message)
                     }
                     row.status = newStatus.toString()
@@ -466,7 +469,8 @@ var MyConfig = Vue.extend({
         getRegisterList(){
             this.registerListShow = true;
             api.innerGet("/config/register_list", {}, (res)=>{
-                if (res.code != "000000"){
+                if (!res.status){
+                    console.log("config/register_list 错误", res)
                     return this.$message.error(res.message);
                 }
                 this.registerList = res.data.list;
@@ -576,11 +580,8 @@ var MyConfig = Vue.extend({
         },
         // 枚举
         getDicSqlSource(){
-            api.innerFoundationDic(Enum.dicSqlSource,(res) =>{
-                if (!res.status){
-                    return this.$message.error(res.message);
-                }
-                this.dic_sql_source = res.data.maps[Enum.dicSqlSource].list
+            api.dicList([Enum.dicSqlSource],(res) =>{
+                this.dic_sql_source = res[Enum.dicSqlSource]
             })
         },
     }
