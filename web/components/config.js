@@ -28,16 +28,6 @@ var MyConfig = Vue.extend({
                                     <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
                                     <span :class="statusClass(scope.row.status)">{{scope.row.status_name}}</span>
                                 </el-tooltip>
-
-
-
-<!--                                <el-switch-->
-<!--                                        validate-event="true"-->
-<!--                                        :value="scope.row.status"-->
-<!--                                        active-value="2"-->
-<!--                                        inactive-value="1"-->
-<!--                                        @change="changeStatus(scope.$index, scope.row.id, $event)"-->
-<!--                                ></el-switch>-->
                             </template>
                         </el-table-column>
                         <el-table-column label="操作">
@@ -47,8 +37,6 @@ var MyConfig = Vue.extend({
                                 <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2">停用</el-button>
                                 <el-button type="text" @click="configLogBox(row.id, row.name)">日志</el-button>
                             </template>
-<!--                            // 操作，再弹窗中进行操作（小型弹窗）；-->
-<!--                            // 日志，侧边栏弹窗查看完整日志；-->
                         </el-table-column>
                     </el-table>
                     <el-pagination
@@ -70,10 +58,6 @@ var MyConfig = Vue.extend({
                             <el-form-item label="类型*">
                                 <el-radio v-model="form.type" label="1">周期</el-radio>
                                 <el-radio v-model="form.type" label="2">单次</el-radio>
-<!--                                <el-select v-model="form.type" placeholder="请选请求方式" @change="changeType">-->
-<!--                                    <el-option label="周期" value="1"></el-option>-->
-<!--                                    <el-option label="单次" value="2"></el-option>-->
-<!--                                </el-select>-->
                             </el-form-item>
             
             
@@ -106,11 +90,6 @@ var MyConfig = Vue.extend({
                                                 <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
                                                 <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
                                             </el-input>
-            
-            
-            
-            <!--                                输入 k,v 两个输入域，后面有一个删除按钮；当key存在值时自动新增一个空的元素组。-->
-            <!--                                method与url合并到一行（样式产考postApi7）。-->
                                         </el-form-item>
                                         <el-form-item label="请求Body参数">
                                             <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
@@ -123,11 +102,14 @@ var MyConfig = Vue.extend({
                                         <el-form-item label="proto">
                                             <el-input type="textarea" v-model="form.command.rpc.proto" rows="5" placeholder="请输入*.proto 文件内容"></el-input>
                                         </el-form-item>
-                                        <el-form-item label="地址">
+                                        <el-form-item label="地址" label-width="42px" style="margin: 22px 0;">
                                             <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
                                         </el-form-item>
                                         <el-form-item label="方法">
-                                            <el-input v-model="form.command.rpc.action" placeholder="请输入服务方法; 示例：user.User/Echo"></el-input>
+                                            <el-select v-model="form.command.rpc.action" filterable clearable placeholder="填写proto信息后点击解析，可获得其方法进行选择" style="min-width: 400px">
+                                                <el-option v-for="item in form.command.rpc.actions" :key="item" :label="item" :value="item"></el-option>
+                                            </el-select>
+                                            <el-button @click="parseProto()">解析proto</el-button>
                                         </el-form-item>
                                         <el-form-item label="请求参数">
                                             <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
@@ -396,9 +378,12 @@ var MyConfig = Vue.extend({
                         body:'',
                     },
                     rpc:{
+                        proto: '',
                         method: 'GRPC',
                         addr: '',
                         action: '',
+                        actions: [],
+                        header: [],
                         body: ''
                     },
                     cmd:'',
@@ -586,6 +571,19 @@ var MyConfig = Vue.extend({
                 this.dic_sql_source = res[Enum.dicSqlSource]
             })
         },
+        // 解析proto内容
+        parseProto(){
+            let data = this.form.command.rpc.proto
+            if (data == "" || data == undefined){
+                return this.$message.warning("请先输入proto内容");
+            }
+            api.innerPost("/foundation/parse_proto", {proto:data}, (res)=>{
+                if (!res.status){
+                    return this.$message.error(res.message)
+                }
+                this.form.command.rpc.actions = res.data.actions
+            })
+        }
     }
 })
 

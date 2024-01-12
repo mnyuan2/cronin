@@ -36,7 +36,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	// api
 	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/foundation/system_info", routerSystemInfo)
-	r.GET("/foundation/parse_proto", routerParseProto)
+	r.POST("/foundation/parse_proto", routerParseProto)
 	r.GET("/config/list", httpList)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)

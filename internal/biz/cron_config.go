@@ -62,7 +62,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 	}
 
 	for _, item := range resp.List {
-		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{}, Sql: &pb.CronSql{}}
+		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{Actions: []string{}}, Sql: &pb.CronSql{}}
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
 		jsoniter.UnmarshalFromString(item.CommandStr, item.Command)
@@ -183,6 +183,20 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 		if r.Command.Rpc.Action == "" {
 			return nil, fmt.Errorf("rpc 请完善请求方法")
+		}
+		resp2, err := NewDicService(dm.ctx, nil).ParseProto(&pb.ParseProtoRequest{Proto: r.Command.Rpc.Proto})
+		if err != nil {
+			return nil, err
+		}
+		r.Command.Rpc.Actions = resp2.Actions
+		actionOk := false
+		for _, item := range resp2.Actions {
+			if item == r.Command.Rpc.Action {
+				actionOk = true
+			}
+		}
+		if !actionOk {
+			return nil, fmt.Errorf("rpc 请求方法与proto不符")
 		}
 
 	} else if r.Protocol == models.ProtocolCmd {

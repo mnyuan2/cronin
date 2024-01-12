@@ -3,6 +3,7 @@ package grpcurl
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoparse"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -57,4 +58,14 @@ func (h *MyEventHandler) SetStatus(stat *status.Status) {
 
 func (h *MyEventHandler) GetStatus() *status.Status {
 	return h.status
+}
+
+func ParseProtoString(data string) ([]*desc.FileDescriptor, error) {
+	p := protoparse.Parser{
+		//ImportPaths:           importPaths,
+		InferImportPaths:      false,
+		IncludeSourceCodeInfo: true,
+		Accessor:              protoparse.FileContentsFromMap(map[string]string{"*.proto": data}),
+	}
+	return p.ParseFiles("*.proto")
 }

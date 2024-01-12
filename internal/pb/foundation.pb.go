@@ -34,10 +34,9 @@ type SystemInfoReply struct {
 	EnvName string `json:"env_name"`
 }
 
-type ParseProtoRequest struct{}
+type ParseProtoRequest struct {
+	Proto string `json:"proto"` // 文件内容
+}
 type ParseProtoReply struct {
-	Version string `json:"version"`
-	CmdName string `json:"cmd_name"`
-	Env     string `json:"env"`
-	EnvName string `json:"env_name"`
+	Actions []string `json:"actions"`
 }

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/axgle/mahonia"
-	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/jhump/protoreflect/grpcreflect"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
@@ -241,13 +240,7 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 	// 解析描述文件
 	var descSource grpcurl.DescriptorSource
 	if r.Proto != "" {
-		p := protoparse.Parser{
-			//ImportPaths:           importPaths,
-			InferImportPaths:      false,
-			IncludeSourceCodeInfo: true,
-			Accessor:              protoparse.FileContentsFromMap(map[string]string{"*.proto": r.Proto}),
-		}
-		fds, err := p.ParseFiles("*.proto")
+		fds, err := grpcurl.ParseProtoString(r.Proto)
 		if err != nil {
 			return nil, fmt.Errorf("无法解析给定的proto文件: %w", err)
 		}
