@@ -89,7 +89,7 @@ func TestCronJob_Grpc2(t *testing.T) {
     "rpc": {
         "addr": "localhost:21014",
         "body": "{\"a\":\"a\",\"b\":2,\"body\":\"中文\"}",
-        "proto": "syntax = \"proto3\";\npackage merchantpush;\nservice Merchantpush {\n  rpc Echo(EchoRequest)returns(EchoResponse){}\n}\nmessage EchoRequest{\n  string a = 1;\n  int32 b = 2;\n  string body = 3;\n}\nmessage EchoResponse{\n  string a = 1;\n  int32 b = 2;\n  string body = 3;\n}",
+        "proto": "",
         "action": "merchantpush.Merchantpush/Echo",
         "header": null,
         "method": "GRPC"
@@ -125,6 +125,21 @@ func TestCronJob_Grpc2(t *testing.T) {
 	//db.New(context.Background()).Write.Where("id=?", 116).Find(conf)
 
 	r := NewCronJob(conf)
+	r.commandParse.Rpc.Proto = `syntax = "proto3";
+package merchantpush;
+service Merchantpush {
+  rpc Echo(EchoRequest)returns(EchoResponse){}
+}
+message EchoRequest{
+  string a = 1;
+  int32 b = 2;
+  string body = 3;
+}
+message EchoResponse{
+  string a = 1;
+  int32 b = 2;
+  string body = 3;
+}`
 
 	ctx := context.Background()
 	res, err := NewCronJob(conf).rpcGrpc(ctx, r.commandParse.Rpc)

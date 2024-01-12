@@ -45,9 +45,6 @@ var MySqlSource = Vue.extend({
     </el-main>`,
 
     name: "MySqlSource",
-    props: {
-        reload_list:false, // 重新加载列表
-    },
     data(){
         return {
             sql_source_list:[],
@@ -70,11 +67,8 @@ var MySqlSource = Vue.extend({
     },
     // 模块初始化
     mounted(){
-        console.log("sql_source:reload_list", this.reload_list)
-        if (this.reload_list){
-            this.getList()
-        }
-
+        console.log("sql_source mounted")
+        this.getList()
     },
 
     // 具体方法
@@ -82,7 +76,6 @@ var MySqlSource = Vue.extend({
         // 列表
         getList(){
             api.innerGet("/setting/sql_source_list", this.listParam, (res)=>{
-                console.log("sql_source:sql_source_list 响应", this.reload_list)
                 if (!res.status){
                     return this.$message.error(res.message);
                 }

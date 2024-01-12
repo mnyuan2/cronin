@@ -181,7 +181,7 @@ var MyConfig = Vue.extend({
                         </div>
                     </el-dialog>
                     <!-- 任务日志弹窗 -->
-                    <el-drawer :title="configLog.title" :visible.sync="configLog.show" direction="rtl" size="40%" wrapperClosable="false">
+                    <el-drawer :title="configLog.title" :visible.sync="configLog.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
                         <my-config-log :config_id="configLog.id"></my-config-log>
                     </el-drawer>
                     <!-- 注册任务列表弹窗 -->
@@ -209,7 +209,7 @@ var MyConfig = Vue.extend({
             
                     <!-- sql链接源管理弹窗 -->
                     <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
-                        <my-sql-source :reload_list="sqlSourceBoxShow"></my-sql-source>
+                        <my-sql-source></my-sql-source>
                     </el-drawer>
                 </el-main>`,
     name: "MyConfig",
@@ -267,7 +267,7 @@ var MyConfig = Vue.extend({
     },
     // 模块初始化
     mounted(){
-
+        console.log("config mounted")
         this.getList()
     },
     watch:{
@@ -436,7 +436,6 @@ var MyConfig = Vue.extend({
             this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字
             this.form.protocol = this.form.protocol.toString()
             console.log("编辑：",this.form)
-            this.changeType()
         },
         // 改变状态
         changeStatus(row, newStatus){
@@ -445,8 +444,7 @@ var MyConfig = Vue.extend({
             }).then(()=>{
                 // 确认操作
                 api.innerPost("/config/change_status", {id:row.id,status:Number(newStatus)}, (res)=>{
-                    console.log("状态改变响应",res)
-                    if (res.status){
+                    if (!res.status){
                         return this.$message.error(res.message)
                     }
                     row.status = newStatus.toString()
@@ -508,6 +506,10 @@ var MyConfig = Vue.extend({
             this.configLog.id = id
             this.configLog.title = title+' 日志'
             this.configLog.show = true
+        },
+        configLogBoxClose(done){
+            this.configLog.show = false;
+            this.configLog.id = 0;
         },
         // sql设置弹窗
         sqlSetShow(index, oldData){

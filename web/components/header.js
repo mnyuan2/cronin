@@ -6,10 +6,10 @@ var MyHeader = Vue.extend({
                           mode="horizontal"
                           background-color="#151515" 
                           text-color="#fff"
-                          active-text-color="#409effa8">
-                          <el-menu-item index="/">cronin</el-menu-item>
-                          <el-menu-item index="config">任务</el-menu-item>
-                          <el-menu-item index="sql_source">sql连接</el-menu-item>
+                          active-text-color="#66b1ff">
+                          <el-menu-item index="/" style="font-weight: 500;font-size: 110%;">cronin</el-menu-item>
+                          <el-menu-item index="/config">任务</el-menu-item>
+                          <el-menu-item index="/sql_source">sql连接</el-menu-item>
                         </el-menu>
                     
                         <el-menu class="menu-right" mode="horizontal" background-color="#151515"  text-color="#fff" active-text-color="#409effa8">

@@ -3,6 +3,8 @@ package models
 import (
 	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
+	"cron/internal/basic/util"
+	"errors"
 )
 
 const (
@@ -36,7 +38,12 @@ func SqlSourceEncrypt(data string) (string, error) {
 }
 
 // 解密
-func SqlSourceDecode(data string) (string, error) {
+func SqlSourceDecode(data string) (s string, err error) {
+	defer func() {
+		if e := util.PanicInfo(recover()); e != "" {
+			err = errors.New(e)
+		}
+	}()
 	if len(data) <= 2 || data[:2] != "d." {
 		return data, nil
 	}

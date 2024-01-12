@@ -33,3 +33,11 @@ type SystemInfoReply struct {
 	Env     string `json:"env"`
 	EnvName string `json:"env_name"`
 }
+
+type ParseProtoRequest struct{}
+type ParseProtoReply struct {
+	Version string `json:"version"`
+	CmdName string `json:"cmd_name"`
+	Env     string `json:"env"`
+	EnvName string `json:"env_name"`
+}

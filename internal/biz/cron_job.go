@@ -289,7 +289,7 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 		h.SetStatus(errStatus)
 	}
 	if h.GetStatus().Code() != codes.OK {
-		err = fmt.Errorf("code:%v code_name:%v message:%v", h.GetStatus().Code(), h.GetStatus().Code().String(), h.GetStatus().Message())
+		err = fmt.Errorf("code:%v code_name:%v message:%v", int32(h.GetStatus().Code()), h.GetStatus().Code().String(), h.GetStatus().Message())
 	}
 
 	return []byte(h.RespMessages), err

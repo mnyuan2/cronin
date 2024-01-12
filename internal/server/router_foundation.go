@@ -27,3 +27,9 @@ func routerSystemInfo(ctx *gin.Context) {
 	rep, err := biz.NewDicService(ctx.Request.Context(), nil).SystemInfo(nil)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+func routerParseProto(ctx *gin.Context) {
+
+	rep, err := biz.NewDicService(ctx.Request.Context(), nil).ParseProto(nil)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

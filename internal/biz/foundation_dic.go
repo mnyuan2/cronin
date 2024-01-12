@@ -145,3 +145,7 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 
 	return resp, nil
 }
+
+func (dm *FoundationService) ParseProto(r *pb.ParseProtoRequest) (resp *pb.ParseProtoReply, err error) {
+	return nil, nil
+}
