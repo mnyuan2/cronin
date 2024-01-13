@@ -386,7 +386,7 @@ func TestCronJob_Mysql(t *testing.T) {
 	//	},
 	//}
 
-	db.New(context.Background()).Write.Where("id=?", 116).Find(conf)
+	db.New(context.Background()).Where("id=?", 116).Find(conf)
 
 	r := NewCronJob(conf)
 

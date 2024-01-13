@@ -96,3 +96,17 @@ type CronConfigRegisterListRequest struct{}
 type CronConfigRegisterListResponse struct {
 	List []*CronConfigListItem `json:"list"`
 }
+
+// 任务设置
+type CronConfigRunRequest struct {
+	Name     string             `json:"name,omitempty"`     // 任务名称
+	Type     int                `json:"type"`               // 类型
+	Spec     string             `json:"spec"`               // 执行时间表达式
+	Protocol int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	Command  *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status   int                `json:"status"`             // 状态
+	Remark   string             `json:"remark"`
+}
+type CronConfigRunResponse struct {
+	Result string `json:"result"`
+}

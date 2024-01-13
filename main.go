@@ -13,8 +13,8 @@ import (
 var (
 	//go:embed web
 	Resource        embed.FS
-	version         = ""      // 版本号  构建时通过 -ldflags "-X main.version=0.3.4" 进行指定
-	isBuildResource = "false" // 是否打包静态资源 构建时通过 -ldflags "-X main.isBuildResource=true" 进行指定
+	version         = "v0.0.0" // 版本号  构建时通过 -ldflags "-X main.version=0.3.4" 进行指定
+	isBuildResource = "false"  // 是否打包静态资源 构建时通过 -ldflags "-X main.isBuildResource=true" 进行指定
 )
 
 func main() {

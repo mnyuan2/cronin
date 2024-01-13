@@ -22,7 +22,7 @@ type EnvContent struct {
 // 环境设置
 type SettingEnvService struct {
 	ctx context.Context
-	db  *db.Database
+	db  *db.MyDB
 }
 
 func NewSettingEnvService(ctx context.Context) *SettingEnvService {
@@ -170,7 +170,7 @@ func (dm *SettingEnvService) SetContent(r *pb.SettingEnvSetRequest) (resp *pb.Se
 	oldOne.UpdateDt = ti.String()
 
 	// 执行写入
-	db.New(dm.ctx).Write.Transaction(func(tx *gorm.DB) error {
+	db.New(dm.ctx).Transaction(func(tx *gorm.DB) error {
 		if err = tx.Select("content", "update_dt").Updates(one).Error; err != nil {
 			return err
 		}
@@ -207,7 +207,7 @@ func (dm *SettingEnvService) ChangeStatus(r *pb.SettingChangeStatusRequest) (res
 	}
 	if r.Status == enum.StatusDisable { // 停用时，不得有进行中的任务
 		total := int64(0)
-		dm.db.Write.Raw("SELECT count(*) FROM cron_config WHERE env=? and `status`=?", one.Name, models.ConfigStatusActive).Find(&total)
+		dm.db.Raw("SELECT count(*) FROM cron_config WHERE env=? and `status`=?", one.Name, models.ConfigStatusActive).Find(&total)
 		if total > 0 {
 			return nil, fmt.Errorf("环境下存在进行中任务，停用失败！")
 		}

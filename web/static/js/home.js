@@ -206,17 +206,15 @@ var api = {
                 return callback(res)
             },
             'error': res =>{
-                if(res.message != ""){
-
-                }else if(res.status == 404) {
-                    res.message = '请求不存在404'
-                } else if(res.status == 503) {
-                    res.message = '请求失败503'
-                }else{
-                    res.message = '请求失败,网络连接超时'
+                let temp = {}
+                if(Object.keys(res.responseJSON).length > 0){
+                    temp = res.responseJSON
+                }else {
+                    temp.code = res.status
+                    temp.message = res.status + " " + res.statusText
                 }
-                res.status = false
-                return callback(res)
+                temp.status = false
+                return callback(temp)
             }
         });
     }

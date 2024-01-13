@@ -17,7 +17,7 @@ import (
 )
 
 type SettingSqlService struct {
-	db   *db.Database
+	db   *db.MyDB
 	ctx  context.Context
 	user *auth.UserToken
 }
@@ -116,9 +116,12 @@ func (dm *SettingSqlService) Ping(r *pb.SettingSqlPingRequest) (resp *pb.Setting
 	if err != nil {
 		return nil, fmt.Errorf("密码异常,%w", err)
 	}
-	conf := config.DataBaseConf{
-		Source: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
-			r.Username, password, r.Hostname, r.Port, r.Database),
+	conf := &config.MysqlSource{
+		Hostname: r.Hostname,
+		Database: r.Database,
+		Username: r.Username,
+		Password: password,
+		Port:     r.Port,
 	}
 	err = db.Conn(conf).Error
 	if err != nil {
@@ -148,7 +151,7 @@ func (dm *SettingSqlService) ChangeStatus(r *pb.SettingChangeStatusRequest) (res
 	// 如果使用未启用就联动置空（也不能删除，要么删除任务或者改任务），如果使用并启用禁止删除；
 	// 如果没有试用就直接删除。
 	list := []string{}
-	err = dm.db.Write.Raw(fmt.Sprintf("SELECT `name` FROM `cron_config` WHERE protocol=%v and JSON_CONTAINS(command, '%v', '$.sql.source.id') = 1", models.ProtocolSql, one.Id)).
+	err = dm.db.Raw(fmt.Sprintf("SELECT `name` FROM `cron_config` WHERE protocol=%v and JSON_CONTAINS(command, '%v', '$.sql.source.id') = 1", models.ProtocolSql, one.Id)).
 		Scan(&list).Error
 	if err != nil {
 		return nil, fmt.Errorf("任务检测错误，%w", err)

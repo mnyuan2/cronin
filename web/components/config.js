@@ -158,6 +158,7 @@ var MyConfig = Vue.extend({
                             </el-form-item>
                         </el-form>
                         <div slot="footer" class="dialog-footer">
+                            <el-button @click="configRun()" class="left" v-show="form.type==1">执行一下</el-button>
                             <el-button @click="setConfigShow = false">取 消</el-button>
                             <el-button type="primary" @click="setCron()">确 定</el-button>
                         </div>
@@ -582,6 +583,32 @@ var MyConfig = Vue.extend({
                     return this.$message.error(res.message)
                 }
                 this.form.command.rpc.actions = res.data.actions
+            })
+        },
+        // 执行一下
+        configRun(){
+            // 主要是强制类型
+            let body = {
+                id: this.form.id,
+                name: this.form.name,
+                type: Number(this.form.type),
+                spec: this.form.spec,
+                protocol: Number(this.form.protocol),
+                command: this.form.command,
+                remark: this.form.remark,
+            }
+            body.command.sql.err_action = Number(body.command.sql.err_action)
+            body.command.sql.source.id = Number(body.command.sql.source.id)
+
+            api.innerPost("/config/run", body, (res)=>{
+                if (!res.status){
+                    return this.$message({
+                        message: res.message,
+                        type: 'error',
+                        duration: 6000
+                    })
+                }
+                return this.$message.success("ok."+res.data.result)
             })
         }
     }

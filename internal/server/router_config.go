@@ -65,3 +65,19 @@ func httpChangeStatus(ctx *gin.Context) {
 	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).ChangeStatus(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+// 任务 运行一次
+func httpRun(ctx *gin.Context) {
+	r := &pb.CronConfigRunRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).Run(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

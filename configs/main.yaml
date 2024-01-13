@@ -12,5 +12,5 @@ crypto:
 
 ## 用户
 user:
-  admin_account: "admin" # 管理员账号，设置后页面请求需要登录
+  admin_account: "" # 管理员账号，设置后页面请求需要登录
   admin_password: "" # 管理员密码

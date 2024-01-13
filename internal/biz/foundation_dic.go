@@ -91,7 +91,7 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 		where, args := w.Build()
 		_sql = strings.Replace(_sql, "%WHERE", "WHERE "+where, 1)
 
-		err := db.New(dm.ctx).Read.Raw(_sql, args...).Scan(&temp).Error
+		err := db.New(dm.ctx).Raw(_sql, args...).Scan(&temp).Error
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +131,7 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 	}
 	// 查默认环境
 	envData := &DicGetItem{}
-	err = db.New(dm.ctx).Write.Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE scene='env' and status=2 and json_contains(content, '2', '$.default');`).Scan(&envData).Error
+	err = db.New(dm.ctx).Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE scene='env' and status=2 and json_contains(content, '2', '$.default');`).Scan(&envData).Error
 	if err != nil {
 		return resp, fmt.Errorf("环境查询异常,%w", err)
 	}

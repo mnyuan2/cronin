@@ -27,7 +27,7 @@ var MyHeader = Vue.extend({
                           <el-submenu popper-class="submenu">
                             <template slot="title">关于</template>
                             <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>
-                            <el-menu-item><a href="https://gitee.com/mnyuan/cronin/" target="_blank">Gitee</a></el-menu-item>
+                            <el-menu-item><a href="https://gitee.com/mnyuan/cronin/" target="_blank">Gitee <i class="el-icon-star-off" style="vertical-align: initial;font-size: 15px;"></i></a></el-menu-item>
                             <el-menu-item disabled>cronin{{sys_info.version}}</el-menu-item>
                           </el-submenu>  
                         </el-menu>

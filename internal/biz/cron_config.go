@@ -262,3 +262,21 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 func (dm *CronConfigService) Del() {
 
 }
+
+// 任务执行
+func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfigRunResponse, err error) {
+	conf := &models.CronConfig{
+		Type:     r.Type,
+		Protocol: r.Protocol,
+	}
+	conf.Command, err = jsoniter.MarshalToString(r.Command)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := NewCronJob(conf).Exec(dm.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CronConfigRunResponse{Result: string(res)}, nil
+}

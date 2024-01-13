@@ -3,6 +3,7 @@ package models
 import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	jsoniter "github.com/json-iterator/go"
 	"time"
 )
@@ -25,19 +26,31 @@ var LogStatusMap = map[int]string{
 }
 
 // 新建一个错误日志
-func NewErrorCronLog(conf *CronConfig, body string, errDesc string, startTime time.Time) *CronLog {
+func NewErrorCronLog(conf *CronConfig, body string, err error, startTime time.Time) *CronLog {
 	str, _ := jsoniter.MarshalToString(conf)
 	t := time.Now()
-	return &CronLog{
-		Env:        conf.Env,
-		ConfId:     conf.Id,
-		CreateDt:   t.Format(conv.FORMAT_DATETIME),
-		Duration:   t.Sub(startTime).Seconds(),
-		Status:     enum.StatusDisable,
-		StatusDesc: errDesc,
-		Body:       body,
-		Snap:       str,
+
+	g := &CronLog{
+		Env:      conf.Env,
+		ConfId:   conf.Id,
+		CreateDt: t.Format(conv.FORMAT_DATETIME),
+		Duration: t.Sub(startTime).Seconds(),
+		Status:   enum.StatusDisable,
+		Body:     body,
+		Snap:     str,
 	}
+	e, ok := err.(*errs.Error)
+	if ok {
+		g.StatusDesc = e.Desc()
+		if e.Error() != "" {
+			g.Body = e.Error() + "\n" + body
+		}
+	} else {
+		g.StatusDesc = "error"
+		g.Body = err.Error() + "\n" + body
+	}
+
+	return g
 }
 
 // 新建一个成功日志
@@ -50,7 +63,7 @@ func NewSuccessCronLog(conf *CronConfig, body string, startTime time.Time) *Cron
 		CreateDt:   t.Format(conv.FORMAT_DATETIME),
 		Duration:   t.Sub(startTime).Seconds(),
 		Status:     enum.StatusActive,
-		StatusDesc: "ok",
+		StatusDesc: "success",
 		Body:       body,
 		Snap:       str,
 	}

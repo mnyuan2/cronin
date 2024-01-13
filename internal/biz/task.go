@@ -6,6 +6,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -68,7 +69,7 @@ func (dm *TaskService) Add(conf *models.CronConfig) error {
 	}
 	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
-		g := models.NewErrorCronLog(conf, err.Error(), "任务启动失败", time.Now())
+		g := models.NewErrorCronLog(conf, "", errs.New(err, "任务启动失败"), time.Now())
 		data.NewCronLogData(context.Background()).Add(g)
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
+	"cron/internal/basic/errs"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -18,24 +19,27 @@ import (
 func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (resp []byte, err error) {
 	source, err := data.NewCronSettingData(ctx).GetSqlSourceOne(job.conf.Env, r.Source.Id)
 	if err != nil {
-		return nil, fmt.Errorf("连接配置异常 %w", err)
+		return nil, errs.New(err, "连接配置异常")
 	}
 	s := &pb.CronSqlSource{}
 	if err = jsoniter.UnmarshalFromString(source.Content, s); err != nil {
-		return nil, fmt.Errorf("连接配置解析异常 %w", err)
+		return nil, errs.New(err, "连接配置解析异常")
 	}
 
 	password, err := models.SqlSourceDecode(s.Password)
 	if err != nil {
-		return nil, fmt.Errorf("密码异常,%w", err)
+		return nil, errs.New(err, "密码异常")
 	}
-	conf := config.DataBaseConf{
-		Source: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
-			s.Username, password, s.Hostname, s.Port, s.Database),
+	conf := &config.MysqlSource{
+		Hostname: s.Hostname,
+		Database: s.Database,
+		Username: s.Username,
+		Password: password,
+		Port:     s.Port,
 	}
 	_db := db.Conn(conf).WithContext(ctx)
 	if _db.Error != nil {
-		return nil, _db.Error
+		return nil, errs.New(_db.Error, "连接失败")
 	}
 
 	// 执行sql
@@ -55,7 +59,7 @@ func (job *CronJob) sqlMysqlExec(_db *gorm.DB, errAction int, statement []string
 	logs = make([]string, len(statement))
 	for i, sql := range statement {
 		str, err := job.sqlMysqlItem(tx, sql)
-		logs[i] = str
+		logs[i] = fmt.Sprintf("#%v	%s", i, str)
 		if err != nil {
 			if errAction == models.SqlErrActionAbort { // 终止
 				return logs

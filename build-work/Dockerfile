@@ -1,4 +1,6 @@
 FROM busybox:latest
-COPY stock /biz-code/stock
+COPY cronin /biz-code/cronin/
+COPY configs/ /biz-code/cronin/configs
 WORKDIR /biz-code
-CMD ./stock > stock.log
+CMD cd ./cronin && ./cronin
+EXPOSE 9003

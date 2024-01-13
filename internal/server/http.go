@@ -41,6 +41,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)
 	r.GET("/config/get")
+	r.POST("/config/run", httpRun)
 	r.GET("/config/register_list", httpRegister)
 	r.GET("/log/by_config", httpLogByConfig)
 	r.POST("/log/del", httpLogDel)

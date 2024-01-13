@@ -4,7 +4,10 @@ var MyConfigLog = Vue.extend({
                             <el-table-column property="create_dt" label="记录时间" width="200"></el-table-column>
                             <el-table-column property="status_name" label="状态" width="80">
                                 <template slot-scope="scope">
-                                    <el-tag :type="scope.row.status == 1 ? 'danger' : 'success'">{{scope.row.status_name}}</el-tag>
+                                    <el-tooltip placement="top-start">
+                                        <div slot="content">{{scope.row.status_desc}}</div>
+                                        <span :class="scope.row.status == 1 ? 'danger' : 'success'">{{scope.row.status_name}}</span>
+                                    </el-tooltip>
                                 </template>
                             </el-table-column>
                             <el-table-column property="duration" label="耗时/秒" width="80"></el-table-column>
@@ -23,7 +26,8 @@ var MyConfigLog = Vue.extend({
                       
                         <!-- 日志详情弹窗 -->
                         <el-dialog title="日志详情" :visible.sync="body.show" size="30%" style="white-space: pre;" append-to-body="true">
-                            <pre><code>{{body.data.replace(/\\\\n/g, '\\n').replace(/\\\\t/g, '\\t')}}</code></pre>
+                            <el-alert :title="body.status_desc" :type="body.status==2 ? 'success' : body.status==1?'error': 'info'" :closable="false"></el-alert>
+                            <pre style="line-height: 133%;background: rgb(244, 244, 245);margin: 0;padding: 6px 20px 7px 8px;border-radius: 3px;overflow: auto;"><code>{{body.data.replace(/\\\\n/g, '\\n').replace(/\\\\t/g, '\\t')}}</code></pre>
                         </el-dialog>
 </div>`,
     name: "MyConfigLog",
@@ -36,6 +40,8 @@ var MyConfigLog = Vue.extend({
             list:[],// 日志列表，没有分页；
             logBody: "",
             body:{
+                status: 0,
+                status_desc:"",
                 data:"",
                 show:false
             }
@@ -72,6 +78,8 @@ var MyConfigLog = Vue.extend({
         // 日志描述展示
         logBodyShow(logItem){
             this.body.data = logItem.body
+            this.body.status = logItem.status
+            this.body.status_desc = logItem.status_desc
             this.body.show = true
             // this.$alert('<div style="white-space: pre;">'+logItem.body+'<div>', '日志详情',{
             //     dangerouslyUseHTMLString: true

@@ -17,7 +17,7 @@ type SumConfTop struct {
 }
 
 type CronLogData struct {
-	db        *db.Database
+	db        *db.MyDB
 	tableName string
 }
 
@@ -30,14 +30,14 @@ func NewCronLogData(ctx context.Context) *CronLogData {
 
 // 添加数据
 func (m *CronLogData) Add(data *models.CronLog) error {
-	return m.db.Write.Create(data).Error
+	return m.db.Create(data).Error
 }
 
 // 查询列表数据
 func (m *CronLogData) GetList(where *db.Where, page, size int, list interface{}) (total int64, err error) {
 	str, args := where.Build()
 
-	return m.db.Read.Paginate(list, page, size, m.tableName, "*", "id desc", str, args...)
+	return m.db.Paginate(list, page, size, m.tableName, "*", "id desc", str, args...)
 }
 
 // 统计配置置顶的错误数
@@ -51,7 +51,7 @@ WHERE
 
 	temps := []*SumConfTop{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Read.Raw(sql, enum.StatusDisable, maxNumber, env, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Find(&temps).Error
+	err = m.db.Raw(sql, enum.StatusDisable, maxNumber, env, confId, startTime.Format(conv.FORMAT_DATETIME), endTime.Format(conv.FORMAT_DATETIME)).Find(&temps).Error
 	if err != nil {
 		return list, err
 	}
@@ -66,7 +66,7 @@ WHERE
 func (m *CronLogData) DelBatch(end time.Time) (count int, err error) {
 	count = 0
 	endDate := end.Format(conv.FORMAT_DATETIME)
-	err = m.db.Write.Model(&models.CronLog{}).Where("create_dt <= ?", endDate).Select("count(*)").Find(&count).Error
+	err = m.db.Model(&models.CronLog{}).Where("create_dt <= ?", endDate).Select("count(*)").Find(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -74,7 +74,7 @@ func (m *CronLogData) DelBatch(end time.Time) (count int, err error) {
 		return count, nil
 	}
 
-	err = m.db.Write.Where("create_dt <= ?", endDate).Delete(&models.CronLog{}).Error
+	err = m.db.Where("create_dt <= ?", endDate).Delete(&models.CronLog{}).Error
 	if err != nil {
 		return 0, fmt.Errorf("删除失败，%w", err)
 	}

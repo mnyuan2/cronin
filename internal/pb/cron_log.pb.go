@@ -17,6 +17,7 @@ type CronLogItem struct {
 	Duration   float32 `json:"duration"`
 	Status     int     `json:"status"`
 	StatusName string  `json:"status_name"`
+	StatusDesc string  `json:"status_desc"`
 	Body       string  `json:"body"`
 	Snap       string  `json:"snap"`
 }
