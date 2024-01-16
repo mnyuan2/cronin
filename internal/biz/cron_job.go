@@ -64,7 +64,7 @@ type CronJob struct {
 // 任务执行器
 func NewCronJob(conf *models.CronConfig) *CronJob {
 	com := &pb.CronConfigCommand{}
-	_ = jsoniter.UnmarshalFromString(conf.Command, com)
+	_ = jsoniter.Unmarshal(conf.Command, com)
 
 	return &CronJob{conf: conf, commandParse: com}
 }
@@ -92,6 +92,8 @@ func (job *CronJob) Run() {
 			job.conf.EntryId = 0
 			data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行完成")
 		}
+		// 执行告警推送
+
 	}()
 
 	//fmt.Println("执行 "+job.conf.GetProtocolName()+" 任务", job.conf.Id, job.conf.Name)

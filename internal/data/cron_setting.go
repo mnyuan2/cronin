@@ -73,3 +73,9 @@ func (m *CronSettingData) GetEnvOne(id int) (one *models.CronSetting, err error)
 	w := db.NewWhere().Eq("scene", models.SceneEnv).Eq("id", id, db.RequiredOption())
 	return m.GetOne(w)
 }
+
+// 获得env信息
+func (m *CronSettingData) GetMessageOne(id int) (one *models.CronSetting, err error) {
+	w := db.NewWhere().Eq("scene", models.SceneMessage).Eq("id", id, db.RequiredOption())
+	return m.GetOne(w)
+}

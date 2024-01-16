@@ -87,3 +87,30 @@ type SettingEnvDelRequest struct {
 }
 type SettingEnvDelReply struct {
 }
+
+// 告警列表
+type SettingMessageListRequest struct {
+	Page int `form:"page"`
+	Size int `form:"size"`
+}
+type SettingMessageListReply struct {
+	List []*SettingMessageListItem `json:"list"`
+	Page *Page                     `json:"page"`
+}
+type SettingMessageListItem struct {
+	Id    int       `json:"id"`
+	Title string    `json:"title"`
+	Sort  int       `json:"int"`
+	Http  *CronHttp `json:"http"`
+}
+
+// 告警设置
+type SettingMessageSetRequest struct {
+	Id    int       `json:"id"`
+	Title string    `json:"title"`
+	Sort  int       `json:"sort"`
+	Http  *CronHttp `json:"http"`
+}
+type SettingMessageSetReply struct {
+	Id int `json:"id"`
+}

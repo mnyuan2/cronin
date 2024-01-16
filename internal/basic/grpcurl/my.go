@@ -60,6 +60,7 @@ func (h *MyEventHandler) GetStatus() *status.Status {
 	return h.status
 }
 
+// 解析proto文件字符串
 func ParseProtoString(data string) ([]*desc.FileDescriptor, error) {
 	p := protoparse.Parser{
 		//ImportPaths:           importPaths,
@@ -68,4 +69,21 @@ func ParseProtoString(data string) ([]*desc.FileDescriptor, error) {
 		Accessor:              protoparse.FileContentsFromMap(map[string]string{"*.proto": data}),
 	}
 	return p.ParseFiles("*.proto")
+}
+
+// 解析proto方法
+func ParseProtoMethods(fds []*desc.FileDescriptor) []string {
+	resp := []string{}
+	for _, fd := range fds {
+		//fmt.Println("package:", fd.GetPackage())
+		for _, serDesc := range fd.GetServices() {
+			//fmt.Println("ser:", serDesc.GetName(), "\n\t", serDesc.UnwrapService().FullName())
+			methods := serDesc.GetMethods()
+			for _, method := range methods {
+				//fmt.Println("method:", string(serDesc.UnwrapService().FullName()), "/", method.GetName(), "..", method.GetFullyQualifiedName())
+				resp = append(resp, string(serDesc.UnwrapService().FullName())+"/"+method.GetName())
+			}
+		}
+	}
+	return resp
 }

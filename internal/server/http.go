@@ -54,6 +54,9 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.POST("/setting/env_set_content", routerEnvSetContent)
 	r.POST("/setting/env_change_status", routerEnvChangeStatus)
 	r.POST("/setting/env_del", routerEnvDel)
+	r.GET("/setting/message_list", routerMessageList)
+	r.POST("/setting/message_set", routerMessageSet)
+
 	// 视图
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.Redirect(http.StatusMovedPermanently, "/index")

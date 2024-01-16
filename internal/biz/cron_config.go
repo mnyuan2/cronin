@@ -7,13 +7,13 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
-	"strings"
 	"time"
 )
 
@@ -141,7 +141,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Spec = r.Spec
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
-	d.Command, _ = jsoniter.MarshalToString(r.Command)
+	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.Type = r.Type
 	if r.Type == models.TypeCycle {
 		if _, err = secondParser.Parse(d.Spec); err != nil {
@@ -156,47 +156,12 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	}
 
 	if r.Protocol == models.ProtocolHttp {
-		if !strings.HasPrefix(r.Command.Http.Url, "http://") && !strings.HasPrefix(r.Command.Http.Url, "https://") {
-			return nil, fmt.Errorf("请输入 http:// 或 https:// 开头的规范地址")
-		}
-		if r.Command.Http.Method == "" {
-			return nil, errors.New("请输入请求method")
-		}
-		if models.ProtocolHttpMethodMap()[r.Command.Http.Method] == "" {
-			return nil, errors.New("未支持的请求method")
-		}
-		if r.Command.Http.Body != "" {
-			temp := map[string]any{} // 目前仅支持json
-			if err = jsoniter.UnmarshalFromString(r.Command.Http.Body, &temp); err != nil {
-				return nil, fmt.Errorf("http body 输入不规范，请确认json字符串是否规范")
-			}
-		}
-	} else if r.Protocol == models.ProtocolRpc {
-		if r.Command.Rpc.Method != "GRPC" {
-			return nil, fmt.Errorf("rpc 请选择请求模式")
-		}
-		if r.Command.Rpc.Proto == "" {
-			return nil, fmt.Errorf("rpc 请完善proto文件内容")
-		}
-		if r.Command.Rpc.Addr == "" {
-			return nil, fmt.Errorf("rpc 请完善请求地址")
-		}
-		if r.Command.Rpc.Action == "" {
-			return nil, fmt.Errorf("rpc 请完善请求方法")
-		}
-		resp2, err := NewDicService(dm.ctx, nil).ParseProto(&pb.ParseProtoRequest{Proto: r.Command.Rpc.Proto})
-		if err != nil {
+		if err := dtos.CheckHttp(r.Command.Http); err != nil {
 			return nil, err
 		}
-		r.Command.Rpc.Actions = resp2.Actions
-		actionOk := false
-		for _, item := range resp2.Actions {
-			if item == r.Command.Rpc.Action {
-				actionOk = true
-			}
-		}
-		if !actionOk {
-			return nil, fmt.Errorf("rpc 请求方法与proto不符")
+	} else if r.Protocol == models.ProtocolRpc {
+		if err := dtos.CheckRPC(r.Command.Rpc); err != nil {
+			return nil, err
 		}
 
 	} else if r.Protocol == models.ProtocolCmd {
@@ -204,17 +169,11 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, fmt.Errorf("请输入 cmd 命令类容")
 		}
 	} else if r.Protocol == models.ProtocolSql {
-		if r.Command.Sql.Source.Id == 0 {
-			return nil, fmt.Errorf("请选择 sql 连接")
+		if err := dtos.CheckSql(r.Command.Sql); err != nil {
+			return nil, err
 		}
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSqlSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
 			return nil, errors.New("sql 连接 配置有误，请确认")
-		}
-		if len(r.Command.Sql.Statement) == 0 {
-			return nil, errors.New("未设置 sql 执行语句")
-		}
-		if _, ok := models.SqlErrActionMap[r.Command.Sql.ErrAction]; !ok {
-			return nil, errors.New("未设置 sql 错误行为")
 		}
 	}
 
@@ -269,7 +228,7 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 		Type:     r.Type,
 		Protocol: r.Protocol,
 	}
-	conf.Command, err = jsoniter.MarshalToString(r.Command)
+	conf.Command, err = jsoniter.Marshal(r.Command)
 	if err != nil {
 		return nil, err
 	}

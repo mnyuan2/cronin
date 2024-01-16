@@ -153,19 +153,7 @@ func (dm *FoundationService) ParseProto(r *pb.ParseProtoRequest) (resp *pb.Parse
 		return nil, fmt.Errorf("无法解析给定的proto文件: %w", err)
 	}
 
-	resp = &pb.ParseProtoReply{Actions: []string{}}
-	for _, fd := range fds {
-		//fmt.Println("package:", fd.GetPackage())
-		for _, serDesc := range fd.GetServices() {
-			//fmt.Println("ser:", serDesc.GetName(), "\n\t", serDesc.UnwrapService().FullName())
-			methods := serDesc.GetMethods()
-			for _, method := range methods {
-				//fmt.Println("method:", string(serDesc.UnwrapService().FullName()), "/", method.GetName(), "..", method.GetFullyQualifiedName())
-				resp.Actions = append(resp.Actions, string(serDesc.UnwrapService().FullName())+"/"+method.GetName())
-			}
-		}
-
-	}
+	resp = &pb.ParseProtoReply{Actions: grpcurl.ParseProtoMethods(fds)}
 
 	return resp, nil
 }
