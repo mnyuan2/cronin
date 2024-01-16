@@ -52,7 +52,9 @@ func (dm *SettingMessageService) List(r *pb.SettingMessageListRequest) (resp *pb
 			Id:    item.Id,
 			Title: item.Title,
 			//Sort:  item.Status,
-			Http: &pb.CronHttp{},
+			Http:     &pb.CronHttp{},
+			UpdateDt: item.UpdateDt,
+			CreateDt: item.CreateDt,
 		}
 		jsoniter.UnmarshalFromString(item.Content, data.Http)
 		resp.List[i] = data
@@ -98,4 +100,22 @@ func (dm *SettingMessageService) Set(r *pb.SettingMessageSetRequest) (resp *pb.S
 	return &pb.SettingMessageSetReply{
 		Id: one.Id,
 	}, err
+}
+
+// 运行一下 模板消息
+func (dm *SettingMessageService) Run(r *pb.SettingMessageSetRequest) (resp *pb.SettingMessageRunReply, err error) {
+	if err = dtos.CheckHttp(r.Http); err != nil {
+		return nil, err
+	}
+
+	res, err := NewCronConfigService(dm.ctx, nil).
+		Run(&pb.CronConfigRunRequest{
+			Protocol: models.ProtocolHttp,
+			Command:  &pb.CronConfigCommand{Http: r.Http},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.SettingMessageRunReply{Result: res.Result}, nil
 }

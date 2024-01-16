@@ -88,7 +88,7 @@ type SettingEnvDelRequest struct {
 type SettingEnvDelReply struct {
 }
 
-// 告警列表
+// 消息模板列表
 type SettingMessageListRequest struct {
 	Page int `form:"page"`
 	Size int `form:"size"`
@@ -98,19 +98,25 @@ type SettingMessageListReply struct {
 	Page *Page                     `json:"page"`
 }
 type SettingMessageListItem struct {
-	Id    int       `json:"id"`
-	Title string    `json:"title"`
-	Sort  int       `json:"int"`
-	Http  *CronHttp `json:"http"`
+	Id       int       `json:"id"`
+	Title    string    `json:"title"`
+	Sort     int       `json:"int"`
+	Http     *CronHttp `json:"http"`
+	CreateDt string    `json:"create_dt"`
+	UpdateDt string    `json:"update_dt"`
 }
 
-// 告警设置
+// 消息模板设置
 type SettingMessageSetRequest struct {
 	Id    int       `json:"id"`
 	Title string    `json:"title"`
 	Sort  int       `json:"sort"`
-	Http  *CronHttp `json:"http"`
+	Http  *CronHttp `json:"http"` // 这里应该增加一个层级，后面可能会有别的模板种类支持
 }
 type SettingMessageSetReply struct {
 	Id int `json:"id"`
+}
+
+type SettingMessageRunReply struct {
+	Result string `json:"result"`
 }

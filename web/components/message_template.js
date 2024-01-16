@@ -1,4 +1,4 @@
-var MyMessage = Vue.extend({
+var MyMessageTemplate = Vue.extend({
     template: `<el-main>
         <el-button type="text" @click="initForm(true)">新增模板</el-button>
         <el-table :data="list">
@@ -15,7 +15,7 @@ var MyMessage = Vue.extend({
 
         <!--设置弹窗-->
         <el-dialog :title="form.box.title" :visible.sync="form.box.show" :close-on-click-modal="false" append-to-body="true">
-            <el-form :model="form.data" label-position="left" label-width="120px">
+            <el-form :model="form.data" label-position="left" label-width="100px">
                 <el-form-item label="模板名称">
                     <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
@@ -45,22 +45,18 @@ var MyMessage = Vue.extend({
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button @click="pingForm()" style="float: left;">发送测试</el-button>
+                <el-button @click="runForm()" style="float: left;">发送测试</el-button>
                 <el-button @click="initForm(false,'-')">取 消</el-button>
                 <el-button type="primary" @click="submitForm()">确 定</el-button>
             </div>
         </el-dialog>
     </el-main>`,
 
-    name: "MySqlSource",
+    name: "MyMessageTemplate",
     data(){
         return {
             list:[],
-            page:{
-                index: 1,
-                size: 10,
-                total: 0
-            },
+            page:{},
             listParam:{
                 page: 1,
                 size: 20,
@@ -93,7 +89,7 @@ var MyMessage = Vue.extend({
                 if (!res.status){
                     return this.$message.error(res.message);
                 }
-                this.sql_source_list = res.data.list;
+                this.list = res.data.list;
                 this.page = res.data.page;
             })
         },
@@ -113,15 +109,33 @@ var MyMessage = Vue.extend({
             if (body.http.url == ""){
                 return this.$message.warning("请输入推送请求地址");
             }
-
-
-            api.innerPost("setting/message_set", body, (res) =>{
+            api.innerPost("/setting/message_set", body, (res) =>{
                 console.log("sql源设置响应",res)
                 if (!res.status){
                     return this.$message.error(res.message)
                 }
                 this.initForm(false)
                 this.getList()
+            })
+        },
+        // 执行一下
+        runForm(){
+            let body = this.form.data
+            if (body.title == ""){
+                return this.$message.warning("请输入模板名称");
+            }
+            if (body.http.url == ""){
+                return this.$message.warning("请输入推送请求地址");
+            }
+            api.innerPost("/setting/message_run", body, (res) =>{
+                if (!res.status){
+                    return this.$message({
+                        message: res.message,
+                        type: 'error',
+                        duration: 6000
+                    })
+                }
+                return this.$message.success("ok."+res.data.result)
             })
         },
         // 初始化表单数据
@@ -143,8 +157,7 @@ var MyMessage = Vue.extend({
                     },
                 }
             }
-            if ( typeof data === 'object' && data["id"] != undefined && data["source"] != undefined
-                && data.id > 0 && typeof data.source === 'object'){
+            if ( typeof data === 'object' && data["id"] != undefined &&  data.id > 0 ){
                 this.form.box.title = '编辑sql连接'
                 this.form.data = data
                 console.log("编辑源",data)
@@ -173,4 +186,4 @@ var MyMessage = Vue.extend({
     }
 })
 
-Vue.component("MyMessage", MyMessage);
+Vue.component("MyMessageTemplate", MyMessageTemplate);

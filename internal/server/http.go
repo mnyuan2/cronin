@@ -56,6 +56,9 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.POST("/setting/env_del", routerEnvDel)
 	r.GET("/setting/message_list", routerMessageList)
 	r.POST("/setting/message_set", routerMessageSet)
+	r.POST("/setting/message_run", routerMessageRun)
+	r.GET("/user/list", routerUserList)
+	r.POST("/user/set", routerUserSet)
 
 	// 视图
 	r.GET("/", func(ctx *gin.Context) {

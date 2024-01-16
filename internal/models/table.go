@@ -11,7 +11,7 @@ import (
 func AutoMigrate(db *db.MyDB) {
 	// 迁移表结构
 	err := db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-		AutoMigrate(&CronSetting{}, &CronConfig{}, &CronLog{})
+		AutoMigrate(&CronSetting{}, &CronConfig{}, &CronLog{}, &CronUser{})
 	if err != nil {
 		panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 	}

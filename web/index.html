@@ -136,7 +136,8 @@
 <script src="/components/config_log.js?v=[[.version]]"></script>
 <script src="/components/sql_source.js?v=[[.version]]"></script>
 <script src="/components/env.js?v=[[.version]]"></script>
-<script src="/components/message.js?v=[[.version]]"></script>
+<script src="/components/message_template.js?v=[[.version]]"></script>
+<script src="/components/users.js?v=[[.version]]"></script>
 <script>
     // 路由
     const router = new VueRouter({
@@ -144,7 +145,8 @@
             { path: '/', redirect: '/config'},
             { path: '/config', component: MyConfig},
             {path: '/sql_source', component: MySqlSource},
-            {path: '/message', component: MyMessage},
+            {path: '/message_template', component: MyMessageTemplate},
+            {path: '/users', component: MyUsers},
         ]
     })
     // vue

@@ -84,5 +84,8 @@ func (e *Error) Path() string {
 
 // Error 原始错误描述
 func (e *Error) Error() string {
-	return e.err.Error()
+	if e.err != nil {
+		return e.err.Error()
+	}
+	return ""
 }

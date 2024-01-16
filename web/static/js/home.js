@@ -38,6 +38,8 @@ const Enum ={
     dicKey: "dic",
     dicSqlSource: 1,
     dicEnv: 2,
+    dicMsg: 3,
+    dicUser: 4,
 }
 
 /**

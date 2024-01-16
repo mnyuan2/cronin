@@ -83,6 +83,11 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicEnv:
 		_sql = "SELECT id,name 'key', title name, content extend FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneEnv).Eq("status", enum.StatusActive)
+	case enum.DicMsg:
+		_sql = "SELECT id, title name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		w.Eq("scene", models.SceneMsg).Eq("status", enum.StatusActive)
+	case enum.DicUser:
+		_sql = "SELECT id, username name FROM `cron_user` ORDER BY sort asc,id desc"
 	}
 
 	items := []*pb.DicGetItem{}

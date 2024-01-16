@@ -156,6 +156,14 @@ var MyConfig = Vue.extend({
                             <el-form-item label="备注">
                                 <el-input v-model="form.remark"></el-input>
                             </el-form-item>
+                            <el-form-item>
+                                <div><el-button type="text" @click="msgBoxShow(-1,'')">推送<i class="el-icon-plus"></i></el-button></div>
+                                <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <pre style="margin: 0;overflow: auto;"><code class="language-sql hljs" style="min-height: 50px;">{{statement}}</code></pre>
+                                    <i class="el-icon-delete" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
+                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
+                                </div>
+                            </el-form-item>
                         </el-form>
                         <div slot="footer" class="dialog-footer">
                             <el-button @click="configRun()" class="left" v-show="form.type==1">执行一下</el-button>
@@ -194,11 +202,39 @@ var MyConfig = Vue.extend({
                     <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
                         <my-sql-source></my-sql-source>
                     </el-drawer>
+                    <!-- 推送设置弹窗 -->
+                    <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
+                        <el-form :model="form">
+                            <el-form-item label="当结果状态">
+                                <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
+                                    <el-option label="GET" value="GET"></el-option>
+                                    <el-option label="POST" value="POST"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="消息模板">
+                                <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
+                                    <el-option v-for="(dic_v,dic_k) in dic_msg" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="@人员">
+                                <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
+                                    <el-option v-for="(dic_v,dic_k) in dic_user" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-form>
+                        
+                        <span slot="footer" class="dialog-footer">
+                            <el-button @click="msgSet.show = false">取 消</el-button>
+                            <el-button type="primary" @click="sqlSetConfirm()">确 定</el-button>
+                        </span>
+                    </el-dialog>
                 </el-main>`,
     name: "MyConfig",
     data(){
         return {
             dic_sql_source:[],
+            dic_user: [],
+            dic_msg: [],
             sys_info:{},
             list: [],
             listPage:{
@@ -228,6 +264,16 @@ var MyConfig = Vue.extend({
                 index: -1, // 操作行号
                 data: "", // 实际内容
             }, // sql设置弹窗
+            msgSet:{
+                show: false, // 是否显示
+                title: '添加',
+                index: -1, // 操作行号
+                data: {
+                    status: "", // 单选
+                    msg_id: "", // 单选
+                    notify_users: [],// 用户id，多选
+                }, // 实际内容
+            },
             form:{},
             hintSpec: "* * * * * *",
             labelType: '1',
@@ -238,6 +284,7 @@ var MyConfig = Vue.extend({
                 },
                 selectableRange: "00:00:00 - 23:01:59",
             },
+
         }
     },
     // 模块初始化
@@ -401,7 +448,8 @@ var MyConfig = Vue.extend({
                         statement:[],
                         err_action: "1",
                     },
-                }
+                },
+                message: []
             }
         },
         // 编辑弹窗
@@ -554,6 +602,22 @@ var MyConfig = Vue.extend({
                 this.form.command.sql.statement.splice(index,1)
             })
         },
+        // 推送弹窗
+        msgBoxShow(index, oldData){
+            if (index === "" || index == null || isNaN(index)){
+                console.log('msgSetShow', index, oldData)
+                return this.$message.error("索引位标志异常");
+            }
+            if (typeof oldData != 'string'){
+                return this.$message.error("sql内容异常");
+            }
+            this.msgSet.show = true
+            this.msgSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
+            this.msgSet.data = oldData // 原来的内容
+            this.msgSet.title = this.msgSet.index < 0? '添加' : '编辑';
+        },
+        // 推送确认
+
         statusClass(status){
             switch (Number(status)) {
                 case 1:
@@ -568,8 +632,10 @@ var MyConfig = Vue.extend({
         },
         // 枚举
         getDicSqlSource(){
-            api.dicList([Enum.dicSqlSource],(res) =>{
+            api.dicList([Enum.dicSqlSource, Enum.dicUser, Enum.dicMsg],(res) =>{
                 this.dic_sql_source = res[Enum.dicSqlSource]
+                this.dic_user = res[Enum.dicUser]
+                this.dic_msg = res[Enum.dicMsg]
             })
         },
         // 解析proto内容
