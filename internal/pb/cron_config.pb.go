@@ -32,7 +32,9 @@ type CronConfigListItem struct {
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
 	Command        *CronConfigCommand `json:"command" gorm:"-"`
-	CommandStr     string             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
+	MsgSet         []*CronMsgSet      `json:"msg_set" gorm:"-"`
+	CommandStr     []byte             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
+	MsgSetStr      []byte             `json:"-" gorm:"column:msg_set;"`
 }
 
 // 任务设置
@@ -44,10 +46,17 @@ type CronConfigSetRequest struct {
 	Protocol int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
 	Command  *CronConfigCommand `json:"command,omitempty"`  // 命令
 	Status   int                `json:"status"`             // 状态
-	Remark   string             `json:"remark"`
+	Remark   string             `json:"remark"`             // 备注
+	MsgSet   []*CronMsgSet      `json:"msg_set"`            // 消息设置
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`
+}
+
+type CronMsgSet struct {
+	MsgId         int   `json:"msg_id"`
+	Status        int   `json:"status"`
+	NotifyUserIds []int `json:"notify_user_ids"`
 }
 type CronConfigCommand struct {
 	Http *CronHttp `json:"http"`

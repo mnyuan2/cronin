@@ -65,7 +65,7 @@ var MyMessageTemplate = Vue.extend({
             varDesc: [
                 {name: 'env', description:'string 环境名称'},
                 {name: 'config', description:'object 任务配置信息，包含字段：name·任务名称、protocol_name·协议类型'},
-                {name: 'log', description:'object 结果日志信息，包含字段：status_desc·状态描述、body·结果日志、duration·耗时/秒、create_dt·触发时间'},
+                {name: 'log', description:'object 结果日志信息，包含字段：status_name·状态(成功、失败)、status_desc·状态描述、body·结果日志、duration·耗时/秒、create_dt·触发时间(yyyy-mm-dd HH:ii:ss)'},
                 {name: 'user', description:'object 人员信息，包含字段 username·用户名、mobie·手机号 信息'},
             ],
 

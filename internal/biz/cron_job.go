@@ -3,6 +3,8 @@ package biz
 import (
 	"bytes"
 	"context"
+	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/grpcurl"
 	"cron/internal/basic/util"
@@ -58,15 +60,22 @@ func (m *ScheduleOnce) Next(t time.Time) time.Time {
 type CronJob struct {
 	conf         *models.CronConfig
 	commandParse *pb.CronConfigCommand
+	msgSetParse  []*pb.CronMsgSet
 	ErrorCount   int // 连续错误
 }
 
 // 任务执行器
 func NewCronJob(conf *models.CronConfig) *CronJob {
 	com := &pb.CronConfigCommand{}
+	msg := []*pb.CronMsgSet{}
 	_ = jsoniter.Unmarshal(conf.Command, com)
+	_ = jsoniter.Unmarshal(conf.MsgSet, &msg)
 
-	return &CronJob{conf: conf, commandParse: com}
+	return &CronJob{
+		conf:         conf,
+		commandParse: com,
+		msgSetParse:  msg,
+	}
 }
 
 // 执行任务
@@ -93,7 +102,7 @@ func (job *CronJob) Run() {
 			data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行完成")
 		}
 		// 执行告警推送
-
+		job.messagePush(ctx, g)
 	}()
 
 	//fmt.Println("执行 "+job.conf.GetProtocolName()+" 任务", job.conf.Id, job.conf.Name)
@@ -107,7 +116,8 @@ func (job *CronJob) Run() {
 		job.ErrorCount = 0
 	}
 	// 连续错误达到5次，任务终止。
-	if job.ErrorCount >= 5 || job.ErrorCount < 0 || job.conf.Type == models.TypeOnce {
+	e, ok := err.(*errs.Error)
+	if job.ErrorCount >= 5 || (ok && e.Code() == errs.SysError.String()) || job.conf.Type == models.TypeOnce {
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
 		job.conf.Status = models.ConfigStatusError
 		job.conf.EntryId = 0
@@ -121,7 +131,7 @@ func (job *CronJob) Run() {
 func (job *CronJob) Exec(ctx context.Context) (res []byte, err error) {
 	switch job.conf.Protocol {
 	case models.ProtocolHttp:
-		res, err = job.httpFunc(ctx)
+		res, err = job.httpFunc(ctx, job.commandParse.Http)
 	case models.ProtocolRpc:
 		res, err = job.rpcFunc(ctx)
 	case models.ProtocolCmd:
@@ -135,21 +145,21 @@ func (job *CronJob) Exec(ctx context.Context) (res []byte, err error) {
 }
 
 // http 执行函数
-func (job *CronJob) httpFunc(ctx context.Context) (res []byte, err error) {
+func (job *CronJob) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte, err error) {
 	header := map[string]string{}
-	for _, head := range job.commandParse.Http.Header {
+	for _, head := range http.Header {
 		if head.Key == "" {
 			continue
 		}
 		header[head.Key] = head.Value
 	}
-	method := models.ProtocolHttpMethodMap()[job.commandParse.Http.Method]
+	method := models.ProtocolHttpMethodMap()[http.Method]
 	if method == "" {
 		// 任务设置有问题，提出执行队列，记录日志。
-		job.ErrorCount = -2
-		return nil, errs.New(nil, "http method is empty")
+		//job.ErrorCount = -2
+		return nil, errs.New(nil, "http method is empty", errs.SysError)
 	}
-	return job.httpRequest(ctx, method, job.commandParse.Http.Url, []byte(job.commandParse.Http.Body), header)
+	return job.httpRequest(ctx, method, http.Url, []byte(http.Body), header)
 }
 
 // rpc 执行函数
@@ -160,12 +170,10 @@ func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err error) {
 		// 目前还存在问题，无法通用性的提交和接收参数！
 		return job.rpcGrpc(ctx, job.commandParse.Rpc)
 	case "RPC":
-		job.ErrorCount = -2
-		return nil, errs.New(nil, fmt.Sprintf("未支持的rpc method，任务已终止。"))
+		return nil, errs.New(nil, fmt.Sprintf("未支持的rpc method，任务已终止。"), errs.SysError)
 		// 手头目前没有rpc的服务，不好测试验证。
 	default:
-		job.ErrorCount = -2
-		return nil, errs.New(nil, fmt.Sprintf("未支持的rpc method %s，任务已终止。", job.commandParse.Rpc.Method))
+		return nil, errs.New(nil, fmt.Sprintf("未支持的rpc method %s，任务已终止。", job.commandParse.Rpc.Method), errs.SysError)
 	}
 }
 
@@ -209,8 +217,7 @@ func (job *CronJob) sqlFunc(ctx context.Context) (res []byte, err error) {
 	case models.SqlSourceMysql:
 		return job.sqlMysql(ctx, job.commandParse.Sql)
 	default:
-		job.ErrorCount = -2
-		return nil, errs.New(nil, fmt.Sprintf("未支持的sql 驱动 %s", job.commandParse.Sql.Driver))
+		return nil, errs.New(nil, fmt.Sprintf("未支持的sql 驱动 %s", job.commandParse.Sql.Driver), errs.SysError)
 	}
 }
 
@@ -292,4 +299,48 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 	}
 
 	return []byte(h.RespMessages), err
+}
+
+func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
+	ids := make([]int, len(job.msgSetParse))
+	for i, m := range job.msgSetParse {
+		ids[i] = m.MsgId
+	}
+
+	w := db.NewWhere().
+		Eq("scene", models.SceneMsg).
+		In("id", ids, db.RequiredOption()).
+		Eq("status", enum.StatusActive)
+	msgs, err := data.NewCronSettingData(ctx).Gets(w)
+	if err != nil || len(msgs) == 0 {
+		return
+	}
+	msgMaps := map[int]*models.CronSetting{}
+	for _, m := range msgs {
+		msgMaps[m.Id] = m
+	}
+
+	for _, set := range job.msgSetParse {
+		if set.Status > 0 && set.Status != g.Status {
+			continue
+		}
+
+		// 查询模板
+		msg, ok := msgMaps[set.MsgId]
+		if !ok {
+			continue // 消息模板不存在或未启用
+		}
+
+		// 字符串模板替换;
+		//msg.Content
+
+		template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
+		if err = jsoniter.UnmarshalFromString(msg.Content, template); err != nil {
+			continue // 解析错误
+		}
+
+		// 执行推送
+		res, err := job.httpFunc(ctx, template.Http)
+		fmt.Println(res, err)
+	}
 }

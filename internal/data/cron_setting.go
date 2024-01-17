@@ -19,7 +19,7 @@ func NewCronSettingData(ctx context.Context) *CronSettingData {
 	}
 }
 
-// 列表查询
+// 列表查询(这个应该叫getListPage)
 func (m *CronSettingData) GetList(scene string, env string, page, size int, list interface{}) (total int64, err error) {
 	str, args := db.NewWhere().
 		Eq("scene", scene, db.RequiredOption()).
@@ -28,6 +28,14 @@ func (m *CronSettingData) GetList(scene string, env string, page, size int, list
 	total, err = m.db.Paginate(list, page, size, m.tableName, "*", "update_dt desc,id desc", str, args...)
 
 	return total, err
+}
+
+// 获得多条数据
+func (m *CronSettingData) Gets(where *db.Where) (list []*models.CronSetting, err error) {
+	list = []*models.CronSetting{}
+	w, args := where.Build()
+
+	return list, m.db.Where(w, args...).Find(&list).Error
 }
 
 // 获得单条配置

@@ -98,21 +98,26 @@ type SettingMessageListReply struct {
 	Page *Page                     `json:"page"`
 }
 type SettingMessageListItem struct {
-	Id       int       `json:"id"`
-	Title    string    `json:"title"`
-	Sort     int       `json:"int"`
-	Http     *CronHttp `json:"http"`
-	CreateDt string    `json:"create_dt"`
-	UpdateDt string    `json:"update_dt"`
+	Id       int                     `json:"id"`
+	Title    string                  `json:"title"`
+	Sort     int                     `json:"int"`
+	Template *SettingMessageTemplate `json:"template"`
+	CreateDt string                  `json:"create_dt"`
+	UpdateDt string                  `json:"update_dt"`
 }
 
 // 消息模板设置
 type SettingMessageSetRequest struct {
-	Id    int       `json:"id"`
-	Title string    `json:"title"`
-	Sort  int       `json:"sort"`
-	Http  *CronHttp `json:"http"` // 这里应该增加一个层级，后面可能会有别的模板种类支持
+	Id       int                     `json:"id"`
+	Title    string                  `json:"title"`
+	Sort     int                     `json:"sort"`
+	Type     int                     `json:"type"`
+	Template *SettingMessageTemplate `json:"template"`
 }
+type SettingMessageTemplate struct {
+	Http *CronHttp `json:"http"`
+}
+
 type SettingMessageSetReply struct {
 	Id int `json:"id"`
 }

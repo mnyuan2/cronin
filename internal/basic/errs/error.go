@@ -22,6 +22,9 @@ type Code string
 func (c Code) parse(e *Error) {
 	e.code = c
 }
+func (c Code) String() string {
+	return string(c)
+}
 
 const (
 	SysError = Code("999999") // 系统错误

@@ -71,8 +71,7 @@ type CronConfig struct {
 	StatusDt     string `json:"status_dt" gorm:"column:status_dt;type:datetime;default:null;comment:状态变更时间;"`
 	UpdateDt     string `json:"update_dt" gorm:"column:update_dt;type:datetime;default:null;comment:更新时间;"`
 	CreateDt     string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
-	AlertId      int    `json:"alert_id" gorm:"column:alert_id;type:int(11);default:0;comment:告警配置编号;"`
-	AlertUserIds []byte `json:"alert_user_ids" gorm:"column:alert_user_ids;type:json;default:null;comment:告警通知人员编号;"`
+	MsgSet       []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
 }
 
 func (m *CronConfig) GetProtocolName() string {

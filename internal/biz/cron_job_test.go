@@ -1,6 +1,7 @@
 package biz
 
 import (
+	"bytes"
 	"context"
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
@@ -442,4 +443,40 @@ func str2gbk(text []byte) []byte {
 
 	srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(text))
 	return []byte(srcCoder)
+}
+
+func TestTemplate(t *testing.T) {
+	str := []byte(`{
+    "http": {
+        "method": "POST",
+        "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=909ef764-4f7e-44eb-9cba-4a5ca734ebbf",
+        "body": "{"msgtype":"text","text":{"content":"时间：[[log.create_dt]]\n任务 [[config.name]]执行[[log.status]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]","mentioned_mobile_list":["[[user.mobie]]"]}}",
+        "header": [
+            {
+                "key": "a",
+                "value": "[[x]]"
+            }
+        ]
+    }
+}`)
+
+	// 提取模板变量
+	// 重组临时变量，默认置空，有效的写入新值
+	args := map[string]string{
+		"env":                  "测试环境",
+		"config.name":          "xx任务",
+		"config.protocol_name": "sql脚本",
+		"log.status_name":      "成功",
+		"log.status_desc":      "success",
+		"log.body":             "xxxxxxxxxxxxxx\nyyyyyyyyyyyyyy",
+		"log.duration":         "3.2s",
+		"log.create_dt":        "2023-01-01 11:12:59",
+		"user.username":        "管理员,大王",
+		"user.mobile":          "13118265689,12345678910",
+	}
+	// 变量替换
+	for k, v := range args {
+		str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)
+	}
+	fmt.Println(string(str))
 }

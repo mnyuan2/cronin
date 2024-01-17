@@ -58,14 +58,16 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, 5)
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, 7)
 	}
 
 	for _, item := range resp.List {
 		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{Actions: []string{}}, Sql: &pb.CronSql{}}
+		item.MsgSet = []*pb.CronMsgSet{}
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
-		jsoniter.UnmarshalFromString(item.CommandStr, item.Command)
+		jsoniter.Unmarshal(item.CommandStr, item.Command)
+		jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet)
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
 			item.TopErrorNumber = top.ErrorNumber
@@ -113,6 +115,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 			StatusName:   conf.GetStatusName(),
 			UpdateDt:     next, // 下一次时间
 			Command:      c.commandParse,
+			MsgSet:       c.msgSetParse,
 		})
 	}
 
@@ -142,6 +145,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
 	d.Command, _ = jsoniter.Marshal(r.Command)
+	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.Type = r.Type
 	if r.Type == models.TypeCycle {
 		if _, err = secondParser.Parse(d.Spec); err != nil {
@@ -174,6 +178,11 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSqlSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
 			return nil, errors.New("sql 连接 配置有误，请确认")
+		}
+	}
+	for i, msg := range r.MsgSet {
+		if msg.MsgId == 0 {
+			return nil, fmt.Errorf("推送%v未设置消息模板", i)
 		}
 	}
 
