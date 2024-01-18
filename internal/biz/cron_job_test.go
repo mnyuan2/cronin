@@ -85,7 +85,7 @@ func TestCronJob_Grpc(t *testing.T) {
 // 构建grpc请求 2版
 func TestCronJob_Grpc2(t *testing.T) {
 	conf := &models.CronConfig{
-		Command: `{
+		Command: []byte(`{
     "cmd": "",
     "rpc": {
         "addr": "localhost:21014",
@@ -120,7 +120,7 @@ func TestCronJob_Grpc2(t *testing.T) {
         ],
         "method": "GET"
     }
-}`,
+}`),
 	}
 
 	//db.New(context.Background()).Write.Where("id=?", 116).Find(conf)
@@ -450,7 +450,7 @@ func TestTemplate(t *testing.T) {
     "http": {
         "method": "POST",
         "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=909ef764-4f7e-44eb-9cba-4a5ca734ebbf",
-        "body": "{"msgtype":"text","text":{"content":"时间：[[log.create_dt]]\n任务 [[config.name]]执行[[log.status]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]","mentioned_mobile_list":["[[user.mobie]]"]}}",
+        "body": "{"msgtype":"text","text":{"content":"时间：[[log.create_dt]]\n任务 [[config.name]]执行[[log.status]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]","mentioned_mobile_list":["[[user.mobile]]"]}}",
         "header": [
             {
                 "key": "a",

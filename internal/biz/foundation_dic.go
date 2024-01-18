@@ -15,6 +15,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type FoundationService struct {
@@ -127,8 +128,9 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 
 func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.SystemInfoReply, err error) {
 	resp = &pb.SystemInfoReply{
-		Version: config.Version,
-		CmdName: "sh",
+		Version:     config.Version,
+		CmdName:     "sh",
+		CurrentDate: time.Now().Format(time.RFC3339),
 	}
 	// 根据运行环境确认cmd的类型
 	if runtime.GOOS == "windows" {

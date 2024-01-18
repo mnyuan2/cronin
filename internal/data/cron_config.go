@@ -23,7 +23,7 @@ func NewCronConfigData(ctx context.Context) *CronConfigData {
 func (m *CronConfigData) GetList(where *db.Where, page, size int, list interface{}) (total int64, err error) {
 	str, args := where.Build()
 
-	return m.db.Paginate(list, page, size, m.tableName, "*", "id", str, args...)
+	return m.db.Paginate(list, page, size, m.tableName, "*", "update_dt desc", str, args...)
 }
 
 func (m *CronConfigData) Set(data *models.CronConfig) error {

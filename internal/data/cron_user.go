@@ -19,10 +19,18 @@ func NewCronUserData(ctx context.Context) *CronUserData {
 }
 
 // 查询列表数据
-func (m *CronUserData) GetList(where *db.Where, page, size int, list interface{}) (total int64, err error) {
+func (m *CronUserData) GetListPage(where *db.Where, page, size int, list interface{}) (total int64, err error) {
 	str, args := where.Build()
 
 	return m.db.Paginate(list, page, size, m.tableName, "*", "sort asc,id desc", str, args...)
+}
+
+// 查询列表数据
+func (m *CronUserData) GetList(where *db.Where) (list []*models.CronUser, err error) {
+	list = []*models.CronUser{}
+	w, args := where.Build()
+
+	return list, m.db.Where(w, args...).Find(&list).Error
 }
 
 func (m *CronUserData) Set(data *models.CronUser) error {

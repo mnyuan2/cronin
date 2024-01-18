@@ -84,6 +84,6 @@ func (m *CronSettingData) GetEnvOne(id int) (one *models.CronSetting, err error)
 
 // 获得env信息
 func (m *CronSettingData) GetMessageOne(id int) (one *models.CronSetting, err error) {
-	w := db.NewWhere().Eq("scene", models.SceneMessage).Eq("id", id, db.RequiredOption())
+	w := db.NewWhere().Eq("scene", models.SceneMsg).Eq("id", id, db.RequiredOption())
 	return m.GetOne(w)
 }

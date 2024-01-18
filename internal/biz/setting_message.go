@@ -40,7 +40,7 @@ func (dm *SettingMessageService) List(r *pb.SettingMessageListRequest) (resp *pb
 		},
 	}
 	list := []*models.CronSetting{}
-	resp.Page.Total, err = data.NewCronSettingData(dm.ctx).GetList(models.SceneMessage, "", r.Page, r.Size, &list)
+	resp.Page.Total, err = data.NewCronSettingData(dm.ctx).GetList(models.SceneMsg, "", r.Page, r.Size, &list)
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +52,13 @@ func (dm *SettingMessageService) List(r *pb.SettingMessageListRequest) (resp *pb
 			Id:    item.Id,
 			Title: item.Title,
 			//Sort:  item.Status,
-			Http:     &pb.CronHttp{},
+			Template: &pb.SettingMessageTemplate{
+				Http: &pb.CronHttp{},
+			},
 			UpdateDt: item.UpdateDt,
 			CreateDt: item.CreateDt,
 		}
-		jsoniter.UnmarshalFromString(item.Content, data.Http)
+		jsoniter.UnmarshalFromString(item.Content, data.Template)
 		resp.List[i] = data
 	}
 
@@ -65,7 +67,7 @@ func (dm *SettingMessageService) List(r *pb.SettingMessageListRequest) (resp *pb
 
 // 设置源
 func (dm *SettingMessageService) Set(r *pb.SettingMessageSetRequest) (resp *pb.SettingMessageSetReply, err error) {
-	if err = dtos.CheckHttp(r.Http); err != nil {
+	if err = dtos.CheckHttp(r.Template.Http); err != nil {
 		return nil, err
 	}
 
@@ -81,14 +83,14 @@ func (dm *SettingMessageService) Set(r *pb.SettingMessageSetRequest) (resp *pb.S
 		}
 		jsoniter.UnmarshalFromString(one.Content, oldSource)
 	} else {
-		one.Scene = models.SceneMessage
+		one.Scene = models.SceneMsg
 		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
 	}
 
 	one.UpdateDt = ti.String()
 	one.Title = r.Title
-	one.Content, err = jsoniter.MarshalToString(r.Http)
+	one.Content, err = jsoniter.MarshalToString(r.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -104,14 +106,14 @@ func (dm *SettingMessageService) Set(r *pb.SettingMessageSetRequest) (resp *pb.S
 
 // 运行一下 模板消息
 func (dm *SettingMessageService) Run(r *pb.SettingMessageSetRequest) (resp *pb.SettingMessageRunReply, err error) {
-	if err = dtos.CheckHttp(r.Http); err != nil {
+	if err = dtos.CheckHttp(r.Template.Http); err != nil {
 		return nil, err
 	}
 
 	res, err := NewCronConfigService(dm.ctx, nil).
 		Run(&pb.CronConfigRunRequest{
 			Protocol: models.ProtocolHttp,
-			Command:  &pb.CronConfigCommand{Http: r.Http},
+			Command:  &pb.CronConfigCommand{Http: r.Template.Http},
 		})
 	if err != nil {
 		return nil, err

@@ -21,8 +21,8 @@ type CronLog struct {
 }
 
 var LogStatusMap = map[int]string{
-	enum.StatusDisable: "错误",
-	enum.StatusActive:  "正常",
+	enum.StatusDisable: "失败",
+	enum.StatusActive:  "成功",
 }
 
 // 新建一个错误日志
@@ -67,4 +67,8 @@ func NewSuccessCronLog(conf *CronConfig, body string, startTime time.Time) *Cron
 		Body:       body,
 		Snap:       str,
 	}
+}
+
+func (m *CronLog) GetStatusName() string {
+	return LogStatusMap[m.Status]
 }

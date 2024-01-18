@@ -175,11 +175,24 @@
             getSysInfo(){
                 api.systemInfo((res)=>{
                     this.sysInfo = res;
+                    // 如果服务器时间与本地时间存在较大差异，要给出提示。
+                    let ser = new Date(res.current_date)
+                    let cur = new Date()
+                    let diff = Math.abs(ser.getTime() - cur.getTime())/1000/60 // 分钟
+                    if (diff > 10){
+                        console.log("服务器时间", ser, "|",cur)
+                        this.$notify({
+                            title: '注意',
+                            dangerouslyUseHTMLString: true,
+                            message: '服务器时间与当前系统时间存在较大差异，请核查！<br>服务时间：'+ser.toISOString()+'<br>本地时间：'+cur.toISOString(),
+                            type: 'warning'
+                        })
+                    }
                 }, true)
             },
             // 枚举
             getDic(){
-                api.dicList([Enum.dicSqlSource, Enum.dicEnv], (list) =>{
+                api.dicList([Enum.dicSqlSource, Enum.dicUser, Enum.dicMsg], (list) =>{
                     this.dicMap = list
                     // 补充环境名称
                     if (this.sysInfo.env_name == "***"){
@@ -191,7 +204,7 @@
                             }
                         }
                     }
-                })
+                },true)
             },
         }
     })

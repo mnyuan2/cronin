@@ -3,6 +3,7 @@ package biz
 import (
 	"bytes"
 	"context"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
@@ -319,6 +320,30 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 	for _, m := range msgs {
 		msgMaps[m.Id] = m
 	}
+	userIds := []int{}
+	for _, set := range job.msgSetParse {
+		userIds = append(userIds, set.NotifyUserIds...)
+	}
+	w2 := db.NewWhere().In("id", userIds)
+	users, _ := data.NewCronUserData(ctx).GetList(w2)
+	userMaps := map[int]*models.CronUser{}
+	for _, user := range users {
+		userMaps[user.Id] = user
+	}
+
+	// 重组临时变量，默认置空，有效的写入新值
+	args := map[string]string{
+		"env":                  job.conf.Env,
+		"config.name":          job.conf.Name,
+		"config.protocol_name": job.conf.GetProtocolName(),
+		"log.status_name":      g.GetStatusName(),
+		"log.status_desc":      g.StatusDesc,
+		"log.body":             g.Body,
+		"log.duration":         conv.Float64s().ToString(g.Duration),
+		"log.create_dt":        g.CreateDt,
+		"user.username":        "管理员,大王",
+		"user.mobile":          "13118265689,12345678910",
+	}
 
 	for _, set := range job.msgSetParse {
 		if set.Status > 0 && set.Status != g.Status {
@@ -332,10 +357,22 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 		}
 
 		// 字符串模板替换;
+		args["user.username"] = ""
+		args["user.mobile"] = ""
+		for _, user_id := range set.NotifyUserIds {
+
+		}
+
+		// 变量替换
+		str := []byte(msg.Content)
+		for k, v := range args {
+			str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)
+		}
+
 		//msg.Content
 
 		template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
-		if err = jsoniter.UnmarshalFromString(msg.Content, template); err != nil {
+		if err = jsoniter.Unmarshal(str, template); err != nil {
 			continue // 解析错误
 		}
 

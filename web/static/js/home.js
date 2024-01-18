@@ -106,7 +106,7 @@ var api = {
         let queryInfo = []
         // 从存储查看要请求的枚举是否存在 存在从存储取出
         types.forEach((element, index) => {
-            if (list[element]) {
+            if (list[element] && !reload) {
                 reply[element] = list[element]
             } else {
                 queryInfo.push(element)
