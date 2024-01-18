@@ -135,7 +135,7 @@ var MyConfig = Vue.extend({
                                             <div style="overflow-y: auto;max-height: 420px;">
                                                 <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                                     <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 56px;"><code class="language-sql hljs">{{statement}}</code></pre>
-                                                    <i class="el-icon-delete" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
+                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
                                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
                                                     <i style="position: absolute;right: 1px;top: 49px;font-size: 18px;">#{{sql_index}}</i>
                                                 </div>
@@ -161,10 +161,10 @@ var MyConfig = Vue.extend({
                             </el-form-item>
                             <el-form-item>
                                 <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
-                                <div v-for="(msg,msg_index) in form.message" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <p>当结果<el-tag>{{msg.status_name}}</el-tag>时，发送<el-tag size="small">{{msg.msg_name}}</el-tag>消息，{{msg.notify_users_name.length > 0? '并且@人员<el-tag size="small">'+msg.notify_users_name+'</el-tag>' : ''}}</p>
-                                    <i class="el-icon-delete" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
-                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
+                                <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <el-row v-html="msg.descrition"></el-row>
+                                    <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
+                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
                                 </div>
                             </el-form-item>
                         </el-form>
@@ -221,7 +221,7 @@ var MyConfig = Vue.extend({
                                 消息
                             </el-form-item>
                             <el-form-item label="并且@用户">
-                                <el-select v-model="msgSet.data.notify_users" multiple="true">
+                                <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
                                     <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
                                 </el-select>
                             </el-form-item>
@@ -272,7 +272,7 @@ var MyConfig = Vue.extend({
                 title: '添加',
                 index: -1, // 操作行号
                 data: {}, // 实际内容
-                statusList:[{id:"1",name:"错误"}, {id:"2", name:"成功"}, {id:"0",name:"完成"}],
+                statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}, {id:0,name:"完成"}],
             },
             form:{},
             hintSpec: "* * * * * *",
@@ -377,6 +377,7 @@ var MyConfig = Vue.extend({
                 protocol: Number(this.form.protocol),
                 command: this.form.command,
                 remark: this.form.remark,
+                msg_set: this.form.msg_set,
             }
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.source.id = Number(body.command.sql.source.id)
@@ -467,7 +468,10 @@ var MyConfig = Vue.extend({
                 this.form.command.http.header = this.initFormData().command.http.header
             }
             for (let i in row.msg_set){
-                this.form.msg_set.push(this.msgSetBuildName(row.msg_set[i]))
+                this.form.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
+            }
+            if (this.form.msg_set == null){
+
             }
             this.form.type = this.form.type.toString()
             this.form.status = this.form.status.toString() // 这里要转字符串，否则可能显示数字
@@ -616,7 +620,7 @@ var MyConfig = Vue.extend({
                 oldData = {
                     status: "1",
                     msg_id: "",
-                    notify_users: [],
+                    notify_user_ids: [],
                 }
             }else if (typeof oldData != 'object'){
                 console.log('推送信息异常', oldData)
@@ -627,40 +631,55 @@ var MyConfig = Vue.extend({
             this.msgSet.title = this.msgSet.index < 0? '添加' : '编辑';
             this.msgSet.data = oldData
         },
+        msgSetDel(index){
+            if (index === "" || index == null || isNaN(index)){
+                console.log('msgSetDel', index)
+                return this.$message.error("索引位标志异常");
+            }
+            this.$confirm('确认删除推送配置','提示',{
+                type:'warning',
+            }).then(()=>{
+                this.form.msg_set.splice(index, 1);
+            })
+
+        },
         // 推送确认
         msgSetConfirm(){
-            if (this.msgSet.data.msg_id == ""){
+            if (this.msgSet.data.msg_id <= 0){
                 return this.$message.warning("请选择消息模板");
             }
-            if (this.msgSet.data.status == ""){
-                return this.$message.warning("请选择结果状态");
-            }
-            let data = this.msgSetBuildName(this.msgSet.data)
+            let data = this.msgSetBuildDesc(this.msgSet.data)
 
             if (this.msgSet.index < 0){
-                this.form.message.push(data)
+                this.form.msg_set.push(data)
             }else{
-                this.form.message[this.msgSet.index] = data
+                this.form.msg_set[this.msgSet.index] = data
             }
             this.msgSet.show = false
             this.msgSet.index = -1
             this.msgSet.data = {}
         },
-        msgSetBuildName(data){
+        // 构建消息设置描述
+        msgSetBuildDesc(data){
             let item1 = this.msgSet.statusList.find(option => option.id === data.status);
             if (item1){
                 data.status_name = item1.name
             }
+            let descrition = '当任务<span class="el-tag el-tag--small el-tag--light">'+item1.name+'</span>时'
+
             let item2 = this.dic_msg.find(option => option.id === data.msg_id)
             if (item2){
                 data.msg_name = item2.name
+                descrition += '，发送<span class="el-tag el-tag--small el-tag--light">'+item2.name+'</span>消息'
             }
             let item3 = this.dic_user.filter((option) => {
-                return data.notify_users.includes(option.id);
+                return data.notify_user_ids.includes(option.id);
             });
             if (item3){
                 data.notify_users_name = item3.map((item)=>{return item.name})
+                descrition += '并且@人员<span class="el-tag el-tag--small el-tag--light">'+data.notify_users_name+'</span>'
             }
+            data.descrition = descrition
             return data
         },
         statusClass(status){

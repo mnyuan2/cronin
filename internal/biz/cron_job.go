@@ -9,6 +9,7 @@ import (
 	"cron/internal/basic/errs"
 	"cron/internal/basic/grpcurl"
 	"cron/internal/basic/util"
+	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -61,22 +62,27 @@ func (m *ScheduleOnce) Next(t time.Time) time.Time {
 type CronJob struct {
 	conf         *models.CronConfig
 	commandParse *pb.CronConfigCommand
-	msgSetParse  []*pb.CronMsgSet
+	msgSetParse  *dtos.MsgSetParse
 	ErrorCount   int // 连续错误
 }
 
 // 任务执行器
 func NewCronJob(conf *models.CronConfig) *CronJob {
-	com := &pb.CronConfigCommand{}
-	msg := []*pb.CronMsgSet{}
-	_ = jsoniter.Unmarshal(conf.Command, com)
-	_ = jsoniter.Unmarshal(conf.MsgSet, &msg)
-
-	return &CronJob{
+	job := &CronJob{
 		conf:         conf,
-		commandParse: com,
-		msgSetParse:  msg,
+		commandParse: &pb.CronConfigCommand{},
+		msgSetParse:  &dtos.MsgSetParse{MsgIds: []int{}, NotifyUserIds: []int{}, Set: []*pb.CronMsgSet{}},
 	}
+
+	_ = jsoniter.Unmarshal(conf.Command, job.commandParse)
+	_ = jsoniter.Unmarshal(conf.MsgSet, &job.msgSetParse.Set)
+
+	for _, s := range job.msgSetParse.Set {
+		job.msgSetParse.NotifyUserIds = append(job.msgSetParse.NotifyUserIds, s.NotifyUserIds...)
+		job.msgSetParse.MsgIds = append(job.msgSetParse.MsgIds, s.MsgId)
+	}
+
+	return job
 }
 
 // 执行任务
@@ -94,16 +100,24 @@ func (job *CronJob) Run() {
 
 	defer func() {
 		if err := util.PanicInfo(recover()); err != "" {
-			data.NewCronLogData(ctx).Add(models.NewErrorCronLog(job.conf, "", errs.New(errors.New(err), "执行异常"), st))
+			g2 := models.NewErrorCronLog(job.conf, "", errs.New(errors.New(err), "执行异常"), st)
+			if g == nil {
+				g = g2
+			} else {
+				g.Status = g2.Status
+				g.StatusDesc += " " + g2.StatusDesc
+				g.Body += "\n-----------------------\n" + g2.Body
+			}
 		}
+		// 执行告警推送
+		job.messagePush(ctx, g)
+
 		data.NewCronLogData(ctx).Add(g)
 		if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
 			job.conf.Status = models.ConfigStatusFinish
 			job.conf.EntryId = 0
 			data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行完成")
 		}
-		// 执行告警推送
-		job.messagePush(ctx, g)
 	}()
 
 	//fmt.Println("执行 "+job.conf.GetProtocolName()+" 任务", job.conf.Id, job.conf.Name)
@@ -302,15 +316,20 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 	return []byte(h.RespMessages), err
 }
 
+// 发送消息
 func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
-	ids := make([]int, len(job.msgSetParse))
-	for i, m := range job.msgSetParse {
-		ids[i] = m.MsgId
-	}
+	defer func() {
+		if err := util.PanicInfo(recover()); err != "" {
+			g2 := models.NewErrorCronLog(job.conf, "", errs.New(errors.New(err), "执行异常"), time.Now())
+			g.Status = g2.Status
+			g.StatusDesc += " " + g2.StatusDesc
+			g.Body += "\n------------\n" + g2.Body
+		}
+	}()
 
 	w := db.NewWhere().
 		Eq("scene", models.SceneMsg).
-		In("id", ids, db.RequiredOption()).
+		In("id", job.msgSetParse.MsgIds, db.RequiredOption()).
 		Eq("status", enum.StatusActive)
 	msgs, err := data.NewCronSettingData(ctx).Gets(w)
 	if err != nil || len(msgs) == 0 {
@@ -320,12 +339,9 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 	for _, m := range msgs {
 		msgMaps[m.Id] = m
 	}
-	userIds := []int{}
-	for _, set := range job.msgSetParse {
-		userIds = append(userIds, set.NotifyUserIds...)
-	}
-	w2 := db.NewWhere().In("id", userIds)
-	users, _ := data.NewCronUserData(ctx).GetList(w2)
+
+	users, _ := data.NewCronUserData(ctx).
+		GetList(db.NewWhere().In("id", job.msgSetParse.NotifyUserIds, db.RequiredOption()))
 	userMaps := map[int]*models.CronUser{}
 	for _, user := range users {
 		userMaps[user.Id] = user
@@ -341,11 +357,11 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 		"log.body":             g.Body,
 		"log.duration":         conv.Float64s().ToString(g.Duration),
 		"log.create_dt":        g.CreateDt,
-		"user.username":        "管理员,大王",
-		"user.mobile":          "13118265689,12345678910",
+		"user.username":        "",
+		"user.mobile":          "",
 	}
 
-	for _, set := range job.msgSetParse {
+	for _, set := range job.msgSetParse.Set {
 		if set.Status > 0 && set.Status != g.Status {
 			continue
 		}
@@ -356,20 +372,25 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 			continue // 消息模板不存在或未启用
 		}
 
-		// 字符串模板替换;
-		args["user.username"] = ""
-		args["user.mobile"] = ""
-		for _, user_id := range set.NotifyUserIds {
-
+		username, mobile := []string{}, []string{}
+		for _, userId := range set.NotifyUserIds {
+			if user, ok := userMaps[userId]; ok {
+				if user.Username != "" {
+					username = append(username, user.Username)
+				}
+				if user.Mobile != "" {
+					mobile = append(mobile, user.Mobile)
+				}
+			}
 		}
+		args["user.username"] = strings.Join(username, ",")
+		args["user.mobile"] = strings.Join(mobile, ",")
 
 		// 变量替换
 		str := []byte(msg.Content)
 		for k, v := range args {
 			str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)
 		}
-
-		//msg.Content
 
 		template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
 		if err = jsoniter.Unmarshal(str, template); err != nil {

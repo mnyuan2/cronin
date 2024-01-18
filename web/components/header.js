@@ -26,7 +26,7 @@ var MyHeader = Vue.extend({
                           </el-menu-item>
                           <el-submenu popper-class="submenu">
                             <template slot="title">设置</template>
-                            <el-menu-item>告警</el-menu-item>
+                            <el-menu-item>通知</el-menu-item>
                             <el-menu-item>人员</el-menu-item>
                           </el-submenu>
                           <el-submenu popper-class="submenu">
@@ -95,7 +95,9 @@ var MyHeader = Vue.extend({
         envBox(show){
             this.envBoxShow = show == true;
             if (!this.envBoxShow){
-                this.getDic() // 关闭弹窗要重载枚举?
+                api.dicList([Enum.dicEnv], (list) => {
+                    this.dic_envs = list
+                }, true)
             }
         },
     }

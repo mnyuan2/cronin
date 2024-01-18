@@ -39,7 +39,7 @@ func (dm *UserService) List(r *pb.UserListRequest) (resp *pb.UserListReply, err 
 	}
 	w := db.NewWhere()
 
-	resp.Page.Total, err = data.NewCronUserData(dm.ctx).GetList(w, r.Page, r.Size, &resp.List)
+	resp.Page.Total, err = data.NewCronUserData(dm.ctx).GetListPage(w, r.Page, r.Size, &resp.List)
 	if err != nil {
 		return nil, err
 	}

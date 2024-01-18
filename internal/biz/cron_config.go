@@ -115,7 +115,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 			StatusName:   conf.GetStatusName(),
 			UpdateDt:     next, // 下一次时间
 			Command:      c.commandParse,
-			MsgSet:       c.msgSetParse,
+			MsgSet:       c.msgSetParse.Set,
 		})
 	}
 

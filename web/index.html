@@ -192,7 +192,7 @@
             },
             // 枚举
             getDic(){
-                api.dicList([Enum.dicSqlSource, Enum.dicUser, Enum.dicMsg], (list) =>{
+                api.dicList([Enum.dicSqlSource, Enum.dicEnv, Enum.dicUser, Enum.dicMsg], (list) =>{
                     this.dicMap = list
                     // 补充环境名称
                     if (this.sysInfo.env_name == "***"){
