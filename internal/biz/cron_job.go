@@ -354,7 +354,7 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 		"config.protocol_name": job.conf.GetProtocolName(),
 		"log.status_name":      g.GetStatusName(),
 		"log.status_desc":      g.StatusDesc,
-		"log.body":             g.Body,
+		"log.body":             strings.ReplaceAll(g.Body, `"`, `\"`), // 内部存在双引号会引发错误
 		"log.duration":         conv.Float64s().ToString(g.Duration),
 		"log.create_dt":        g.CreateDt,
 		"user.username":        "",
@@ -393,12 +393,17 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 		}
 
 		template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
-		if err = jsoniter.Unmarshal(str, template); err != nil {
+		if err := jsoniter.Unmarshal(str, template); err != nil {
+			g.StatusDesc += " 消息模板解析错误"
+			g.Body += "\n------------\n" + err.Error()
 			continue // 解析错误
 		}
 
 		// 执行推送
 		res, err := job.httpFunc(ctx, template.Http)
-		fmt.Println(res, err)
+		if err != nil {
+			g.StatusDesc += " 推送失败"
+			g.Body += "\n------------\n" + string(res)
+		}
 	}
 }

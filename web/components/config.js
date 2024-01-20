@@ -674,10 +674,10 @@ var MyConfig = Vue.extend({
             }
             let item3 = this.dic_user.filter((option) => {
                 return data.notify_user_ids.includes(option.id);
-            });
-            if (item3){
-                data.notify_users_name = item3.map((item)=>{return item.name})
-                descrition += '并且@人员<span class="el-tag el-tag--small el-tag--light">'+data.notify_users_name+'</span>'
+            }).map((item)=>{return item.name})
+            if (item3.length > 0){
+                data.notify_users_name = item3
+                descrition += '，并且@人员<span class="el-tag el-tag--small el-tag--light">'+data.notify_users_name+'</span>'
             }
             data.descrition = descrition
             return data

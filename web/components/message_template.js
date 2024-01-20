@@ -19,22 +19,23 @@ var MyMessageTemplate = Vue.extend({
                 <el-form-item label="模板名称">
                     <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
+<!--                http消息-->
                 <el-form-item label="请求地址" class="http_url_box">
-                    <el-input v-model="form.data.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
-                        <el-select v-model="form.data.http.method" placeholder="请选请求方式" slot="prepend">
+                    <el-input v-model="form.data.template.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
+                        <el-select v-model="form.data.template.http.method" placeholder="请选请求方式" slot="prepend">
                             <el-option label="GET" value="GET"></el-option>
                             <el-option label="POST" value="POST"></el-option>
                         </el-select>
                     </el-input>
                 </el-form-item>
                 <el-form-item label="请求Header" class="http_header_box">
-                    <el-input v-for="(header_v,header_i) in form.data.http.header" v-model="header_v.value" placeholder="参数值">
+                    <el-input v-for="(header_v,header_i) in form.data.template.http.header" v-model="header_v.value" placeholder="参数值">
                         <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
                         <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
                     </el-input>
                 </el-form-item>
                 <el-form-item label="请求Body">
-                    <el-input type="textarea" v-model="form.data.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
+                    <el-input type="textarea" v-model="form.data.template.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                 </el-form-item>
                 <el-form-item label="模板变量">
                   <el-alert title="请求地址、请求Header、请求Body 中使用[[var_name]] 双中括号包含变量名称，消息推送时会被实际值替换。" type="info" :closable="false"></el-alert>
@@ -106,11 +107,10 @@ var MyMessageTemplate = Vue.extend({
             if (body.title == ""){
                 return this.$message.warning("请输入模板名称");
             }
-            if (body.http.url == ""){
+            if (body.template.http.url == ""){
                 return this.$message.warning("请输入推送请求地址");
             }
             api.innerPost("/setting/message_set", body, (res) =>{
-                console.log("sql源设置响应",res)
                 if (!res.status){
                     return this.$message.error(res.message)
                 }
@@ -121,11 +121,8 @@ var MyMessageTemplate = Vue.extend({
         // 执行一下
         runForm(){
             let body = this.form.data
-            if (body.title == ""){
-                return this.$message.warning("请输入模板名称");
-            }
-            if (body.http.url == ""){
-                return this.$message.warning("请输入推送请求地址");
+            if (body.template.http.url == ""){
+                return this.$message.warning("请输入推送地址");
             }
             api.innerPost("/setting/message_run", body, (res) =>{
                 if (!res.status){
@@ -149,17 +146,22 @@ var MyMessageTemplate = Vue.extend({
                     id: 0,
                     title:"",
                     sort: 1,
-                    http:{
-                        method: 'POST',
-                        header: [{"key":"","value":""}],
-                        url:'',
-                        body:'',
-                    },
+                    template:{
+                        http:{
+                            method: 'POST',
+                            header: [{"key":"","value":""}],
+                            url:'',
+                            body:'',
+                        },
+                    }
                 }
             }
             if ( typeof data === 'object' && data["id"] != undefined &&  data.id > 0 ){
-                this.form.box.title = '编辑sql连接'
+                this.form.box.title = '编辑模板'
                 this.form.data = data
+                if (this.form.data.template.http.header.length == 0){
+                    this.form.data.template.http.header.push({"key":"","value":""})
+                }
                 console.log("编辑源",data)
             }
         },
@@ -168,17 +170,17 @@ var MyMessageTemplate = Vue.extend({
             if (val == ""){
                 return
             }
-            let item = this.form.data.http.header.slice(-1)[0]
+            let item = this.form.data.template.http.header.slice(-1)[0]
             if (item == undefined || item.key != ""){
-                this.form.data.http.header.push({"key":"","value":""})
+                this.form.data.template.http.header.push({"key":"","value":""})
             }
         },
         // http header 输入值删除
         httpHeaderDel(index){
-            if ((index+1) >= this.form.data.http.header.length){
+            if ((index+1) >= this.form.data.template.http.header.length){ // 不允许删除最后一个空行
                 return
             }
-            this.form.data.http.header.splice(index,1)
+            this.form.data.template.http.header.splice(index,1)
         },
         close(){
             this.$emit('update:visible', false) // 向外传递关闭表示

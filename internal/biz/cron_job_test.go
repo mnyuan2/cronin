@@ -6,6 +6,7 @@ import (
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
 	"cron/internal/models"
+	"cron/internal/pb"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -387,17 +389,18 @@ func TestCronJob_Mysql(t *testing.T) {
 	//	},
 	//}
 
-	db.New(context.Background()).Where("id=?", 116).Find(conf)
+	db.New(context.Background()).Where("id=?", 114).Find(conf)
 
 	r := NewCronJob(conf)
+	r.Run()
 
-	ctx := context.Background()
-	res, err := NewCronJob(conf).sqlMysql(ctx, r.commandParse.Sql)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println(string(res))
+	//ctx := context.Background()
+	//res, err := r.sqlMysql(ctx, r.commandParse.Sql)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	time.Sleep(time.Minute * 3)
+	//fmt.Println(string(res))
 }
 
 type J struct {
@@ -450,7 +453,7 @@ func TestTemplate(t *testing.T) {
     "http": {
         "method": "POST",
         "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=909ef764-4f7e-44eb-9cba-4a5ca734ebbf",
-        "body": "{"msgtype":"text","text":{"content":"时间：[[log.create_dt]]\n任务 [[config.name]]执行[[log.status]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]","mentioned_mobile_list":["[[user.mobile]]"]}}",
+        "body": "{\"msgtype\":\"text\",\"text\":{\"content\":\"时间：[[log.create_dt]]\n任务[[config.name]]执行[[log.status_name]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]\",\"mentioned_mobile_list\":[\"[[user.mobile]]\"]}}",
         "header": [
             {
                 "key": "a",
@@ -462,21 +465,34 @@ func TestTemplate(t *testing.T) {
 
 	// 提取模板变量
 	// 重组临时变量，默认置空，有效的写入新值
+	// 方案1 解析前监测双引号等关键、方案2让低层兼容
 	args := map[string]string{
 		"env":                  "测试环境",
 		"config.name":          "xx任务",
 		"config.protocol_name": "sql脚本",
 		"log.status_name":      "成功",
 		"log.status_desc":      "success",
-		"log.body":             "xxxxxxxxxxxxxx\nyyyyyyyyyyyyyy",
-		"log.duration":         "3.2s",
-		"log.create_dt":        "2023-01-01 11:12:59",
-		"user.username":        "管理员,大王",
-		"user.mobile":          "13118265689,12345678910",
+		"log.body": strings.ReplaceAll(`<html>
+<meta http-equiv="refresh" content="0;url=http://www.baidu.com/">
+</html>`, `"`, `\"`),
+		"log.duration":  "3.2s",
+		"log.create_dt": "2023-01-01 11:12:59",
+		"user.username": "管理员,大王",
+		"user.mobile":   "13118265689,12345678910",
 	}
+
+	body := `Get "http://baidu.com": EOF
+`
+
+	args["log.body"] = strings.ReplaceAll(body, `"`, `\"`)
 	// 变量替换
 	for k, v := range args {
 		str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)
 	}
-	fmt.Println(string(str))
+	//fmt.Println(string(str))
+	temp := &pb.SettingMessageTemplate{Http: &pb.CronHttp{Header: []*pb.KvItem{}}}
+	if err := jsoniter.Unmarshal(str, temp); err != nil {
+		t.Fatal(err, "解析错误")
+	}
+	fmt.Println(temp)
 }

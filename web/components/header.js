@@ -12,7 +12,13 @@ var MyHeader = Vue.extend({
                           <el-menu-item index="/sql_source">sql连接</el-menu-item>
                         </el-menu>
                     
-                        <el-menu class="menu-right" mode="horizontal" background-color="#151515"  text-color="#fff" active-text-color="#409effa8">
+                        <el-menu router 
+                            :default-active="$route.path"
+                            class="menu-right" 
+                            mode="horizontal" 
+                            background-color="#151515"  
+                            text-color="#fff" 
+                            active-text-color="#409effa8">
                           <el-menu-item>
                             <el-dropdown @command="envClick">
                                 <span class="el-dropdown-link">
@@ -26,8 +32,8 @@ var MyHeader = Vue.extend({
                           </el-menu-item>
                           <el-submenu popper-class="submenu">
                             <template slot="title">设置</template>
-                            <el-menu-item>通知</el-menu-item>
-                            <el-menu-item>人员</el-menu-item>
+                            <el-menu-item index="/message_template">通知</el-menu-item>
+                            <el-menu-item index="/users">人员</el-menu-item>
                           </el-submenu>
                           <el-submenu popper-class="submenu">
                             <template slot="title">关于</template>

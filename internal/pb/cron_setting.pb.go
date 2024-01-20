@@ -100,7 +100,7 @@ type SettingMessageListReply struct {
 type SettingMessageListItem struct {
 	Id       int                     `json:"id"`
 	Title    string                  `json:"title"`
-	Sort     int                     `json:"int"`
+	Sort     int                     `json:"sort"`
 	Template *SettingMessageTemplate `json:"template"`
 	CreateDt string                  `json:"create_dt"`
 	UpdateDt string                  `json:"update_dt"`
