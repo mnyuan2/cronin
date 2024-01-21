@@ -5,7 +5,7 @@ import (
 	"runtime"
 )
 
-type ErrBase interface {
+type Errs interface {
 	error
 	Code() string
 	Path() string // 调用错误路径
@@ -45,7 +45,7 @@ type Error struct {
 }
 
 // New 返回错误
-func New(err error, ops ...any) ErrBase {
+func New(err error, ops ...any) Errs {
 	_, file, line, _ := runtime.Caller(1)
 
 	e := &Error{

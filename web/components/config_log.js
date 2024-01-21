@@ -13,12 +13,8 @@ var MyConfigLog = Vue.extend({
                             <el-table-column property="duration" label="耗时/秒" width="80"></el-table-column>
                             <el-table-column property="" label="详情">
                                 <template slot-scope="scope">
-<!--                                    <el-popover trigger="hover" placement="left">-->
-<!--                                        <div>-->
-                                        {{scope.row.body.substring(0, 105)+'...'}}
-<!--                                        </div>-->
-                                        <el-button type="text" slot="reference" @click="logBodyShow(scope.row)">更多</el-button>
-<!--                                    </el-popover>-->
+                                    {{scope.row.body.substring(0, 105)+'...'}}
+                                    <el-button type="text" slot="reference" @click="logBodyShow(scope.row)">更多</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -28,6 +24,10 @@ var MyConfigLog = Vue.extend({
                         <el-dialog title="日志详情" :visible.sync="body.show" size="30%" style="white-space: pre;" append-to-body="true">
                             <el-alert :title="body.status_desc" :type="body.status==2 ? 'success' : body.status==1?'error': 'info'" :closable="false"></el-alert>
                             <pre style="line-height: 133%;background: rgb(244, 244, 245);margin: 0;padding: 6px 20px 7px 8px;border-radius: 3px;overflow: auto;"><code>{{body.data.replace(/\\\\n/g, '\\n').replace(/\\\\t/g, '\\t')}}</code></pre>
+                            <blick v-show="body.msg_data.length>0">
+                                <el-divider content-position="left"><i class="el-icon-message"></i></el-divider>
+                                <el-alert v-for="(msg_v,msg_k) in body.msg_data" :title="'#'+msg_k+' '+msg_v" type="info" :closable="false"></el-alert>
+                            </blick>
                         </el-dialog>
 </div>`,
     name: "MyConfigLog",
@@ -43,7 +43,8 @@ var MyConfigLog = Vue.extend({
                 status: 0,
                 status_desc:"",
                 data:"",
-                show:false
+                show:false,
+                msg_data: []
             }
         }
     },
@@ -80,6 +81,11 @@ var MyConfigLog = Vue.extend({
             this.body.data = logItem.body
             this.body.status = logItem.status
             this.body.status_desc = logItem.status_desc
+            if (logItem.msg_body != null && logItem.msg_body.length > 0){
+                this.body.msg_data = logItem.msg_body
+            }else{
+                this.body.msg_data = []
+            }
             this.body.show = true
             // this.$alert('<div style="white-space: pre;">'+logItem.body+'<div>', '日志详情',{
             //     dangerouslyUseHTMLString: true

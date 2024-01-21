@@ -22,10 +22,8 @@
             padding: 0;
             border: 0;
         }
-        .el-header .menu-left{
-            display: inline-block;
-        }
-        .el-menu--horizontal>.el-menu-item {
+        .el-menu--horizontal>.el-menu-item,
+        .el-submenu{
             height: 46px;
             line-height: 46px;
         }
@@ -40,10 +38,34 @@
             line-height: inherit;
             list-style: none
         }
-
-        .el-header .menu-right{
+        /*右导航*/
+        .el-header .group-right{
             float: right;
             margin-right: 10px;
+        }
+        .el-header .group-right>div{
+            padding: 0 !important;
+        }
+        .el-header .group-right>ul>li{
+            display: inline-block;
+            vertical-align: middle;
+            position: relative;
+        }
+        /* menu-group 箭头图标占位正常 */
+        /* 现在的问题是下拉菜单的方位不对 */
+        .group-right ul li .el-icon-arrow-down{
+            position: static;
+            vertical-align: middle;
+            margin-left: 8px;
+            margin-top: -3px;
+        }
+        .group-right ul li .el-icon-arrow-right{
+            display: none;
+        }
+        .group-right .submenu{
+            top: 49px !important;
+            right: 0px !important;
+            left: auto !important;
         }
         .el-header .el-dropdown-link{
             color: #fff;
@@ -179,6 +201,7 @@
                     let ser = new Date(res.current_date)
                     let cur = new Date()
                     let diff = Math.abs(ser.getTime() - cur.getTime())/1000/60 // 分钟
+                    console.log("服务器时间",ser.toISOString(), "\n本地  时间",cur.toISOString())
                     if (diff > 10){
                         console.log("服务器时间", ser, "|",cur)
                         this.$notify({

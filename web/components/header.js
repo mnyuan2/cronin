@@ -10,8 +10,35 @@ var MyHeader = Vue.extend({
                           <el-menu-item index="/" style="font-weight: 500;font-size: 110%;">cronin</el-menu-item>
                           <el-menu-item index="/config">任务</el-menu-item>
                           <el-menu-item index="/sql_source">sql连接</el-menu-item>
+                          <!--右导航-->
+                          <el-menu-item-group class="group-right">
+                              <el-menu-item>
+                                <el-dropdown @command="envClick">
+                                    <span class="el-dropdown-link">
+                                        {{sys_info.env_name}} <i class="el-icon-arrow-down el-icon--right"></i>
+                                    </span>
+                                    <el-dropdown-menu slot="dropdown">
+                                        <el-dropdown-item v-for="(dic_v,dic_k) in dic_envs" :command="dic_v.key" :disabled="sys_info.env==dic_v.key">{{dic_v.name}}</el-dropdown-item>
+                                        <el-dropdown-item command="envBoxDisplay" divided>管理环境</el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </el-dropdown>
+                              </el-menu-item>
+                              <el-submenu popper-class="submenu" index="setting">
+                                <template slot="title">设置<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
+                                <el-menu-item index="/message_template">通知</el-menu-item>
+                                <el-menu-item index="/users">人员</el-menu-item>
+                              </el-submenu>
+                              <el-submenu popper-class="submenu" index="about">
+                                <template slot="title">关于<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
+                                <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>
+                                <el-menu-item><a href="https://gitee.com/mnyuan/cronin/" target="_blank">Gitee <i class="el-icon-star-off" style="vertical-align: initial;font-size: 15px;"></i></a></el-menu-item>
+                                <el-menu-item disabled>cronin {{sys_info.version}}</el-menu-item>
+                              </el-submenu>  
+                          </el-menu-item-group>
                         </el-menu>
                     
+                    
+                    <!--
                         <el-menu router 
                             :default-active="$route.path"
                             class="menu-right" 
@@ -39,9 +66,10 @@ var MyHeader = Vue.extend({
                             <template slot="title">关于</template>
                             <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>
                             <el-menu-item><a href="https://gitee.com/mnyuan/cronin/" target="_blank">Gitee <i class="el-icon-star-off" style="vertical-align: initial;font-size: 15px;"></i></a></el-menu-item>
-                            <el-menu-item disabled>cronin{{sys_info.version}}</el-menu-item>
+                            <el-menu-item disabled>cronin {{sys_info.version}}</el-menu-item>
                           </el-submenu>  
                         </el-menu>
+                        -->
                     <!-- 环境 管理弹窗 -->
                     <el-drawer title="环境管理" :visible.sync="envBoxShow" size="50%" wrapperClosable="false" :before-close="envBox">
                         <my-env :reload_list="envBoxShow"></my-env>

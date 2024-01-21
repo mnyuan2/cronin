@@ -13,6 +13,7 @@ import (
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/axgle/mahonia"
@@ -170,8 +171,6 @@ func (job *CronJob) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte
 	}
 	method := models.ProtocolHttpMethodMap()[http.Method]
 	if method == "" {
-		// 任务设置有问题，提出执行队列，记录日志。
-		//job.ErrorCount = -2
 		return nil, errs.New(nil, "http method is empty", errs.SysError)
 	}
 	return job.httpRequest(ctx, method, http.Url, []byte(http.Body), header)
@@ -246,7 +245,21 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 		req.Header.Set(k, v)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	// 创建 HTTP 客户端
+	client := &http.Client{
+		Transport: &http.Transport{
+			//MaxIdleConns:    10,
+			//MaxConnsPerHost: 10,
+			//IdleConnTimeout: 10 * time.Second,
+			TLSClientConfig: &tls.Config{
+				// 指定不校验 SSL/TLS 证书
+				InsecureSkipVerify: true,
+			},
+		},
+		//Timeout:   15 * time.Second,
+	}
+
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, errs.New(err, "请求执行失败")
 	}
@@ -318,13 +331,16 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 
 // 发送消息
 func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
+	msgLogs, index := make([]string, len(job.msgSetParse.Set)), 0
 	defer func() {
 		if err := util.PanicInfo(recover()); err != "" {
-			g2 := models.NewErrorCronLog(job.conf, "", errs.New(errors.New(err), "执行异常"), time.Now())
-			g.Status = g2.Status
-			g.StatusDesc += " " + g2.StatusDesc
-			g.Body += "\n------------\n" + g2.Body
+			g.MsgStatus = enum.StatusDisable
+			msgLogs[index] += "执行异常 " + err
 		}
+		if g.MsgStatus == 0 && len(msgLogs) > 0 { // 存在消息日志，没有错误就是成功
+			g.MsgStatus = enum.StatusActive
+		}
+		g.MsgBody, _ = jsoniter.MarshalToString(msgLogs)
 	}()
 
 	w := db.NewWhere().
@@ -361,7 +377,8 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 		"user.mobile":          "",
 	}
 
-	for _, set := range job.msgSetParse.Set {
+	for i, set := range job.msgSetParse.Set {
+		index = i
 		if set.Status > 0 && set.Status != g.Status {
 			continue
 		}
@@ -386,24 +403,30 @@ func (job *CronJob) messagePush(ctx context.Context, g *models.CronLog) {
 		args["user.username"] = strings.Join(username, ",")
 		args["user.mobile"] = strings.Join(mobile, ",")
 
-		// 变量替换
-		str := []byte(msg.Content)
-		for k, v := range args {
-			str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)
-		}
-
-		template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
-		if err := jsoniter.Unmarshal(str, template); err != nil {
-			g.StatusDesc += " 消息模板解析错误"
-			g.Body += "\n------------\n" + err.Error()
-			continue // 解析错误
-		}
-
-		// 执行推送
-		res, err := job.httpFunc(ctx, template.Http)
+		res, err := job.messagePushItem(ctx, []byte(msg.Content), args)
+		msgLogs[index] = string(res)
 		if err != nil {
-			g.StatusDesc += " 推送失败"
-			g.Body += "\n------------\n" + string(res)
+			g.MsgStatus = enum.StatusDisable
+			if e, ok := err.(*errs.Error); ok {
+				msgLogs[index] += e.Desc() + " "
+			}
+			msgLogs[index] += err.Error()
 		}
 	}
+}
+
+// 消息发送
+func (job *CronJob) messagePushItem(ctx context.Context, templateByte []byte, args map[string]string) (res []byte, err error) {
+	// 变量替换
+	for k, v := range args {
+		templateByte = bytes.Replace(templateByte, []byte("[["+k+"]]"), []byte(v), -1)
+	}
+
+	template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
+	if err = jsoniter.Unmarshal(templateByte, template); err != nil {
+		return nil, errs.New(err, "消息模板解析错误")
+	}
+
+	// 执行推送
+	return job.httpFunc(ctx, template.Http)
 }

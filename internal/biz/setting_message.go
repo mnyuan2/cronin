@@ -132,7 +132,7 @@ func (dm *SettingMessageService) Run(r *pb.SettingMessageSetRequest) (resp *pb.S
 		b = bytes.Replace(b, []byte("[["+k+"]]"), []byte(v), -1)
 	}
 	temp := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
-	if err = json.Unmarshal(b, temp); err != nil {
+	if err = jsoniter.Unmarshal(b, temp); err != nil {
 		return nil, errs.New(err, "解析错误")
 	}
 

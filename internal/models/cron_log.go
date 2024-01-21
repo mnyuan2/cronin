@@ -18,6 +18,8 @@ type CronLog struct {
 	StatusDesc string  `json:"status_desc" gorm:"column:status_desc;type:varchar(255);default:'';comment:错误描述;"`
 	Body       string  `json:"body" gorm:"column:body;type:text;comment:日志内容;"`
 	Snap       string  `json:"snap" gorm:"column:snap;type:text;comment:任务快照;"`
+	MsgStatus  int     `json:"msg_status" gorm:"column:msg_status;type:tinyint(2);default:0;comment:状态：1.错误、2.正常;"`
+	MsgBody    string  `json:"msg_body" gorm:"column:msg_body;type:text;comment:消息内容;"`
 }
 
 var LogStatusMap = map[int]string{
