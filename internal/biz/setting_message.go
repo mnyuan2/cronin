@@ -124,8 +124,8 @@ func (dm *SettingMessageService) Run(r *pb.SettingMessageSetRequest) (resp *pb.S
 		"log.body":             "xxxxxxxxxxxxxx\nyyyyyyyyyyyyyy",
 		"log.duration":         "3.2s",
 		"log.create_dt":        "2023-01-01 11:12:59",
-		"user.username":        "管理员,大王",
-		"user.mobile":          "13118265689,12345678910",
+		"user.username":        "",
+		"user.mobile":          "",
 	}
 	b, _ := json.Marshal(r.Template)
 	for k, v := range args {
@@ -134,6 +134,14 @@ func (dm *SettingMessageService) Run(r *pb.SettingMessageSetRequest) (resp *pb.S
 	temp := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
 	if err = jsoniter.Unmarshal(b, temp); err != nil {
 		return nil, errs.New(err, "解析错误")
+	}
+
+	// 找一个用户
+	user := &models.CronUser{}
+	data.NewCronUserData(dm.ctx).GetListPage(db.NewWhere(), 1, 1, user)
+	if user.Id > 0 {
+		args["user.username"] = user.Username
+		args["user.mobile"] = user.Mobile
 	}
 
 	res, err := NewCronConfigService(dm.ctx, nil).

@@ -209,7 +209,10 @@ var api = {
             },
             'error': res =>{
                 let temp = {}
-                if(Object.keys(res.responseJSON).length > 0){
+                if (res.status == 0){
+                    temp.code = res.status
+                    temp.message = res.statusText
+                }else if(Object.keys(res.responseJSON).length > 0){
                     temp = res.responseJSON
                 }else {
                     temp.code = res.status

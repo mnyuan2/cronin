@@ -16,7 +16,7 @@ func AutoMigrate(db *db.MyDB) {
 		panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 	}
 	// 初始化数据
-	err = db.Where("scene='env' and status=?", enum.StatusActive).FirstOrCreate(&CronSetting{
+	err = db.Where("scene=? and status=?", SceneEnv, enum.StatusActive).FirstOrCreate(&CronSetting{
 		Scene:    "env",
 		Name:     "public",
 		Title:    "public",
@@ -28,4 +28,23 @@ func AutoMigrate(db *db.MyDB) {
 	if err != nil {
 		panic(fmt.Sprintf("cron_setting 表默认行数据初始化失败，%s", err.Error()))
 	}
+	msg := &CronSetting{}
+	err = db.Where("scene=?", SceneMsg).Find(msg).Error
+	if err != nil {
+		panic(fmt.Sprintf("cron_setting 表默认行数据初始化失败，%s", err.Error()))
+	}
+	if msg.Id == 0 { // 后期会有多条默认消息模板
+		db.CreateInBatches([]*CronSetting{
+			{
+				Scene:    "msg",
+				Name:     "",
+				Title:    "企微xx群",
+				Content:  `{"http":{"method":"POST","url":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx","body":"{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[log.create_dt]]\\n任务 [[config.name]]执行[[log.status_name]]了 \\n耗时[[log.duration]]秒\\n响应：[[log.body]]\",\n        \"mentioned_mobile_list\": [\n            \"[[user.mobile]]\"\n        ]\n    }\n}","header":[{"key":"","value":""}]}}`,
+				Status:   enum.StatusActive,
+				CreateDt: time.Now().Format(time.DateTime),
+				UpdateDt: time.Now().Format(time.DateTime),
+			},
+		}, 10)
+	}
+
 }

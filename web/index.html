@@ -53,16 +53,16 @@
         }
         /* menu-group 箭头图标占位正常 */
         /* 现在的问题是下拉菜单的方位不对 */
-        .group-right ul li .el-icon-arrow-down{
+        .el-header .group-right ul li .el-icon-arrow-down{
             position: static;
             vertical-align: middle;
             margin-left: 8px;
             margin-top: -3px;
         }
-        .group-right ul li .el-icon-arrow-right{
+        .el-header .group-right ul li .el-icon-arrow-right{
             display: none;
         }
-        .group-right .submenu{
+        .el-header .group-right .submenu{
             top: 49px !important;
             right: 0px !important;
             left: auto !important;
@@ -74,17 +74,17 @@
             padding: 5px 10px;
         }
 
-        .submenu ul{
+        .el-header .submenu ul{
             background-color: #fff !important;
         }
-        .submenu li{
+        .el-header .submenu li{
             background-color: inherit !important;
             color: #303133 !important;
         }
-        .submenu li:hover{
+        .el-header .submenu li:hover{
             background-color: #f2f2f2 !important;
         }
-        .submenu a{
+        .el-header .submenu a{
             text-decoration: auto;
             color: #303133;
         }
@@ -115,6 +115,20 @@
             margin: 0;
             text-align: right;
             color: #f2f2f2;
+        }
+
+        /*任务表单弹窗*/
+        .config-form-box .el-dialog__header{
+            padding: 14px 20px 10px;
+        }
+        .config-form-box .el-dialog__body{
+            padding: 6px 20px;
+        }
+        .config-form-box .el-form-item{
+            margin-bottom: 10px;
+        }
+        .config-form-box .el-tabs{
+            margin: 10px 0;
         }
         .http_header_box .el-input-group__prepend,
         .http_header_box .el-input-group__append,

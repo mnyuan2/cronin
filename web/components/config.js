@@ -50,18 +50,18 @@ var MyConfig = Vue.extend({
                     
                     
                     <!-- 任务设置表单 -->
-                    <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false">
+                    <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false" class="config-form-box">
                         <el-form :model="form">
-                            <el-form-item label="活动名称*">
+                            <el-form-item label="活动名称*" label-width="76px">
                                 <el-input v-model="form.name"></el-input>
                             </el-form-item>
-                            <el-form-item label="类型*">
+                            <el-form-item label="类型*" label-width="76px">
                                 <el-radio v-model="form.type" label="1">周期</el-radio>
                                 <el-radio v-model="form.type" label="2">单次</el-radio>
                             </el-form-item>
             
             
-                            <el-form-item label="时间*">
+                            <el-form-item label="时间*" label-width="76px">
                                 <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
                                 <el-date-picker 
                                     style="width: 100%"
@@ -137,7 +137,7 @@ var MyConfig = Vue.extend({
                                                     <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 56px;"><code class="language-sql hljs">{{statement}}</code></pre>
                                                     <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
                                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
-                                                    <i style="position: absolute;right: 1px;top: 49px;font-size: 18px;">#{{sql_index}}</i>
+                                                    <i style="position: absolute;right: 1px;top: 49px;font-size: 16px;">#{{sql_index}}</i>
                                                 </div>
                                                 <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
                                             </div>
@@ -156,10 +156,10 @@ var MyConfig = Vue.extend({
                                     </el-tab-pane>
                                 </el-tabs>
                             </el-form-item>
-                            <el-form-item label="备注">
+                            <el-form-item label="备注" label-width="43px">
                                 <el-input v-model="form.remark"></el-input>
                             </el-form-item>
-                            <el-form-item>
+                            <el-form-item label-width="2px">
                                 <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
                                 <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                     <el-row v-html="msg.descrition"></el-row>
@@ -294,6 +294,7 @@ var MyConfig = Vue.extend({
             this.sys_info = res;
         })
         this.getDicSqlSource()
+        console.log("config created")
     },
     // 模块初始化
     mounted(){
@@ -419,6 +420,7 @@ var MyConfig = Vue.extend({
         initFormData(){
             return  {
                 type: '1',
+                protocol: '3',
                 command:{
                     http:{
                         method: 'GET',
@@ -618,7 +620,7 @@ var MyConfig = Vue.extend({
             }
             if (oldData == undefined || index < 0){
                 oldData = {
-                    status: "1",
+                    status: 1,
                     msg_id: "",
                     notify_user_ids: [],
                 }

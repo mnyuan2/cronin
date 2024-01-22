@@ -92,6 +92,7 @@ var MyUsers = Vue.extend({
                 }
                 this.initForm(false)
                 this.getList()
+                api.dicList([Enum.dicUser],()=>{}, true) // 存在变化，更新缓存
             })
         },
         // 初始化表单数据
