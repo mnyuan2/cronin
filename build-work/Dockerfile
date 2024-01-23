@@ -1,4 +1,4 @@
-FROM busybox:latest
+FROM alpine:latest
 COPY cronin /biz-code/cronin/
 COPY configs/ /biz-code/cronin/configs
 WORKDIR /biz-code
