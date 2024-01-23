@@ -93,6 +93,7 @@ var MyEnv = Vue.extend({
         getList(){
             api.innerGet("/setting/env_list", this.listParam, (res)=>{
                 if (!res.status){
+                    console.log("setting/env_list 错误", res)
                     return this.$message.error(res.message);
                 }
                 for (let i in res.data.list){
@@ -141,6 +142,7 @@ var MyEnv = Vue.extend({
             }).then(()=>{
                 api.innerPost("/setting/env_set_content", {id: row.id, default:Number(newValue)}, (res)=>{
                     if (!res.status){
+                        console.log("setting/env_set_content 错误", res)
                         return this.$message.error(res.message)
                     }
                     row.default = newValue.toString()
@@ -181,6 +183,7 @@ var MyEnv = Vue.extend({
                 // 确认操作
                 api.innerPost("/setting/env_change_status", {id:row.id,status:Number(newStatus)}, (res)=>{
                     if (!res.status){
+                        console.log("setting/env_change_status 错误", res)
                         return this.$message.error(res.message)
                     }
                     row.status = newStatus.toString()
@@ -202,6 +205,7 @@ var MyEnv = Vue.extend({
             }).then(()=>{
                 api.innerPost("/setting/env_del", {id:id}, (res) =>{
                     if (!res.status){
+                        console.log("setting/env_del 错误", res)
                         return this.$message.error(res.message)
                     }
                     this.getList()

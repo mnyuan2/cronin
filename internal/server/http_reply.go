@@ -1,6 +1,7 @@
 package server
 
 import (
+	"cron/internal/basic/errs"
 	"cron/internal/pb"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -74,10 +75,16 @@ func (r *GinReply) SetSuccess(data ...interface{}) *GinReply {
 // SetReply 设置响应结果
 //
 // 快捷方法， 内部集成了成功和错误的响应流程。
-func (r *GinReply)SetReply(resp interface{}, err error)*GinReply{
+func (r *GinReply) SetReply(resp interface{}, err error) *GinReply {
 	if err != nil {
-		r.SetError(pb.OperationFailure, err.Error())
-	}else {
+		e, ok := err.(*errs.Error)
+		if ok {
+			r.Code = e.Code()
+			r.Message = e.Desc() + ":" + e.Error()
+		} else {
+			r.SetError(pb.OperationFailure, err.Error())
+		}
+	} else {
 		r.SetSuccess(resp)
 	}
 	return r

@@ -27,3 +27,14 @@ func routerSystemInfo(ctx *gin.Context) {
 	rep, err := biz.NewDicService(ctx.Request.Context(), nil).SystemInfo(nil)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+// 解析proto文件
+func routerParseProto(ctx *gin.Context) {
+	r := &pb.ParseProtoRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewDicService(ctx.Request.Context(), nil).ParseProto(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

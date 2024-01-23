@@ -11,39 +11,36 @@ import (
 	"time"
 )
 
-type Database struct {
-	Write *MyDB
-	Read  *MyDB
-}
-
 var (
-	write *gorm.DB
-	read  *gorm.DB
-	once  sync.Once
+	_db  *gorm.DB
+	once sync.Once
 )
 
 // 连接数据库
-func New(ctx context.Context) *Database {
+func New(ctx context.Context) *MyDB {
 	once.Do(func() {
 		conf := config.DbConf()
-		if write = Conn(conf["write"]); write.Error != nil {
-			panic(write.Error)
+		switch conf.Driver {
+		case "mysql":
+			if _db = Conn(conf.Mysql); _db.Error != nil {
+				panic(_db.Error)
+			}
+		default:
+			panic(fmt.Sprintf("database.driver=%s 为支持", conf.Driver))
 		}
-		if read = Conn(conf["read"]); read.Error != nil {
-			panic(read.Error)
-		}
+
 	})
 
 	// 根据实例,修改上下文
-	return &Database{
-		Write: &MyDB{write.WithContext(ctx)},
-		Read:  &MyDB{read.WithContext(ctx)},
-	}
+	return &MyDB{_db.WithContext(ctx)}
+
 }
 
-func Conn(conf config.DataBaseConf) *gorm.DB {
+func Conn(conf *config.MysqlSource) *gorm.DB {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
+		conf.Username, conf.Password, conf.Hostname, conf.Port, conf.Database)
 	// 连接数据库
-	db, err := gorm.Open(mysql.Open(conf.Source), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			//TablePrefix: "", // 表前缀
 			SingularTable: true, // use singular table name, table for `User` would be `user` with this option enabled

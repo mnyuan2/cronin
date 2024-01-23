@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/grpcurl"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type FoundationService struct {
@@ -82,6 +84,11 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicEnv:
 		_sql = "SELECT id,name 'key', title name, content extend FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneEnv).Eq("status", enum.StatusActive)
+	case enum.DicMsg:
+		_sql = "SELECT id, title name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		w.Eq("scene", models.SceneMsg).Eq("status", enum.StatusActive)
+	case enum.DicUser:
+		_sql = "SELECT id, username name FROM `cron_user` ORDER BY sort asc,id desc"
 	}
 
 	items := []*pb.DicGetItem{}
@@ -90,7 +97,7 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 		where, args := w.Build()
 		_sql = strings.Replace(_sql, "%WHERE", "WHERE "+where, 1)
 
-		err := db.New(dm.ctx).Read.Raw(_sql, args...).Scan(&temp).Error
+		err := db.New(dm.ctx).Raw(_sql, args...).Scan(&temp).Error
 		if err != nil {
 			return nil, err
 		}
@@ -121,8 +128,9 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 
 func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.SystemInfoReply, err error) {
 	resp = &pb.SystemInfoReply{
-		Version: config.Version,
-		CmdName: "sh",
+		Version:     config.Version,
+		CmdName:     "sh",
+		CurrentDate: time.Now().Format(time.RFC3339),
 	}
 	// 根据运行环境确认cmd的类型
 	if runtime.GOOS == "windows" {
@@ -130,7 +138,7 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 	}
 	// 查默认环境
 	envData := &DicGetItem{}
-	err = db.New(dm.ctx).Write.Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE scene='env' and status=2 and json_contains(content, '2', '$.default');`).Scan(&envData).Error
+	err = db.New(dm.ctx).Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE scene='env' and status=2 and json_contains(content, '2', '$.default');`).Scan(&envData).Error
 	if err != nil {
 		return resp, fmt.Errorf("环境查询异常,%w", err)
 	}
@@ -142,6 +150,17 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 	}
 	resp.Env = envData.Key
 	resp.EnvName = envData.Name
+
+	return resp, nil
+}
+
+func (dm *FoundationService) ParseProto(r *pb.ParseProtoRequest) (resp *pb.ParseProtoReply, err error) {
+	fds, err := grpcurl.ParseProtoString(r.Proto)
+	if err != nil {
+		return nil, fmt.Errorf("无法解析给定的proto文件: %w", err)
+	}
+
+	resp = &pb.ParseProtoReply{Actions: grpcurl.ParseProtoMethods(fds)}
 
 	return resp, nil
 }

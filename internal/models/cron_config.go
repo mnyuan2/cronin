@@ -64,13 +64,14 @@ type CronConfig struct {
 	Name         string `json:"name" gorm:"column:name;type:varchar(255);default:'';comment:任务名称;"`
 	Spec         string `json:"spec" gorm:"column:spec;type:varchar(32);default:'';comment:执行时间 表达式;"`
 	Protocol     int    `json:"protocol" gorm:"column:protocol;type:tinyint(2);default:0;comment:协议：1.http、2.grpc、3.系统命令、4.sql执行;"`
-	Command      string `json:"command" gorm:"column:command;type:json;default:null;comment:命令内容;"`
+	Command      []byte `json:"command" gorm:"column:command;type:json;default:null;comment:命令内容;"`
 	Remark       string `json:"remark" gorm:"column:remark;type:varchar(255);comment:备注;"`
 	Status       int    `json:"status" gorm:"column:status;type:tinyint(2);default:1;comment:状态：1.停止、2.启用;"`
 	StatusRemark string `json:"status_remark" gorm:"column:status_remark;type:varchar(255);comment:状态变更描述;"`
 	StatusDt     string `json:"status_dt" gorm:"column:status_dt;type:datetime;default:null;comment:状态变更时间;"`
 	UpdateDt     string `json:"update_dt" gorm:"column:update_dt;type:datetime;default:null;comment:更新时间;"`
 	CreateDt     string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
+	MsgSet       []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
 }
 
 func (m *CronConfig) GetProtocolName() string {
