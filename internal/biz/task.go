@@ -6,6 +6,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -57,6 +58,15 @@ func (dm *TaskService) Init() (err error) {
 	return nil
 }
 
+// 注册任务监视器
+func (dm *TaskService) sysRegisterMonitor() {
+	// 检测系统任务是否正常
+	// 系统任务包含：定时删除日志、注册任务有效性检查。
+	//cronDb := data.NewCronConfigData(context.Background())
+	//w := db.NewWhere().Eq("status", enum.StatusActive)
+	//total, err = cronDb.GetList(w, 1, pageSize, &list)
+}
+
 // 添加任务
 func (dm *TaskService) Add(conf *models.CronConfig) error {
 	if conf == nil {
@@ -68,7 +78,7 @@ func (dm *TaskService) Add(conf *models.CronConfig) error {
 	}
 	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
-		g := models.NewErrorCronLog(conf, fmt.Sprintf("任务启动失败，%s；", err.Error()), time.Now())
+		g := models.NewErrorCronLog(conf, "", errs.New(err, "任务启动失败"), time.Now())
 		data.NewCronLogData(context.Background()).Add(g)
 		return err
 	}
@@ -132,6 +142,6 @@ func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 			{Key: "Authorization", Value: "Basic " + s},
 		}
 	}
-	sysLogRetention.Command, _ = jsoniter.MarshalToString(cmd)
+	sysLogRetention.Command, _ = jsoniter.Marshal(cmd)
 	return sysLogRetention
 }

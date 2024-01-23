@@ -7,13 +7,13 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
-	"strings"
 	"time"
 )
 
@@ -58,14 +58,16 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(ids, startTime, endTime, 5)
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, 7)
 	}
 
 	for _, item := range resp.List {
-		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{}, Sql: &pb.CronSql{}}
+		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{Actions: []string{}}, Sql: &pb.CronSql{}}
+		item.MsgSet = []*pb.CronMsgSet{}
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
-		jsoniter.UnmarshalFromString(item.CommandStr, item.Command)
+		jsoniter.Unmarshal(item.CommandStr, item.Command)
+		jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet)
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
 			item.TopErrorNumber = top.ErrorNumber
@@ -113,6 +115,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 			StatusName:   conf.GetStatusName(),
 			UpdateDt:     next, // 下一次时间
 			Command:      c.commandParse,
+			MsgSet:       c.msgSetParse.Set,
 		})
 	}
 
@@ -141,7 +144,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Spec = r.Spec
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
-	d.Command, _ = jsoniter.MarshalToString(r.Command)
+	d.Command, _ = jsoniter.Marshal(r.Command)
+	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.Type = r.Type
 	if r.Type == models.TypeCycle {
 		if _, err = secondParser.Parse(d.Spec); err != nil {
@@ -156,37 +160,29 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	}
 
 	if r.Protocol == models.ProtocolHttp {
-		if !strings.HasPrefix(r.Command.Http.Url, "http://") && !strings.HasPrefix(r.Command.Http.Url, "https://") {
-			return nil, fmt.Errorf("请输入 http:// 或 https:// 开头的规范地址")
+		if err := dtos.CheckHttp(r.Command.Http); err != nil {
+			return nil, err
 		}
-		if r.Command.Http.Method == "" {
-			return nil, errors.New("请输入请求method")
+	} else if r.Protocol == models.ProtocolRpc {
+		if err := dtos.CheckRPC(r.Command.Rpc); err != nil {
+			return nil, err
 		}
-		if models.ProtocolHttpMethodMap()[r.Command.Http.Method] == "" {
-			return nil, errors.New("未支持的请求method")
-		}
-		if r.Command.Http.Body != "" {
-			temp := map[string]any{} // 目前仅支持json
-			if err = jsoniter.UnmarshalFromString(r.Command.Http.Body, &temp); err != nil {
-				return nil, fmt.Errorf("http body 输入不规范，请确认json字符串是否规范")
-			}
-		}
+
 	} else if r.Protocol == models.ProtocolCmd {
 		if r.Command.Cmd == "" {
 			return nil, fmt.Errorf("请输入 cmd 命令类容")
 		}
 	} else if r.Protocol == models.ProtocolSql {
-		if r.Command.Sql.Source.Id == 0 {
-			return nil, fmt.Errorf("请选择 sql 连接")
+		if err := dtos.CheckSql(r.Command.Sql); err != nil {
+			return nil, err
 		}
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSqlSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
 			return nil, errors.New("sql 连接 配置有误，请确认")
 		}
-		if len(r.Command.Sql.Statement) == 0 {
-			return nil, errors.New("未设置 sql 执行语句")
-		}
-		if _, ok := models.SqlErrActionMap[r.Command.Sql.ErrAction]; !ok {
-			return nil, errors.New("未设置 sql 错误行为")
+	}
+	for i, msg := range r.MsgSet {
+		if msg.MsgId == 0 {
+			return nil, fmt.Errorf("推送%v未设置消息模板", i)
 		}
 	}
 
@@ -233,4 +229,22 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 
 func (dm *CronConfigService) Del() {
 
+}
+
+// 任务执行
+func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfigRunResponse, err error) {
+	conf := &models.CronConfig{
+		Type:     r.Type,
+		Protocol: r.Protocol,
+	}
+	conf.Command, err = jsoniter.Marshal(r.Command)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := NewCronJob(conf).Exec(dm.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CronConfigRunResponse{Result: string(res)}, nil
 }

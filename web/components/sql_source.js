@@ -1,7 +1,6 @@
 var MySqlSource = Vue.extend({
-    template: `<div>
-        <el-button type="primary" plain @click="initForm(true)" style="margin-left: 20px">新增链接</el-button>
-        
+    template: `<el-main>
+        <el-button type="text" @click="initForm(true)">新增链接</el-button>
         <el-table :data="sql_source_list">
             <el-table-column property="title" label="链接名称"></el-table-column>
             <el-table-column property="create_dt" label="创建时间"></el-table-column>
@@ -43,12 +42,9 @@ var MySqlSource = Vue.extend({
                 <el-button type="primary" @click="submitForm()">确 定</el-button>
             </div>
         </el-dialog>
-    </div>`,
+    </el-main>`,
 
     name: "MySqlSource",
-    props: {
-        reload_list:false, // 重新加载列表
-    },
     data(){
         return {
             sql_source_list:[],
@@ -71,11 +67,8 @@ var MySqlSource = Vue.extend({
     },
     // 模块初始化
     mounted(){
-        console.log("sql_source:reload_list", this.reload_list)
-        if (this.reload_list){
-            this.getList()
-        }
-
+        console.log("sql_source mounted")
+        this.getList()
     },
 
     // 具体方法
@@ -83,7 +76,6 @@ var MySqlSource = Vue.extend({
         // 列表
         getList(){
             api.innerGet("/setting/sql_source_list", this.listParam, (res)=>{
-                console.log("sql_source:sql_source_list 响应", this.reload_list)
                 if (!res.status){
                     return this.$message.error(res.message);
                 }
@@ -128,6 +120,7 @@ var MySqlSource = Vue.extend({
             let body = this.form.data.source
             api.innerPost("/setting/sql_source_ping", body, (res) =>{
                 if (!res.status){
+                    console.log("setting/sql_source_ping 错误", res)
                     return this.$message.error(res.message)
                 }
                 return this.$message.success('连接成功');

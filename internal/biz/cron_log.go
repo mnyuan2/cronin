@@ -8,6 +8,7 @@ import (
 	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"time"
 )
 
@@ -32,12 +33,30 @@ func (dm *CronLogService) ByConfig(r *pb.CronLogByConfigRequest) (resp *pb.CronL
 	w := db.NewWhere().
 		Eq("conf_id", r.ConfId, db.RequiredOption()).
 		Eq("env", env, db.RequiredOption())
+	list := []*models.CronLog{}
+	_, err = data.NewCronLogData(dm.ctx).GetList(w, 1, r.Limit, &list)
+	resp = &pb.CronLogByConfigResponse{List: make([]*pb.CronLogItem, len(list))}
+	for i, one := range list {
+		item := &pb.CronLogItem{
+			Id:            one.Id,
+			ConfId:        one.ConfId,
+			CreateDt:      one.CreateDt,
+			Duration:      one.Duration,
+			Status:        one.Status,
+			StatusName:    models.LogStatusMap[one.Status],
+			StatusDesc:    one.StatusDesc,
+			Body:          one.Body,
+			Snap:          one.Snap,
+			MsgStatus:     one.MsgStatus,
+			MsgStatusName: models.LogStatusMap[one.Status],
+			MsgBody:       []string{},
+		}
+		if item.MsgStatusName == "" {
+			item.MsgStatusName = "无"
+		}
+		jsoniter.UnmarshalFromString(one.MsgBody, &item.MsgBody)
 
-	resp = &pb.CronLogByConfigResponse{List: []*pb.CronLogItem{}}
-
-	_, err = data.NewCronLogData(dm.ctx).GetList(w, 1, r.Limit, &resp.List)
-	for _, item := range resp.List {
-		item.StatusName = models.LogStatusMap[item.Status]
+		resp.List[i] = item
 	}
 
 	return resp, err

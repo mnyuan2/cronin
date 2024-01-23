@@ -28,8 +28,16 @@ type DicExtendItem struct {
 // 系统信息
 type SystemInfoRequest struct{}
 type SystemInfoReply struct {
-	Version string `json:"version"`
-	CmdName string `json:"cmd_name"`
-	Env     string `json:"env"`
-	EnvName string `json:"env_name"`
+	Version     string `json:"version"`
+	CmdName     string `json:"cmd_name"`
+	Env         string `json:"env"`
+	EnvName     string `json:"env_name"`
+	CurrentDate string `json:"current_date"`
+}
+
+type ParseProtoRequest struct {
+	Proto string `json:"proto"` // 文件内容
+}
+type ParseProtoReply struct {
+	Actions []string `json:"actions"`
 }

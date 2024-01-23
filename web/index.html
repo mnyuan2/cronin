@@ -6,40 +6,129 @@
     <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
     <script src="/static/js/vue@2.7.8.js"></script>
     <script src="/static/js/element-ui@2.15.14.js"></script>
-    <script src="/static/js/home.js?v=[[.version]]"></script>
+    <script src="/static/js/vue-router@3.6.5.js"></script>
     <script src="/static/js/jquery.min.js"></script>
-    <script src="/components/header.js?v=[[.version]]"></script>
-    <script src="/components/config.js?v=[[.version]]"></script>
-    <script src="/components/config_log.js?v=[[.version]]"></script>
-    <script src="/components/sql_source.js?v=[[.version]]"></script>
-    <script src="/components/env.js?v=[[.version]]"></script>
+    <script src="/static/js/moment.min.js"></script>
     <style>
         body{
             margin: 0;
+            font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
         }
-        .el-header{
-            height: 50px !important;
-            line-height: 50px;
+        .left{
+            float: left;
         }
+        .el-header {
+            background: #151515;
+            padding: 0;
+            border: 0;
+        }
+        .el-menu--horizontal>.el-menu-item,
+        .el-submenu{
+            height: 46px;
+            line-height: 46px;
+        }
+        .el-menu--horizontal>.el-submenu .el-submenu__title {
+            height:auto;
+            line-height: 46px;
+            border-bottom: inherit;
+        }
+        .el-menu-item,.el-submenu__title {
+            list-style: none;
+            height: auto;
+            line-height: inherit;
+            list-style: none
+        }
+        /*右导航*/
+        .el-header .group-right{
+            float: right;
+            margin-right: 10px;
+        }
+        .el-header .group-right>div{
+            padding: 0 !important;
+        }
+        .el-header .group-right>ul>li{
+            display: inline-block;
+            vertical-align: middle;
+            position: relative;
+        }
+        /* menu-group 箭头图标占位正常 */
+        /* 现在的问题是下拉菜单的方位不对 */
+        .el-header .group-right ul li .el-icon-arrow-down{
+            position: static;
+            vertical-align: middle;
+            margin-left: 8px;
+            margin-top: -3px;
+        }
+        .el-header .group-right ul li .el-icon-arrow-right{
+            display: none;
+        }
+        .el-header .group-right .submenu{
+            top: 49px !important;
+            right: 0px !important;
+            left: auto !important;
+        }
+        .el-header .el-dropdown-link{
+            color: #fff;
+            border: 1px solid #525252;
+            border-radius: 6px;
+            padding: 5px 10px;
+        }
+
+        .el-header .submenu ul{
+            background-color: #fff !important;
+        }
+        .el-header .submenu li{
+            background-color: inherit !important;
+            color: #303133 !important;
+        }
+        .el-header .submenu li:hover{
+            background-color: #f2f2f2 !important;
+        }
+        .el-header .submenu a{
+            text-decoration: auto;
+            color: #303133;
+        }
+        .el-menu--popup {
+            min-width: 120px;
+        }
+
         .icon{
             font-size: 24px;
         }
         .primary{
             color: #409EFF;
+            cursor: default;
         }
         .warning{
             color: #e6a23c;
+            cursor: default;
         }
         .success{
             color: #67c23a;
+            cursor: default;
         }
         .danger{
             color: #f56c6c;
+            cursor: default;
         }
         .version{
             margin: 0;
             text-align: right;
             color: #f2f2f2;
+        }
+
+        /*任务表单弹窗*/
+        .config-form-box .el-dialog__header{
+            padding: 14px 20px 10px;
+        }
+        .config-form-box .el-dialog__body{
+            padding: 6px 20px;
+        }
+        .config-form-box .el-form-item{
+            margin-bottom: 10px;
+        }
+        .config-form-box .el-tabs{
+            margin: 10px 0;
         }
         .http_header_box .el-input-group__prepend,
         .http_header_box .el-input-group__append,
@@ -70,14 +159,36 @@
 </head>
 <body>
     <div id="app">
-        <my-header :dic_envs="dicMap[Enum.dicEnv]" :sys_info="sysInfo"></my-header>
-        <my-config :dic_sql_source="dicMap[Enum.dicSqlSource]" :sys_info="sysInfo"></my-config>
+        <el-container direction="vertical">
+            <my-header :dic_envs="dicMap[Enum.dicEnv]" :sys_info="sysInfo"></my-header>
+            <router-view></router-view>
+        </el-container>
     </div>
 </body>
 
+<script src="/static/js/home.js?v=[[.version]]"></script>
+<script src="/components/header.js?v=[[.version]]"></script>
+<script src="/components/config.js?v=[[.version]]"></script>
+<script src="/components/config_log.js?v=[[.version]]"></script>
+<script src="/components/sql_source.js?v=[[.version]]"></script>
+<script src="/components/env.js?v=[[.version]]"></script>
+<script src="/components/message_template.js?v=[[.version]]"></script>
+<script src="/components/users.js?v=[[.version]]"></script>
 <script>
-    new Vue({
+    // 路由
+    const router = new VueRouter({
+        routes: [
+            { path: '/', redirect: '/config'},
+            { path: '/config', component: MyConfig},
+            {path: '/sql_source', component: MySqlSource},
+            {path: '/message_template', component: MyMessageTemplate},
+            {path: '/users', component: MyUsers},
+        ]
+    })
+    // vue
+    const v = new Vue({
         el: '#app',
+        router: router,
         data(){
             return {
                 dicMap:{},
@@ -98,25 +209,28 @@
         watch:{},
         methods:{
             getSysInfo(){
-                api.innerSystemInfo((res)=>{
-                    if (!res.status){
-                        return this.$message.error(res.message);
+                api.systemInfo((res)=>{
+                    this.sysInfo = res;
+                    // 如果服务器时间与本地时间存在较大差异，要给出提示。
+                    let ser = new Date(res.current_date)
+                    let cur = new Date()
+                    let diff = Math.abs(ser.getTime() - cur.getTime())/1000/60 // 分钟
+                    console.log("服务器时间",ser.toISOString(), "\n本地  时间",cur.toISOString())
+                    if (diff > 10){
+                        console.log("服务器时间", ser, "|",cur)
+                        this.$notify({
+                            title: '注意',
+                            dangerouslyUseHTMLString: true,
+                            message: '服务器时间与当前系统时间存在较大差异，请核查！<br>服务时间：'+ser.toISOString()+'<br>本地时间：'+cur.toISOString(),
+                            type: 'warning'
+                        })
                     }
-                    this.sysInfo = res.data;
-                })
+                }, true)
             },
             // 枚举
             getDic(){
-                api.innerFoundationDic([Enum.dicSqlSource, Enum.dicEnv], (res) =>{
-                    if (!res.status){
-                        return this.$message.error(res.message);
-                    }
-                    let list = {};
-                    for (k in res.data.maps){
-                        list[k] = res.data.maps[k].list
-                    }
+                api.dicList([Enum.dicSqlSource, Enum.dicEnv, Enum.dicUser, Enum.dicMsg], (list) =>{
                     this.dicMap = list
-
                     // 补充环境名称
                     if (this.sysInfo.env_name == "***"){
                         for (let i in list[Enum.dicEnv]){
@@ -127,7 +241,7 @@
                             }
                         }
                     }
-                })
+                },true)
             },
         }
     })

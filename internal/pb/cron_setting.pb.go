@@ -87,3 +87,41 @@ type SettingEnvDelRequest struct {
 }
 type SettingEnvDelReply struct {
 }
+
+// 消息模板列表
+type SettingMessageListRequest struct {
+	Page int `form:"page"`
+	Size int `form:"size"`
+}
+type SettingMessageListReply struct {
+	List []*SettingMessageListItem `json:"list"`
+	Page *Page                     `json:"page"`
+}
+type SettingMessageListItem struct {
+	Id       int                     `json:"id"`
+	Title    string                  `json:"title"`
+	Sort     int                     `json:"sort"`
+	Template *SettingMessageTemplate `json:"template"`
+	CreateDt string                  `json:"create_dt"`
+	UpdateDt string                  `json:"update_dt"`
+}
+
+// 消息模板设置
+type SettingMessageSetRequest struct {
+	Id       int                     `json:"id"`
+	Title    string                  `json:"title"`
+	Sort     int                     `json:"sort"`
+	Type     int                     `json:"type"`
+	Template *SettingMessageTemplate `json:"template"`
+}
+type SettingMessageTemplate struct {
+	Http *CronHttp `json:"http"`
+}
+
+type SettingMessageSetReply struct {
+	Id int `json:"id"`
+}
+
+type SettingMessageRunReply struct {
+	Result string `json:"result"`
+}
