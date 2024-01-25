@@ -18,7 +18,7 @@ cronin 采用网页的形式对定时任务管理设置；多命名空间，为�
 #### 一 获取程序包
 - 方式1：下载编译包(优选) 
     
-点击链接 https://gitee.com/mnyuan/cronin/releases 根据服务器型号选择编译包。
+进入 [releases](https://gitee.com/mnyuan/cronin/releases) 根据服务器型号选择编译包下载。
 
 - 方式2：手动编译
 - - main.version 参数为指定的版本号。
