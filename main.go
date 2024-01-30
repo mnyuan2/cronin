@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
+	"cron/internal/basic/tracing"
 	"cron/internal/models"
 	"cron/internal/server"
 	"embed"
@@ -22,6 +23,8 @@ func main() {
 	fmt.Println("版本号", config.Version, isBuildResource)
 	// 注册mysql表
 	models.AutoMigrate(db.New(context.Background()))
+	// 日志写入
+	go tracing.MysqlCollectorListen()
 	// 初始化任务
 	server.InitTask()
 	// 初始化http

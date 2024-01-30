@@ -31,10 +31,11 @@ func (dm *CronLogService) ByConfig(r *pb.CronLogByConfigRequest) (resp *pb.CronL
 		env = ""
 	}
 	w := db.NewWhere().
-		Eq("conf_id", r.ConfId, db.RequiredOption()).
+		JsonPathIn("tags", r.ConfId, db.RequiredOption()).
 		Eq("env", env, db.RequiredOption())
 	list := []*models.CronLog{}
-	_, err = data.NewCronLogData(dm.ctx).GetList(w, 1, r.Limit, &list)
+
+	_, err = data.NewCronLogSpanData(dm.ctx).ListPage(w, 1, r.Limit, &list)
 	resp = &pb.CronLogByConfigResponse{List: make([]*pb.CronLogItem, len(list))}
 	for i, one := range list {
 		item := &pb.CronLogItem{

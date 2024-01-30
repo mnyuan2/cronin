@@ -4,6 +4,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
+	jsoniter "github.com/json-iterator/go"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -34,9 +35,21 @@ func (h *MyEventHandler) OnSendHeaders(md metadata.MD) {
 	h.ReqHeaders = md
 }
 
+// GetSendHeadersMarshal 获取发送的header
+func (h *MyEventHandler) GetSendHeadersMarshal() []byte {
+	b, _ := jsoniter.Marshal(h.ReqMessages)
+	return b
+}
+
 // OnReceiveHeaders在接收到响应头时被调用。
 func (h *MyEventHandler) OnReceiveHeaders(md metadata.MD) {
 	h.RespHeaders = md
+}
+
+// GetReceiveHeadersMarshal 获取接收的header
+func (h *MyEventHandler) GetReceiveHeadersMarshal() []byte {
+	b, _ := jsoniter.Marshal(h.RespHeaders)
+	return b
 }
 
 // 每收到一个响应消息就调用

@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -26,10 +27,9 @@ type Where struct {
 	clauses map[string]interface{}
 }
 
-func NewWhere()*Where {
+func NewWhere() *Where {
 	return &Where{}
 }
-
 
 // 原始的查询
 // @query 原始的查询条件, 必须带?号,开头不用 AND, 支持多个查询条件组合, 例如 name = ? AND id > ?
@@ -94,6 +94,35 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 		}
 	}
 
+	return builder
+}
+
+// 构建json 路径in查询
+func (builder *Where) JsonPathIn(field string, values interface{}, options ...Option) *Where {
+	//opt := ApplyOptions(options...)
+
+	args := []string{}
+	switch values.(type) {
+	case []int32:
+		val := values.([]int32)
+		for _, v := range val {
+			args = append(args, strconv.Itoa(int(v)))
+		}
+	case []string:
+		args = values.([]string)
+	default:
+		panic("未支持的数据类型")
+	}
+
+	if len(args) > 0 {
+		str := ""
+		for _, v := range args {
+			str += "'$.\"" + v + "\"',"
+		}
+
+		_where := fmt.Sprintf("JSON_CONTAINS_PATH(%s, 'one', %s)", field, strings.Trim(str, ","))
+		builder.wheres = append(builder.wheres, _where)
+	}
 	return builder
 }
 
@@ -188,15 +217,14 @@ func (builder *Where) op(field string, op string, value interface{}, options ...
 	return builder
 }
 
-
 // 返回数
-func (builder *Where)Limit(limit int)*Where{
+func (builder *Where) Limit(limit int) *Where {
 	builder.clauses["LIMIT"] = limit
 	return builder
 }
 
 // 数据偏移位
-func (builder *Where)Offset(limit int)*Where{
+func (builder *Where) Offset(limit int) *Where {
 	builder.clauses["OFFSET"] = limit
 	return builder
 }
