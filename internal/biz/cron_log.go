@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/auth"
 	"cron/internal/basic/db"
+	"cron/internal/basic/errs"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -24,46 +25,58 @@ func NewCronLogService(ctx context.Context, user *auth.UserToken) *CronLogServic
 	}
 }
 
-// 通过配置查询日志
-func (dm *CronLogService) ByConfig(r *pb.CronLogByConfigRequest) (resp *pb.CronLogByConfigResponse, err error) {
-	env := dm.user.Env
-	if r.ConfId <= 0 {
-		env = ""
+// List 列表
+func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListResponse, err error) {
+	tags := map[string]any{}
+	if err := jsoniter.UnmarshalFromString(r.Tags, &tags); err != nil {
+		return nil, errs.New(err, "tags传递不规范")
 	}
-	w := db.NewWhere().
-		JsonPathIn("tags", r.ConfId, db.RequiredOption()).
-		Eq("env", env, db.RequiredOption())
-	list := []*models.CronLog{}
 
+	w := db.NewWhere().In("env", []string{dm.user.Env, ""})
+	for k, v := range tags {
+		w.JsonIndexEq("tags_key", "tags_val", k, v)
+	}
+
+	list := []*models.CronLogSpan{}
 	_, err = data.NewCronLogSpanData(dm.ctx).ListPage(w, 1, r.Limit, &list)
-	resp = &pb.CronLogByConfigResponse{List: make([]*pb.CronLogItem, len(list))}
-	for i, one := range list {
-		item := &pb.CronLogItem{
-			Id:            one.Id,
-			ConfId:        one.ConfId,
-			CreateDt:      one.CreateDt,
-			Duration:      one.Duration,
-			Status:        one.Status,
-			StatusName:    models.LogStatusMap[one.Status],
-			StatusDesc:    one.StatusDesc,
-			Body:          one.Body,
-			Snap:          one.Snap,
-			MsgStatus:     one.MsgStatus,
-			MsgStatusName: models.LogStatusMap[one.Status],
-			MsgBody:       []string{},
-		}
-		if item.MsgStatusName == "" {
-			item.MsgStatusName = "无"
-		}
-		jsoniter.UnmarshalFromString(one.MsgBody, &item.MsgBody)
-
-		resp.List[i] = item
+	resp = &pb.CronLogListResponse{List: make([]*pb.CronLogSpan, len(list))}
+	for i, item := range list {
+		resp.List[i] = dm.toOut(item)
 	}
 
 	return resp, err
 }
 
-// 删除日志
+// Trace 踪迹
+func (dm *CronLogService) Trace(r *pb.CronLogTraceRequest) (resp *pb.CronLogTraceResponse, err error) {
+	if r.TraceId == "" {
+		return nil, errs.New(nil, "未指定traceId")
+	}
+
+	w := db.NewWhere().In("env", []string{dm.user.Env, ""}).Eq("trace_id", r.TraceId)
+	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 1000)
+
+	// 树 或 列表；样例为树，那我也树吧。
+	resp = &pb.CronLogTraceResponse{
+		Data:  []*pb.CronLogTraceItem{},
+		Limit: 1000,
+		Total: len(list),
+	}
+
+	tra := &pb.CronLogTraceItem{
+		TraceId: r.TraceId,
+		Spans:   []*pb.CronLogSpan{},
+	}
+	for _, item := range list {
+		span := dm.toOut(item)
+		tra.Spans = append(tra.Spans, span)
+	}
+	resp.Data = append(resp.Data, tra)
+
+	return resp, err
+}
+
+// Del 删除
 func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelResponse, err error) {
 	if r.Retention == "" {
 		return nil, fmt.Errorf("retention 参数为必须")
@@ -80,4 +93,27 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 	resp.Count, err = data.NewCronLogData(dm.ctx).DelBatch(end)
 
 	return resp, err
+}
+
+// 转输出
+func (dm *CronLogService) toOut(in *models.CronLogSpan) *pb.CronLogSpan {
+	out := &pb.CronLogSpan{
+		Timestamp:    in.Timestamp,
+		Duration:     in.Duration / 1000,
+		Status:       in.Status,
+		StatusName:   "",
+		StatusDesc:   "",
+		TraceId:      in.TraceId,
+		SpanId:       in.SpanId,
+		ParentSpanId: in.ParentSpanId,
+		Service:      in.Service,
+		Operation:    in.Operation,
+		Tags:         []*pb.CronLogSpanTag{},
+		Logs:         []*pb.CronLogSpanLog{},
+	}
+
+	jsoniter.Unmarshal(in.Tags, &out.Tags)
+	jsoniter.Unmarshal(in.Logs, &out.Logs)
+
+	return out
 }

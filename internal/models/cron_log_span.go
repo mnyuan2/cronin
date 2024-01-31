@@ -11,6 +11,8 @@ type CronLogSpan struct {
 	Operation    string  `json:"operation" gorm:"column:operation;type:varchar(120);default:'';comment:操作名称;"`
 	Duration     float64 `json:"duration" gorm:"column:duration;type:double(19,0);default:0;comment:耗时/毫秒;"`
 	Tags         []byte  `json:"tags" gorm:"column:tags;type:json;default:null;comment:描述;"`
+	TagsKey      []byte  `json:"tags_key" gorm:"column:tags_key;type:json;default:null;comment:描述key数组;"`
+	TagsVal      []byte  `json:"tags_val" gorm:"column:tags_val;type:json;default:null;comment:描述val数组;"`
 	Logs         []byte  `json:"logs" gorm:"column:logs;type:json;default:null;comment:日志;"`
 	Status       int32   `json:"status" gorm:"column:status;type:tinyint(2);default:0;comment:状态：0.无、1.错误、2.正常;"`
 }

@@ -150,6 +150,7 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 	}
 	if parent := ctx.Value("mysql_span"); parent != nil {
 		span.traceId = parent.(*MysqlSpan).traceId
+		span.parentSpanId = parent.(*MysqlSpan).spanId
 		span.spanId = gen.NewSpanID(ctx, span.traceId)
 	} else {
 		span.traceId, span.spanId = gen.NewIDs(ctx)
@@ -164,11 +165,12 @@ type MysqlSpan struct {
 	embedded.Span
 	sc trace.SpanContext
 
-	traceId   trace.TraceID
-	spanId    trace.SpanID
-	service   string
-	operation string
-	env       string
+	traceId      trace.TraceID
+	spanId       trace.SpanID
+	parentSpanId trace.SpanID
+	service      string
+	operation    string
+	env          string
 	// startTime 开始时间
 	startTime time.Time
 	// endTime 结束时间
@@ -213,10 +215,14 @@ func (s *MysqlSpan) AddEvent(name string, options ...trace.EventOption) {
 // End does nothing.
 func (s *MysqlSpan) End(...trace.SpanEndOption) {
 	s.endTime = time.Now()
+	tagsKey, tagsVal := make([]string, len(s.tags)), make([]string, len(s.tags))
+	for i, item := range s.tags {
+		tagsKey[i] = string(item.Key)
+		tagsVal[i] = item.Value.Emit()
+	}
 	// 执行日志的写入
 	data := &models.CronLogSpan{
 		Timestamp: s.startTime.Format(time.DateTime),
-		//TraceId:   s.traceId.String(),
 		Service:   s.service,
 		Operation: s.operation,
 		Duration:  s.endTime.Sub(s.startTime).Seconds(),
@@ -225,8 +231,11 @@ func (s *MysqlSpan) End(...trace.SpanEndOption) {
 	}
 	data.TraceId, _ = gen.ParseID(s.traceId.String())
 	data.SpanId, _ = gen.ParseID(s.spanId.String())
+	data.ParentSpanId, _ = gen.ParseID(s.parentSpanId.String())
 	data.Tags, _ = jsoniter.Marshal(s.tags)
 	data.Logs, _ = jsoniter.Marshal(s.logs)
+	data.TagsKey, _ = jsoniter.Marshal(tagsKey)
+	data.TagsVal, _ = jsoniter.Marshal(tagsVal)
 
 	//log.Println(data)
 	mysqlQueue <- *data
