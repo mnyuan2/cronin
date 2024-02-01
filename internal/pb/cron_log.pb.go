@@ -12,8 +12,8 @@ type CronLogListResponse struct {
 	// 后期可能会做分页
 }
 type CronLogSpan struct {
-	Timestamp    string            `json:"timestamp"`      // 开始时间
-	Duration     float64           `json:"duration"`       // 耗时/秒
+	Timestamp    int64             `json:"timestamp"`      // 开始时间
+	Duration     int64             `json:"duration"`       // 耗时/秒
 	Status       int32             `json:"status"`         // 状态：0.无、1.错误、2.正常
 	StatusName   string            `json:"status_name"`    //
 	StatusDesc   string            `json:"status_desc"`    //
@@ -45,7 +45,7 @@ type CronLogTraceRequest struct {
 
 // 日志踪迹响应
 type CronLogTraceResponse struct {
-	Data  []*CronLogTraceItem `json:"data"`
+	List  []*CronLogTraceItem `json:"list"`
 	Limit int                 `json:"limit"`
 	Total int                 `json:"total"`
 }

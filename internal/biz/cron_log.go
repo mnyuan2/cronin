@@ -58,7 +58,7 @@ func (dm *CronLogService) Trace(r *pb.CronLogTraceRequest) (resp *pb.CronLogTrac
 
 	// 树 或 列表；样例为树，那我也树吧。
 	resp = &pb.CronLogTraceResponse{
-		Data:  []*pb.CronLogTraceItem{},
+		List:  []*pb.CronLogTraceItem{},
 		Limit: 1000,
 		Total: len(list),
 	}
@@ -71,7 +71,7 @@ func (dm *CronLogService) Trace(r *pb.CronLogTraceRequest) (resp *pb.CronLogTrac
 		span := dm.toOut(item)
 		tra.Spans = append(tra.Spans, span)
 	}
-	resp.Data = append(resp.Data, tra)
+	resp.List = append(resp.List, tra)
 
 	return resp, err
 }
@@ -99,7 +99,7 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 func (dm *CronLogService) toOut(in *models.CronLogSpan) *pb.CronLogSpan {
 	out := &pb.CronLogSpan{
 		Timestamp:    in.Timestamp,
-		Duration:     in.Duration / 1000,
+		Duration:     in.Duration,
 		Status:       in.Status,
 		StatusName:   "",
 		StatusDesc:   "",

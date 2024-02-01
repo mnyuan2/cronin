@@ -14,7 +14,7 @@ var MyConfigLog = Vue.extend({
         <el-table-column property="duration" label="耗时/秒" width="80"></el-table-column>
         <el-table-column property="" label="详情">
             <template slot-scope="scope">
-                <el-button type="text" @click="logBodyShow(scope.row)">查看</el-button>
+                <el-button type="text" @click="getTrace(scope.row.trace_id)">查看</el-button>
             </template>
         </el-table-column>
     </el-table>
@@ -29,14 +29,7 @@ var MyConfigLog = Vue.extend({
         return {
             config_id:0,
             list:[],// 日志列表，没有分页；
-            logBody: "",
-            body:{
-                status: 0,
-                status_desc:"",
-                data:"",
-                show:false,
-                msg_data: []
-            }
+            traces:[], // 踪迹
         }
     },
     // 模块初始化
@@ -67,21 +60,31 @@ var MyConfigLog = Vue.extend({
                 this.list = res.data.list;
             })
         },
-        // 日志描述展示
-        logBodyShow(logItem){
-            this.body.data = logItem.body
-            this.body.status = logItem.status
-            this.body.status_desc = logItem.status_desc
-            if (logItem.msg_body != null && logItem.msg_body.length > 0){
-                this.body.msg_data = logItem.msg_body
-            }else{
-                this.body.msg_data = []
-            }
-            this.body.show = true
-            // this.$alert('<div style="white-space: pre;">'+logItem.body+'<div>', '日志详情',{
-            //     dangerouslyUseHTMLString: true
-            // })
-        },
+        // 踪迹展示
+        getTrace(traceId){
+            api.innerGet("/log/traces", {trace_id: traceId}, (res)=>{
+                if (!res.status){
+                    console.log("log/traces 错误", res)
+                    return this.$message.error(res.message);
+                }
+                let trace = [];
+                res.data.list[0].Spans.forEach(function (item, index, raw) {
+                    if (item == 0){
+                        if (item){
+                            
+                        }
+                    }
+                })
+
+
+
+
+                // 剩下就是我要怎么来组织这个树了！
+
+                // this.traces = res.data.list;
+            })
+        }
+
     }
 })
 

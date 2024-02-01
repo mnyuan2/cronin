@@ -222,10 +222,10 @@ func (s *MysqlSpan) End(...trace.SpanEndOption) {
 	}
 	// 执行日志的写入
 	data := &models.CronLogSpan{
-		Timestamp: s.startTime.Format(time.DateTime),
+		Timestamp: s.startTime.UnixMicro(),
 		Service:   s.service,
 		Operation: s.operation,
-		Duration:  s.endTime.Sub(s.startTime).Seconds(),
+		Duration:  s.endTime.Sub(s.startTime).Microseconds(),
 		Status:    int32(s.status),
 		Env:       s.env,
 	}
