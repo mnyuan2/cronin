@@ -1,5 +1,7 @@
 package models
 
+import "cron/internal/basic/enum"
+
 // CronLogSpan 第二版日志 依据规范 OpenTelemetry
 type CronLogSpan struct {
 	Env          string `json:"env" gorm:"column:env;type:varchar(32);comment:环境;"`
@@ -14,5 +16,11 @@ type CronLogSpan struct {
 	TagsKey      []byte `json:"tags_key" gorm:"column:tags_key;type:json;default:null;comment:描述key数组;"`
 	TagsVal      []byte `json:"tags_val" gorm:"column:tags_val;type:json;default:null;comment:描述val数组;"`
 	Logs         []byte `json:"logs" gorm:"column:logs;type:json;default:null;comment:日志;"`
-	Status       int32  `json:"status" gorm:"column:status;type:tinyint(2);default:0;comment:状态：0.无、1.错误、2.正常;"`
+	Status       int    `json:"status" gorm:"column:status;type:tinyint(2);default:0;comment:状态：0.无、1.错误、2.正常;"`
+	StatusDesc   string `json:"status_desc" gorm:"column:status_desc;type:varchar(255);default:'';comment:状态描述;"`
+}
+
+var LogSpanStatusMap = map[int]string{
+	enum.StatusDisable: "失败",
+	enum.StatusActive:  "成功",
 }

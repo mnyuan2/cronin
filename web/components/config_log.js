@@ -19,6 +19,36 @@ var MyConfigLog = Vue.extend({
         </el-table-column>
     </el-table>
     
+    <!--款式1 踪迹展示-->
+    <el-table :data="traces" row-key="span_id" :tree-props="{children: 'children', hasChildren: 'hasChildren'}">
+        <el-table-column type="expand">
+            <template slot-scope="scope">
+                <el-collapse>
+                    <el-collapse-item title="Tags">
+                        <el-table :data="scope.row.tags" stripe style="width: 100%">
+                            <el-table-column prop="Key" width="180"></el-table-column>
+                            <el-table-column prop="Value.Value"></el-table-column>
+                        </el-table>
+                    </el-collapse-item>
+                    <el-collapse-item title="Logs">
+                        <el-table :data="scope.row.logs" stripe style="width: 100%">
+                            <el-table-column prop="[0]Key" width="180"></el-table-column>
+                            <el-table-column prop="[0]Value.Value"></el-table-column>
+                        </el-table>
+                    </el-collapse-item>
+                </el-collapse>
+            </template>
+        </el-table-column>
+        <el-table-column label="服务&操作" width="220">
+            <template slot-scope="scope">
+                <span>{{scope.row.service}}</span>
+                <span>{{scope.row.operation}}</span>
+            </template>
+        </el-table-column>
+        <el-table-column>显示时间轴</el-table-column>
+    </el-table>
+    
+    <!--款式2 踪迹展示-->
                
 </div>`,
     name: "MyConfigLog",
@@ -67,21 +97,14 @@ var MyConfigLog = Vue.extend({
                     console.log("log/traces 错误", res)
                     return this.$message.error(res.message);
                 }
-                let trace = [];
-                res.data.list[0].Spans.forEach(function (item, index, raw) {
-                    if (item == 0){
-                        if (item){
-                            
-                        }
-                    }
-                })
+                let trace = arrayToTree(res.data.list[0].Spans, 'span_id', 'parent_span_id', 'children')
 
-
+                console.trace(trace)
 
 
                 // 剩下就是我要怎么来组织这个树了！
 
-                // this.traces = res.data.list;
+                this.traces = trace;
             })
         }
 

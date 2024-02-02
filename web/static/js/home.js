@@ -29,6 +29,26 @@ function getDatetimeString(d) {
 }
 
 /**
+ * 一维array数组转树型多维结构
+ * @param arrList 数组
+ * @param id 主键
+ * @param fid 子健
+ * @param children 子集名称
+ * @returns {*[]|*}
+ */
+function arrayToTree(arrList, id, fid, children = 'children') {
+    let map = []
+    arrList.forEach(item => {
+        let up = arrList.filter(x => x[id] == item[fid])
+        let sit = arrList.filter(x => x[fid] == item[id])
+        if (sit.length) item[children] = sit
+        if (!(up.length && !sit.length)) map.push(item)
+    })
+    if (arrList.length == map.length)return map
+    return arrayToTree(map, id, fid)
+}
+
+/**
  * 业务枚举
  * @type {{dicEnv: number, dicSqlSource: number, envKey: string}}
  */

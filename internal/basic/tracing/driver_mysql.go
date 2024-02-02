@@ -139,7 +139,7 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 		env:       t.env,
 		startTime: time.Now(),
 		tags:      []attribute.KeyValue{},
-		logs:      []trace.EventOption{},
+		logs:      []*MysqlSpanLog{},
 	}
 	span.tags = append(span.tags, conf.Attributes()...)
 
@@ -160,6 +160,11 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 	return ctx, span
 }
 
+type MysqlSpanLog struct {
+	Timestamp int64
+	Fields    []trace.EventOption
+}
+
 // mysql 驱动的 Span节点
 type MysqlSpan struct {
 	embedded.Span
@@ -176,22 +181,30 @@ type MysqlSpan struct {
 	// endTime 结束时间
 	endTime time.Time
 	// status 状态
-	status codes.Code
+	status     codes.Code
+	statusDesc string
 	// 标签集
 	tags []attribute.KeyValue
 	// 日志集
-	logs []trace.EventOption
+	logs []*MysqlSpanLog
 }
 
-// SpanContext returns an empty span context.
+// SpanContext 返回一个空的span上下文
 func (s *MysqlSpan) SpanContext() trace.SpanContext { return s.sc }
 
 // IsRecording always returns false.
 func (*MysqlSpan) IsRecording() bool { return false }
 
-// SetStatus does nothing.
+// SetStatus 设置状态标记
 func (s *MysqlSpan) SetStatus(status codes.Code, desc string) {
+	if status == codes.Error && desc != "" {
+		s.AddEvent("x", trace.WithAttributes(attribute.String("error.desc", desc)))
+	}
+	if desc == "" {
+		desc = status.String()
+	}
 	s.status = status
+	s.statusDesc = desc
 }
 
 func (s *MysqlSpan) SetLocalStatus(status int, desc string) {
@@ -209,7 +222,7 @@ func (s *MysqlSpan) SetAttributes(kv ...attribute.KeyValue) {
 //
 //	不支持查询
 func (s *MysqlSpan) AddEvent(name string, options ...trace.EventOption) {
-	s.logs = append(s.logs, options...)
+	s.logs = append(s.logs, &MysqlSpanLog{Fields: options, Timestamp: time.Now().UnixMicro()})
 }
 
 // End does nothing.
@@ -222,12 +235,13 @@ func (s *MysqlSpan) End(...trace.SpanEndOption) {
 	}
 	// 执行日志的写入
 	data := &models.CronLogSpan{
-		Timestamp: s.startTime.UnixMicro(),
-		Service:   s.service,
-		Operation: s.operation,
-		Duration:  s.endTime.Sub(s.startTime).Microseconds(),
-		Status:    int32(s.status),
-		Env:       s.env,
+		Timestamp:  s.startTime.UnixMicro(),
+		Service:    s.service,
+		Operation:  s.operation,
+		Duration:   s.endTime.Sub(s.startTime).Microseconds(),
+		Status:     int(s.status),
+		StatusDesc: s.statusDesc,
+		Env:        s.env,
 	}
 	data.TraceId, _ = gen.ParseID(s.traceId.String())
 	data.SpanId, _ = gen.ParseID(s.spanId.String())
@@ -237,7 +251,6 @@ func (s *MysqlSpan) End(...trace.SpanEndOption) {
 	data.TagsKey, _ = jsoniter.Marshal(tagsKey)
 	data.TagsVal, _ = jsoniter.Marshal(tagsVal)
 
-	//log.Println(data)
 	mysqlQueue <- *data
 }
 

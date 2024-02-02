@@ -14,7 +14,7 @@ type CronLogListResponse struct {
 type CronLogSpan struct {
 	Timestamp    int64             `json:"timestamp"`      // 开始时间
 	Duration     int64             `json:"duration"`       // 耗时/秒
-	Status       int32             `json:"status"`         // 状态：0.无、1.错误、2.正常
+	Status       int               `json:"status"`         // 状态：0.无、1.错误、2.正常
 	StatusName   string            `json:"status_name"`    //
 	StatusDesc   string            `json:"status_desc"`    //
 	TraceId      string            `json:"trace_id"`       // 踪迹id
@@ -27,15 +27,17 @@ type CronLogSpan struct {
 }
 
 type CronLogSpanTag struct {
-	Key   string
-	Value *CronLogSpanTagValue
+	Key   string               `json:"key"`
+	Value *CronLogSpanTagValue `json:"value"`
 }
 type CronLogSpanTagValue struct {
-	Type  string
-	Value any
+	Type  string `json:"type"`
+	Value any    `json:"value"`
 }
 
 type CronLogSpanLog struct {
+	Timestamp int64                  `json:"timestamp"`
+	Fields    []*CronLogSpanTagValue `json:"fields"`
 }
 
 // 日志踪迹请求

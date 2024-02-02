@@ -6,9 +6,11 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
+	"cron/internal/basic/tracing"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -17,28 +19,30 @@ import (
 )
 
 // mysql 命令执行
-func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err error) {
-	ctx, span := job.tracer.Start(ctx, "sqlMysql")
-	span.SetStatus(codes.Ok, "")
+func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
+	ctx, span := job.tracer.Start(ctx, "exec-mysql")
 	defer func() {
 		if err != nil {
-			span.SetStatus(codes.Error, err.Error())
+			span.SetStatus(tracing.Error, err.Desc())
+			span.AddEvent("x", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		} else {
+			span.SetStatus(tracing.Ok, "")
 		}
 		span.End()
 	}()
 
-	source, err := data.NewCronSettingData(ctx).GetSqlSourceOne(job.conf.Env, r.Source.Id)
-	if err != nil {
-		return errs.New(err, "连接配置异常")
+	source, er := data.NewCronSettingData(ctx).GetSqlSourceOne(job.conf.Env, r.Source.Id)
+	if er != nil {
+		return errs.New(er, "连接配置异常")
 	}
 	s := &pb.CronSqlSource{}
-	if err = jsoniter.UnmarshalFromString(source.Content, s); err != nil {
-		return errs.New(err, "连接配置解析异常")
+	if er = jsoniter.UnmarshalFromString(source.Content, s); er != nil {
+		return errs.New(er, "连接配置解析异常")
 	}
 
-	password, err := models.SqlSourceDecode(s.Password)
-	if err != nil {
-		return errs.New(err, "密码异常")
+	password, er := models.SqlSourceDecode(s.Password)
+	if er != nil {
+		return errs.New(er, "密码异常")
 	}
 	conf := &config.MysqlSource{
 		Hostname: s.Hostname,
@@ -49,16 +53,20 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err error) {
 	}
 	_db := db.Conn(conf).WithContext(ctx)
 	if _db.Error != nil {
+		span.AddEvent("x", trace.WithAttributes(
+			attribute.String("dsn", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
+				conf.Username, conf.Password, conf.Hostname, conf.Port, conf.Database))),
+		)
 		return errs.New(_db.Error, "连接失败")
 	}
 
 	// 执行sql
 	// 此处为局部错误，大框架是完成的，错误不必返回
-	err = job.sqlMysqlExec(_db, r.ErrAction, r.Statement)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
+	er = job.sqlMysqlExec(_db, r.ErrAction, r.Statement)
+	if er != nil {
+		span.SetStatus(codes.Error, er.Error())
 		// 执行告警推送
-		job.messagePush(ctx, enum.StatusDisable, err.Error(), nil, 0)
+		job.messagePush(ctx, enum.StatusDisable, er.Error(), nil, 0)
 	}
 	return nil
 }
@@ -92,8 +100,8 @@ func (job *CronJob) sqlMysqlExec(_db *gorm.DB, errAction int, statement []string
 }
 
 func (job *CronJob) sqlMysqlItem(_db *gorm.DB, sql string) (err error) {
-	_, span := job.tracer.Start(_db.Statement.Context, "sqlMysqlItem")
-	span.AddEvent("x", trace.WithAttributes(attribute.String("sql", "sql")))
+	_, span := job.tracer.Start(_db.Statement.Context, "sql-item")
+	span.AddEvent("x", trace.WithAttributes(attribute.String("sql", sql)))
 	defer span.End()
 
 	resp := _db.Exec(sql)

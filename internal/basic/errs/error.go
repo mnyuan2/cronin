@@ -8,6 +8,7 @@ import (
 type Errs interface {
 	error
 	Code() string
+	Desc() string
 	Path() string // 调用错误路径
 	ReloadPath()
 }
