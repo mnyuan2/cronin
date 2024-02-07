@@ -222,7 +222,9 @@ func (s *MysqlSpan) SetAttributes(kv ...attribute.KeyValue) {
 //
 //	不支持查询
 func (s *MysqlSpan) AddEvent(name string, options ...trace.EventOption) {
-	s.logs = append(s.logs, &MysqlSpanLog{Fields: options, Timestamp: time.Now().UnixMicro()})
+	g := &MysqlSpanLog{Timestamp: time.Now().UnixMicro()}
+	g.Fields = append(g.Fields, options...)
+	s.logs = append(s.logs, g)
 }
 
 // End does nothing.

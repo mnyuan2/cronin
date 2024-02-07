@@ -29,6 +29,6 @@ func (m *CronLogSpanData) ListPage(where *db.Where, page, size int, list interfa
 func (m *CronLogSpanData) List(where *db.Where, size int) (list []*models.CronLogSpan, err error) {
 	w, args := where.Build()
 	list = []*models.CronLogSpan{}
-	err = m.db.Where(w, args...).Limit(size).Order("timestamp asc").Find(&list).Error
+	err = m.db.Where(w, args...).Limit(size).Order("timestamp asc,span_id").Find(&list).Error
 	return list, err
 }

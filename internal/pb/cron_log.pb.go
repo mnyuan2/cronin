@@ -36,8 +36,8 @@ type CronLogSpanTagValue struct {
 }
 
 type CronLogSpanLog struct {
-	Timestamp int64                  `json:"timestamp"`
-	Fields    []*CronLogSpanTagValue `json:"fields"`
+	Timestamp int64             `json:"timestamp"`
+	Fields    []*CronLogSpanTag `json:"fields"`
 }
 
 // 日志踪迹请求
