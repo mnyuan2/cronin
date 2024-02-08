@@ -23,10 +23,10 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 	ctx, span := job.tracer.Start(ctx, "exec-mysql")
 	defer func() {
 		if err != nil {
-			span.SetStatus(tracing.Error, err.Desc())
+			span.SetStatus(tracing.StatusError, err.Desc())
 			span.AddEvent("x", trace.WithAttributes(attribute.String("error.object", err.Error())))
 		} else {
-			span.SetStatus(tracing.Ok, "")
+			span.SetStatus(tracing.StatusOk, "")
 		}
 		span.End()
 	}()
@@ -52,6 +52,7 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 		Port:     s.Port,
 	}
 	_db := db.Conn(conf).WithContext(ctx)
+
 	if _db.Error != nil {
 		span.AddEvent("x", trace.WithAttributes(
 			attribute.String("dsn", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",

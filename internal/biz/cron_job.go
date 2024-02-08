@@ -133,6 +133,7 @@ func (job *CronJob) Run() {
 		job.ErrorCount++
 		job.messagePush(ctx, enum.StatusDisable, err.Error(), res, time.Since(st).Seconds())
 	} else {
+		span.SetStatus(tracing.StatusOk, "")
 		job.ErrorCount = 0
 		span.AddEvent("x", trace.WithAttributes(attribute.String("resp", string(res))))
 		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())

@@ -1,7 +1,11 @@
 var MyConfigLog = Vue.extend({
     template: `<div class="config-log">
     <el-table :data="list">
-        <el-table-column property="timestamp" label="时间" width="200"></el-table-column>
+        <el-table-column label="开始时间" width="200">
+            <template slot-scope="scope">
+                {{getDatetimeString(new Date(scope.row.timestamp/1000))}}
+            </template>
+        </el-table-column>
         <el-table-column property="operation" label="操作" width="200"></el-table-column>
         <el-table-column property="status_name" label="状态" width="80">
             <template slot-scope="scope">
@@ -11,7 +15,11 @@ var MyConfigLog = Vue.extend({
                 </el-tooltip>
             </template>
         </el-table-column>
-        <el-table-column property="duration" label="耗时/秒" width="80"></el-table-column>
+        <el-table-column label="耗时" width="80">
+            <template slot-scope="scope">
+                {{durationTransform(scope.row.duration)}}
+            </template>
+        </el-table-column>
         <el-table-column property="" label="详情">
             <template slot-scope="scope">
                 <el-button type="text" @click="traceBox(scope.row.trace_id)">查看</el-button>

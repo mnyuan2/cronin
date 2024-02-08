@@ -21,6 +21,7 @@ type CronLogSpan struct {
 }
 
 var LogSpanStatusMap = map[int]string{
+	0:                  "-",
 	enum.StatusDisable: "失败",
 	enum.StatusActive:  "成功",
 }

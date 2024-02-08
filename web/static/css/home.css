@@ -104,6 +104,13 @@ body{
     text-align: right;
     color: #f2f2f2;
 }
+i.el-alert__icon{
+    vertical-align: middle;
+}
+.is-light{
+    background-color: #fef0f0 !important;
+    color: #f56c6c;
+}
 
 /*任务表单弹窗*/
 .config-form-box .el-dialog__header{
@@ -148,61 +155,88 @@ body{
 /* 日志 */
 .config-log {}
 /* 日志 踪迹 */
-trace-page .el-table td.el-table__cell{
+.trace-page .trace-header{
+    display: flex;
+    color: #999;
+}
+.trace-page .label{
+    width: 292px;
+    font-weight: 500;
+    font-size: 1.17em;
+    padding: 2px 4px;
+}
+.trace-page .total-desc span{
+    padding-right: 12px;
+}
+.trace-page .total-desc b{
+    color: #444;
+}
+.trace-page .trace-wrapper td.el-table__cell,
+.trace-page .trace-wrapper th.el-table__cell.is-leaf {
+    border-bottom: 1px solid #fff;
+}
+.trace-page .el-table td.el-table__cell{
     vertical-align: top;
     padding:0;
 }
-trace-page .el-table .el-table_1_column_1 .cell{
+.trace-page .trace-wrapper td:first-child .cell{
     display: flex;
+}
+.trace-page .trace-wrapper .cell{
     padding: 0;
 }
-trace-page .el-table .el-table_1_column_2 .cell{
-    padding: 0;
-}
-trace-page .el-table .el-table_1_column_1 .cell .span-label{
+.trace-page .trace-wrapper .cell .span-label{
     flex: 1;
     background: #e6e6e6;
     cursor: pointer;
     padding: 0 4px;
     overflow: hidden;
 }
-trace-page .span-detail{
+.trace-page .trace-wrapper .el-table__empty-block{
+    min-height: auto;
+}
+.trace-page .trace-wrapper .el-table__empty-block .el-table__empty-text{
+    line-height: 120%;
+}
+
+.trace-page .span-detail{
     overflow: auto;
     width: 100%;
     min-height: 50px;
     position: relative;
     background: #e6e6e6;
 }
-trace-page .span-detail table tr td:first-child{
+.trace-page .span-detail table tr td:first-child{
     color: #999;
 }
-trace-page .span-bar-wrapper{
+.trace-page .span-bar-wrapper{
     width: 100%;
     background: #e4ca87;
+    cursor: pointer;
 }
-trace-page .span-bar{
+.trace-page .span-bar{
     position: relative;
 }
-trace-page .span-bar-label{
+.trace-page .span-bar-label{
     position: absolute;
     top: 0;
     white-space: nowrap;
     margin: 0 4px;
 }
-trace-page .span-header{
+.trace-page .span-header{
     cursor: pointer;
 }
-trace-page .span-detail .el-breadcrumb{
+.trace-page .span-detail .el-breadcrumb{
     display: inline-block;
 }
-trace-page .span-logs-box{
+.trace-page .span-logs-box{
     border: 1px solid;
 
 }
-trace-page .span-logs-box>.span-header{
+.trace-page .span-logs-box>.span-header{
     background: #999;
     padding: 2px 14px;
 }
-trace-page .span-logs-box .span-wrapper{
+.trace-page .span-logs-box .span-wrapper{
     padding: 2px 14px;
 }

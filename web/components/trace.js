@@ -1,9 +1,15 @@
 var MyTrace = Vue.extend({
     template: `<div class="trace-page">
-    <el-table :data="traces" row-key="span_id" :tree-props="{children: 'children', hasChildren: 'hasChildren'}" class="trace-wrapper">
-        <el-table-column label="操作" width="300">
+    <el-row class="trace-header">
+        <div class="label">操作</div>
+        <div class="total-desc" v-html="total_desc"></div>
+    </el-row>
+    <el-table :show-header="false" :data="traces" row-key="span_id" default-expand-all :tree-props="{children:'children',hasChildren:'hasChildren'}" class="trace-wrapper">
+        <template #empty>空</template>
+        <el-table-column width="300">
             <template slot-scope="scope">
-              <div class="span-label" @click="showSpan(scope.row.bar, 'detail_show')">
+              <div :class="(scope.row.status==1?'is-light':'')+ ' span-label'" @click="showSpan(scope.row.bar, 'detail_show')">
+                <i class="el-alert__icon el-icon-error" v-if="scope.row.status==1"></i>
                 <span>{{scope.row.operation}}</span>
               </div>
             </template>
@@ -17,6 +23,7 @@ var MyTrace = Vue.extend({
               </div>
             </div>
             <div class="span-detail" v-if="scope.row.bar.detail_show">
+            
               <!-- tags -->
               <div class="span-wrapper">
                 <div class="span-header" @click="showSpan(scope.row.bar, 'tags_show')">
@@ -31,8 +38,8 @@ var MyTrace = Vue.extend({
                   <el-table-column prop="value.value"> </el-table-column>
                 </el-table>
               </div>
-              <!-- logs -->
               
+              <!-- logs -->
               <div class="span-logs-box">
                 <div class="span-header" @click="showSpan(scope.row.bar, 'logs_show')">
                   <i :class="scope.row.bar.logs_show? 'el-icon-arrow-down':'el-icon-arrow-right'"></i>
@@ -45,7 +52,7 @@ var MyTrace = Vue.extend({
                 <div class="span-wrapper"  v-if="scope.row.bar.logs_show" v-for="(log_v, log_i) in scope.row.logs">
                   <div class="span-header" @click="showSpan(scope.row.bar.log[log_i], 'show')">
                     <i :class="scope.row.bar.log[log_i].show? 'el-icon-arrow-down':'el-icon-arrow-right'"></i>
-                    <strong>{{scope.row.timestamp-log_v.timestamp}}: </strong>
+                    <strong>{{durationTransform(log_v.timestamp-scope.row.timestamp)}}: </strong>
                     <el-breadcrumb v-if="!scope.row.bar.log[log_i].show">
                       <el-breadcrumb-item v-for="(log_f_v,log_f_i) in log_v.fields">{{log_f_v.key}}={{log_f_v.value.value}}</el-breadcrumb-item>
                     </el-breadcrumb>
@@ -73,6 +80,7 @@ var MyTrace = Vue.extend({
         return {
             trace_id:"",
             traces:[], // 踪迹
+            total_desc: "", // 合计描述
         }
     },
     // 模块初始化
@@ -109,7 +117,7 @@ var MyTrace = Vue.extend({
                     totalDuration = list[0].duration // 这里应该是等于最大的一个耗时
                 }
                 for (let span of list){
-                    // 视图信息
+                    // 视图信息控制参数
                     span.bar = {
                         left: (span.timestamp-startTimestamp)/totalDuration*100, // 节点起始 = 当前节点开始-开始的开始
                         width: span.duration/totalDuration*100, // 节点截止 = 当前耗时占比总耗时的比例·宽
@@ -128,8 +136,23 @@ var MyTrace = Vue.extend({
                 let trace = arrayToTree(list, 'span_id', 'parent_span_id', 'children')
                 console.log(trace, totalDuration)
                 this.traces = trace;
+                this.total_desc = "<span>开始时间:<b>"+getDatetimeString(new Date(startTimestamp/1000))+
+                    "</b></span>  <span>耗时:<b>"+ durationTransform(totalDuration) +
+                    "</b></span>  <span>节点数:<b>"+list.length +"</b><span>"
             })
-        }
+        },
+        // 节点显示ui控制
+        showSpan(row, field){
+            if (typeof field !== 'string' || field == ""){
+                alert('请指定字段')
+                retrun
+            }
+            if(row[field]==false){
+                row[field] = true
+            }else{
+                row[field] = false
+            }
+        },
 
     }
 })

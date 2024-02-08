@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	Unset = codes.Unset // Unset 无状态(默认)
-	Error = codes.Error // Error 错误标记
-	Ok    = codes.Ok    // Ok 成功标记
+	StatusUnset = codes.Unset // Unset 无状态(默认)
+	StatusError = codes.Error // Error 错误标记
+	StatusOk    = codes.Ok    // Ok 成功标记
 )
 
 type Span struct {
