@@ -3,11 +3,15 @@ package tracing
 import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	"sync"
 )
 
 var (
+	// 声明一个sync.Mutex 类型
+
 	// 日 节点计数器
 	dayCount = struct {
+		mu         sync.Mutex
 		Day        int
 		TraceCount int64
 		SpanCount  int64

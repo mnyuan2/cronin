@@ -108,7 +108,7 @@ func (dm *CronLogService) toOut(in *models.CronLogSpan) *pb.CronLogSpan {
 		ParentSpanId: in.ParentSpanId,
 		Service:      in.Service,
 		Operation:    in.Operation,
-		Tags:         []*pb.CronLogSpanTag{},
+		Tags:         []*pb.CronLogSpanKV{},
 		Logs:         []*pb.CronLogSpanLog{},
 	}
 

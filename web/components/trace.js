@@ -19,7 +19,7 @@ var MyTrace = Vue.extend({
             <div class="span-bar-wrapper" @click="showSpan(scope.row.bar, 'detail_show')">
               <div class="span-bar" :style="scope.row.bar.style">
                 &nbsp;
-                <div class="span-bar-label" :style="scope.row.bar.left>40 ? 'right: 100%;' : 'left: 100%;'">{{scope.row.bar.label}}</div>
+                <div class="span-bar-label" :style=" scope.row.bar.width>80? 'right: 0;' : scope.row.bar.left>40 ? 'right: 100%;' : 'left: 100%;'">{{scope.row.bar.label}}</div>
               </div>
             </div>
             <div class="span-detail" v-if="scope.row.bar.detail_show">
@@ -54,12 +54,17 @@ var MyTrace = Vue.extend({
                     <i :class="scope.row.bar.log[log_i].show? 'el-icon-arrow-down':'el-icon-arrow-right'"></i>
                     <strong>{{durationTransform(log_v.timestamp-scope.row.timestamp)}}: </strong>
                     <el-breadcrumb v-if="!scope.row.bar.log[log_i].show">
-                      <el-breadcrumb-item v-for="(log_f_v,log_f_i) in log_v.fields">{{log_f_v.key}}={{log_f_v.value.value}}</el-breadcrumb-item>
+                      <el-breadcrumb-item v-for="(log_f_v,log_f_i) in log_v.attributes">{{log_f_v.key}}={{log_f_v.value.value}}</el-breadcrumb-item>
                     </el-breadcrumb>
                   </div>
-                  <el-table :data="log_v.fields" stripe :show-header="false" style="width: 100%" v-if="scope.row.bar.log[log_i].show">
+                  <el-table :data="log_v.attributes" stripe :show-header="false" style="width: 100%" v-if="scope.row.bar.log[log_i].show">
                     <el-table-column prop="key" width="180"> </el-table-column>
-                    <el-table-column prop="value.value"> </el-table-column>
+                    <el-table-column>
+                         <template slot-scope="scope">
+                            <pre v-if="scope.row.value.type=='STRING' && isJSON(scope.row.value.value)" style="max-height: 350px;overflow: auto;">{{JSON.parse(scope.row.value.value)}}</pre>
+                            <div v-else>{{scope.row.value.value}}</div>
+                        </template>
+                    </el-table-column>
                   </el-table>
                   
                 </div>
@@ -130,6 +135,7 @@ var MyTrace = Vue.extend({
                     span.logs.forEach(function (item) {
                         span.bar.log.push({show:false})
                     })
+
                     span.bar.style = 'background: rgb(23, 184, 190); left: '+span.bar.left+'%; width: '+span.bar.width+'%;'
                 }
 
@@ -153,7 +159,14 @@ var MyTrace = Vue.extend({
                 row[field] = false
             }
         },
-
+        // log格式化
+        formatLog(log){
+            if (log.value.type=='STRING' && isJSON(log.value.value)){
+                return '<pre>'+log.value.value+'</pre>'
+            }else{
+                return log.value.value
+            }
+        }
     }
 })
 

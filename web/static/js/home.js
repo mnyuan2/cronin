@@ -94,8 +94,23 @@ function arrayToTree(arrList, id, fid, children = 'children') {
         if (sit.length) item[children] = sit
         if (!(up.length && !sit.length)) map.push(item)
     })
-    if (arrList.length == map.length)return map
-    return arrayToTree(map, id, fid)
+    return map.length > 0 ? [map[0]] : map;
+    // if (arrList.length == map.length)return map
+    // return arrayToTree(map, id, fid)
+}
+
+/**
+ * 判断字符串是否为json字符串
+ * @param str
+ * @returns {boolean}
+ */
+function isJSON(str) {
+    try {
+        JSON.parse(str);
+        return true;
+    } catch (e) {
+        return false;
+    }
 }
 
 /**

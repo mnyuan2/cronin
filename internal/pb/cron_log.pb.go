@@ -22,11 +22,11 @@ type CronLogSpan struct {
 	ParentSpanId string            `json:"parent_span_id"` // 父节点id
 	Service      string            `json:"service"`        // 服务名称
 	Operation    string            `json:"operation"`      // 操作名称
-	Tags         []*CronLogSpanTag `json:"tags"`           // 描述
+	Tags         []*CronLogSpanKV  `json:"tags"`           // 描述
 	Logs         []*CronLogSpanLog `json:"logs"`           // 日志
 }
 
-type CronLogSpanTag struct {
+type CronLogSpanKV struct {
 	Key   string               `json:"key"`
 	Value *CronLogSpanTagValue `json:"value"`
 }
@@ -36,8 +36,9 @@ type CronLogSpanTagValue struct {
 }
 
 type CronLogSpanLog struct {
-	Timestamp int64             `json:"timestamp"`
-	Fields    []*CronLogSpanTag `json:"fields"`
+	Name       string           `json:"name"`
+	Timestamp  int64            `json:"timestamp"`
+	Attributes []*CronLogSpanKV `json:"attributes"`
 }
 
 // 日志踪迹请求

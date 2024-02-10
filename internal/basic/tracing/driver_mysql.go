@@ -84,6 +84,7 @@ type mysqlIDGenerator struct {
 func (t *mysqlIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
 	if t.nonce == 0 {
 		day := t.startTime.Day()
+		dayCount.mu.Lock()
 		if dayCount.Day != day {
 			dayCount.Day = day
 			dayCount.TraceCount = 1
@@ -91,6 +92,7 @@ func (t *mysqlIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.Spa
 		}
 		t.nonce = dayCount.TraceCount
 		dayCount.TraceCount++
+		dayCount.mu.Unlock()
 	}
 
 	id := fmt.Sprintf("%02.2s%010.10v%04.4v", t.env, t.startTime.Unix(), t.nonce)
@@ -102,6 +104,7 @@ func (t *mysqlIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.Spa
 
 func (t *mysqlIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
 	day := t.startTime.Day()
+	dayCount.mu.Lock()
 	if dayCount.Day != day {
 		dayCount.Day = day
 		dayCount.TraceCount = 1
@@ -109,6 +112,7 @@ func (t *mysqlIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID)
 	}
 	nonce := dayCount.SpanCount
 	dayCount.SpanCount++
+	dayCount.mu.Unlock()
 
 	id := fmt.Sprintf("%02.2v%06.6v", dayCount.Day, nonce)
 	spanIDHex := fmt.Sprintf("%016x", id) // 16位
@@ -161,11 +165,15 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 }
 
 type MysqlSpanLog struct {
-	Timestamp int64
-	Fields    []trace.EventOption
+	Name       string               `json:"name"`
+	Timestamp  int64                `json:"timestamp"`
+	Attributes []attribute.KeyValue `json:"attributes"`
 }
 
-// mysql 驱动的 Span节点
+// MysqlSpan mysql 驱动的 Span节点
+//
+//	 实现产考 go.opentelemetry.io/otel/sdk/trac recordingSpan
+//		记录程序业务链路，不包含低层。
 type MysqlSpan struct {
 	embedded.Span
 	sc trace.SpanContext
@@ -222,8 +230,8 @@ func (s *MysqlSpan) SetAttributes(kv ...attribute.KeyValue) {
 //
 //	不支持查询
 func (s *MysqlSpan) AddEvent(name string, options ...trace.EventOption) {
-	g := &MysqlSpanLog{Timestamp: time.Now().UnixMicro()}
-	g.Fields = append(g.Fields, options...)
+	c := trace.NewEventConfig(options...)
+	g := &MysqlSpanLog{Name: name, Attributes: c.Attributes(), Timestamp: c.Timestamp().UnixMicro()}
 	s.logs = append(s.logs, g)
 }
 

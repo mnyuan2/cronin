@@ -24,7 +24,7 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 	defer func() {
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
-			span.AddEvent("x", trace.WithAttributes(attribute.String("error.object", err.Error())))
+			span.AddEvent("执行错误", trace.WithAttributes(attribute.String("error.object", err.Error())))
 		} else {
 			span.SetStatus(tracing.StatusOk, "")
 		}
@@ -54,7 +54,7 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 	_db := db.Conn(conf).WithContext(ctx)
 
 	if _db.Error != nil {
-		span.AddEvent("x", trace.WithAttributes(
+		span.AddEvent("连接失败", trace.WithAttributes(
 			attribute.String("dsn", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
 				conf.Username, conf.Password, conf.Hostname, conf.Port, conf.Database))),
 		)
@@ -63,55 +63,58 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 
 	// 执行sql
 	// 此处为局部错误，大框架是完成的，错误不必返回
-	er = job.sqlMysqlExec(_db, r.ErrAction, r.Statement)
-	if er != nil {
+	err = job.sqlMysqlExec(r, _db, r.Statement)
+	if err != nil {
 		span.SetStatus(codes.Error, er.Error())
 		// 执行告警推送
-		job.messagePush(ctx, enum.StatusDisable, er.Error(), nil, 0)
+		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), 0)
 	}
 	return nil
 }
 
-func (job *CronJob) sqlMysqlExec(_db *gorm.DB, errAction int, statement []string) (err error) {
+func (job *CronJob) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []string) errs.Errs {
 	var tx *gorm.DB
-	if errAction == models.SqlErrActionRollback {
+	if r.ErrAction == models.SqlErrActionRollback {
 		tx = _db.Begin()
 	} else {
 		tx = _db
 	}
 
 	for _, sql := range statement {
-		err = job.sqlMysqlItem(tx, sql)
+		err := job.sqlMysqlItem(r, tx, sql)
 		if err != nil {
-			if errAction == models.SqlErrActionAbort { // 终止
+			if r.ErrAction == models.SqlErrActionAbort { // 终止
 				return errs.New(err, "错误终止")
-			} else if errAction == models.SqlErrActionRollback { // 回滚
+			} else if r.ErrAction == models.SqlErrActionRollback { // 回滚
 				tx.Rollback()
 				return errs.New(err, "错误回滚")
-			} else if errAction == models.SqlErrActionProceed { // 继续
+			} else if r.ErrAction == models.SqlErrActionProceed { // 继续
 
 			}
 		}
 	}
 
-	if errAction == models.SqlErrActionRollback {
+	if r.ErrAction == models.SqlErrActionRollback {
 		tx = tx.Commit()
 	}
 	return nil
 }
 
-func (job *CronJob) sqlMysqlItem(_db *gorm.DB, sql string) (err error) {
-	_, span := job.tracer.Start(_db.Statement.Context, "sql-item")
-	span.AddEvent("x", trace.WithAttributes(attribute.String("sql", sql)))
+func (job *CronJob) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql string) (err error) {
+	ctx, span := job.tracer.Start(_db.Statement.Context, "sql-item")
+	span.AddEvent("", trace.WithAttributes(attribute.String("sql", sql)))
 	defer span.End()
 
 	resp := _db.Exec(sql)
 	if resp.Error != nil {
 		err = resp.Error
 		span.SetStatus(codes.Error, err.Error())
+		if r.ErrAction == models.SqlErrActionProceed {
+			go job.messagePush(ctx, enum.StatusDisable, "错误跳过继续", []byte(err.Error()), 0)
+		}
 	} else {
 		span.SetStatus(codes.Ok, "成功")
-		span.AddEvent("x", trace.WithAttributes(attribute.Int64("rows affected", resp.RowsAffected)))
+		span.AddEvent("", trace.WithAttributes(attribute.Int64("rows affected", resp.RowsAffected)))
 	}
 	return err
 }

@@ -225,6 +225,8 @@ i.el-alert__icon{
 }
 .trace-page .span-header{
     cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
 }
 .trace-page .span-detail .el-breadcrumb{
     display: inline-block;

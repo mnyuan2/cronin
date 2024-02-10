@@ -21,7 +21,6 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/attribute"
-	codes2 "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -107,14 +106,15 @@ func (job *CronJob) Run() {
 	ctx, span := job.tracer.Start(context.Background(), "job-"+job.conf.GetProtocolName())
 	defer func() {
 		if err := util.PanicInfo(recover()); err != "" {
-			span.SetStatus(codes2.Error, "执行异常")
-			span.AddEvent("x", trace.WithAttributes(attribute.String("error.object", err)))
+			span.SetStatus(tracing.StatusError, "执行异常")
+			span.AddEvent("", trace.WithAttributes(attribute.String("error.object", err)))
 		}
 		span.End()
 	}()
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
 		attribute.Int("config_id", job.conf.Id),
+		attribute.String("config_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
 		attribute.String("component", "job"),
 	)
@@ -123,7 +123,7 @@ func (job *CronJob) Run() {
 		e := cronRun.Entry(cron.EntryID(job.conf.EntryId))
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
 		if e.ID == 0 {
-			span.SetStatus(codes2.Error, "重复执行？")
+			span.SetStatus(tracing.StatusError, "重复执行？")
 			return
 		}
 	}
@@ -131,12 +131,12 @@ func (job *CronJob) Run() {
 	res, err := job.Exec(ctx)
 	if err != nil {
 		job.ErrorCount++
-		job.messagePush(ctx, enum.StatusDisable, err.Error(), res, time.Since(st).Seconds())
+		go job.messagePush(ctx, enum.StatusDisable, err.Error(), res, time.Since(st).Seconds())
 	} else {
 		span.SetStatus(tracing.StatusOk, "")
 		job.ErrorCount = 0
-		span.AddEvent("x", trace.WithAttributes(attribute.String("resp", string(res))))
-		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
+		span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
+		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
 	}
 
 	// 连续错误达到5次，任务终止。
@@ -146,14 +146,14 @@ func (job *CronJob) Run() {
 		job.conf.Status = models.ConfigStatusError
 		job.conf.EntryId = 0
 		if err := data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行失败"); err != nil {
-			span.AddEvent("x", trace.WithAttributes(attribute.String("error", "任务状态写入失败"+err.Error())))
+			span.AddEvent("", trace.WithAttributes(attribute.String("error", "任务状态写入失败"+err.Error())))
 		}
 	} else if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
 		job.conf.Status = models.ConfigStatusFinish
 		job.conf.EntryId = 0
 		if err := data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行完成"); err != nil {
-			span.AddEvent("x", trace.WithAttributes(attribute.String("error", "完成状态写入失败"+err.Error())))
+			span.AddEvent("", trace.WithAttributes(attribute.String("error", "完成状态写入失败"+err.Error())))
 		}
 	}
 }
@@ -211,7 +211,7 @@ func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err error) {
 		span.SetAttributes(
 			attribute.String("component", "cmd"),
 		)
-		span.AddEvent("x", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
+		span.AddEvent("", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
 
 		data := strings.Split(job.commandParse.Cmd, " ")
 		if len(data) < 2 {
@@ -220,11 +220,11 @@ func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err error) {
 
 		cmd := exec.Command(data[0], data[1:]...) // 合并 winds 命令
 		if res, err = cmd.Output(); err != nil {
-			span.SetStatus(codes2.Error, err.Error())
+			span.SetStatus(tracing.StatusError, err.Error())
 			return nil, err
 		} else {
 			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(res))
-			span.AddEvent("x", trace.WithAttributes(attribute.String("console", srcCoder)))
+			span.AddEvent("", trace.WithAttributes(attribute.String("console", srcCoder)))
 			return []byte(srcCoder), nil
 		}
 
@@ -242,14 +242,14 @@ func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err error) {
 		span.SetAttributes(
 			attribute.String("component", "cmd"),
 		)
-		span.AddEvent("x", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
+		span.AddEvent("", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
 
 		cmd := exec.Command("/bin/bash", "-c", job.commandParse.Cmd)
 		if res, err = cmd.Output(); err != nil {
-			span.SetStatus(codes2.Error, err.Error())
+			span.SetStatus(tracing.StatusError, err.Error())
 			return nil, errs.New(err, "执行结果错误")
 		} else {
-			span.AddEvent("x", trace.WithAttributes(attribute.String("console", string(res))))
+			span.AddEvent("", trace.WithAttributes(attribute.String("console", string(res))))
 			return res, nil
 		}
 	}
@@ -275,7 +275,8 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 	)
 
 	h, _ := jsoniter.Marshal(header)
-	span.AddEvent("x", trace.WithAttributes(
+	span.AddEvent("", trace.WithAttributes(
+		attribute.String("rul", url),
 		attribute.String("req_header", string(h)),
 		attribute.String("request", string(body)),
 	))
@@ -311,11 +312,11 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 	resp, err = io.ReadAll(res.Body)
 	if err == nil && res.StatusCode != http.StatusOK {
 		err = errs.New(fmt.Errorf("%v %s", res.StatusCode, http.StatusText(res.StatusCode)), "响应错误")
-		span.SetStatus(codes2.Error, err.Error())
+		span.SetStatus(tracing.StatusError, err.Error())
 	}
 
 	h, _ = jsoniter.Marshal(res.Header)
-	span.AddEvent("x", trace.WithAttributes(
+	span.AddEvent("", trace.WithAttributes(
 		attribute.String("resp_header", string(h)),
 		attribute.String("response", string(resp)),
 	))
@@ -331,7 +332,7 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 	)
 	defer func() {
 		if err != nil {
-			span.SetStatus(codes2.Error, err.Error())
+			span.SetStatus(tracing.StatusError, err.Error())
 		}
 		span.End()
 	}()
@@ -386,11 +387,11 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 	}
 	if h.GetStatus().Code() != codes.OK {
 		err = errs.New(fmt.Errorf("code:%v code_name:%v message:%v", int32(h.GetStatus().Code()), h.GetStatus().Code().String(), h.GetStatus().Message()), "响应错误")
-		span.SetStatus(codes2.Error, err.Error())
+		span.SetStatus(tracing.StatusError, err.Error())
 	}
 
 	span.SetAttributes(attribute.String("method", h.Method))
-	span.AddEvent("x", trace.WithAttributes(
+	span.AddEvent("", trace.WithAttributes(
 		attribute.String("req_header", string(h.GetSendHeadersMarshal())),
 		attribute.String("resp_header", string(h.GetReceiveHeadersMarshal())),
 		attribute.String("req", string(h.ReqMessages)),
@@ -405,11 +406,11 @@ func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc stri
 		return
 	}
 
-	ctx, span := job.tracer.Start(ctx, "messagePush")
+	ctx, span := job.tracer.Start(ctx, "message-push")
 	defer func() {
 		if err := util.PanicInfo(recover()); err != "" {
-			span.SetStatus(codes2.Error, "执行异常")
-			span.AddEvent("x", trace.WithAttributes(attribute.String("error.object", err)))
+			span.SetStatus(tracing.StatusError, "执行异常")
+			span.AddEvent("", trace.WithAttributes(attribute.String("error.object", err)))
 		}
 		span.End()
 	}()
@@ -475,16 +476,16 @@ func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc stri
 
 		res, err := job.messagePushItem(ctx, []byte(msg.Content), args)
 		if err != nil {
-			span.SetStatus(codes2.Error, err.Error())
+			span.SetStatus(tracing.StatusError, err.Error())
 		} else {
-			span.AddEvent("x", trace.WithAttributes(attribute.String("response", string(res))))
+			span.AddEvent("", trace.WithAttributes(attribute.String("response", string(res))))
 		}
 	}
 }
 
 // 消息发送
 func (job *CronJob) messagePushItem(ctx context.Context, templateByte []byte, args map[string]string) (res []byte, err error) {
-	ctx, span := job.tracer.Start(ctx, "messagePushItem")
+	ctx, span := job.tracer.Start(ctx, "message-push-item")
 	defer span.End()
 	// 变量替换
 	for k, v := range args {
