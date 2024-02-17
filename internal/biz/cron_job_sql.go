@@ -65,11 +65,10 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 	// 此处为局部错误，大框架是完成的，错误不必返回
 	err = job.sqlMysqlExec(r, _db, r.Statement)
 	if err != nil {
-		span.SetStatus(codes.Error, er.Error())
 		// 执行告警推送
 		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), 0)
 	}
-	return nil
+	return err
 }
 
 func (job *CronJob) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []string) errs.Errs {
@@ -108,7 +107,8 @@ func (job *CronJob) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql string) (err e
 	resp := _db.Exec(sql)
 	if resp.Error != nil {
 		err = resp.Error
-		span.SetStatus(codes.Error, err.Error())
+		span.SetStatus(codes.Error, "执行失败")
+		span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
 		if r.ErrAction == models.SqlErrActionProceed {
 			go job.messagePush(ctx, enum.StatusDisable, "错误跳过继续", []byte(err.Error()), 0)
 		}
