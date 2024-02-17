@@ -149,7 +149,7 @@ func (job *CronJob) Run() {
 	}
 
 	// 连续错误达到5次，任务终止。
-	if job.ErrorCount >= 5 || err.Code() == errs.SysError.String() {
+	if job.ErrorCount >= 5 || (err != nil && err.Code() == errs.SysError.String()) {
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
 		job.conf.Status = models.ConfigStatusError
 		job.conf.EntryId = 0
@@ -496,6 +496,8 @@ func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc stri
 		}
 		args["user.username"], _ = jsoniter.MarshalToString(username)
 		args["user.mobile"], _ = jsoniter.MarshalToString(mobile)
+		args["user.username"] = strings.ReplaceAll(args["user.username"], `"`, `\"`)
+		args["user.mobile"] = strings.ReplaceAll(args["user.mobile"], `"`, `\"`)
 
 		res, err := job.messagePushItem(ctx, []byte(msg.Content), args)
 		if err != nil {

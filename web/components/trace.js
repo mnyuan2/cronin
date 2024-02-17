@@ -61,7 +61,11 @@ var MyTrace = Vue.extend({
                     <el-table-column prop="key" width="180"> </el-table-column>
                     <el-table-column>
                          <template slot-scope="scope">
-                            <pre v-if="scope.row.value.type=='STRING' && isJSON(scope.row.value.value)" style="max-height: 350px;overflow: auto;">{{JSON.parse(scope.row.value.value)}}</pre>
+                            <!-- json格式化 -->
+                            <pre v-if="scope.row.value.type=='STRING' && isJSON(scope.row.value.value)" style="max-height: 350px;overflow: auto;line-height: 100%;">{{JSON.parse(scope.row.value.value)}}</pre>
+                            <!-- 异常文本 换行格式化 -->
+                            <pre v-else-if="scope.row.key=='error.panic'" style="max-height: 350px;overflow: auto;line-height: 120%;">{{scope.row.value.value}}</pre>
+                            <!-- 默认展示 -->
                             <div v-else>{{scope.row.value.value}}</div>
                         </template>
                     </el-table-column>
