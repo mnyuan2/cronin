@@ -449,11 +449,12 @@ func str2gbk(text []byte) []byte {
 }
 
 func TestTemplate(t *testing.T) {
+	var err error
 	str := []byte(`{
     "http": {
         "method": "POST",
         "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=909ef764-4f7e-44eb-9cba-4a5ca734ebbf",
-        "body": "{\"msgtype\":\"text\",\"text\":{\"content\":\"时间：[[log.create_dt]]\n任务[[config.name]]执行[[log.status_name]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]\",\"mentioned_mobile_list\":[\"[[user.mobile]]\"]}}",
+        "body": "{\"msgtype\":\"text\",\"text\":{\"content\":\"时间：[[log.create_dt]]\n任务[[config.name]]执行[[log.status_name]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]\",\"mentioned_mobile_list\":[[user.mobile]]}}",
         "header": [
             {
                 "key": "a",
@@ -478,11 +479,16 @@ func TestTemplate(t *testing.T) {
 		"log.duration":  "3.2s",
 		"log.create_dt": "2023-01-01 11:12:59",
 		"user.username": "管理员,大王",
-		"user.mobile":   "13118265689,12345678910",
+		"user.mobile":   "",
 	}
 
 	body := `Get "http://baidu.com": EOF
 `
+	mobles := []string{"13118265689", "12345678910"}
+	args["user.mobile"], err = jsoniter.MarshalToString(mobles)
+	if err != nil {
+		t.Fatal("数据转义错误", err.Error())
+	}
 
 	args["log.body"] = strings.ReplaceAll(body, `"`, `\"`)
 	// 变量替换

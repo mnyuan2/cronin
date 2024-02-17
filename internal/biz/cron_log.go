@@ -90,7 +90,8 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 	}
 	end := time.Now().Add(-re)
 	resp = &pb.CronLogDelResponse{}
-	resp.Count, err = data.NewCronLogData(dm.ctx).DelBatch(end)
+	w := db.NewWhere().Lte("timestamp", end.UnixMicro())
+	resp.Count, err = data.NewCronLogSpanData(dm.ctx).Del(w)
 
 	return resp, err
 }

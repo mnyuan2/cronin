@@ -6,7 +6,6 @@ import (
 	"cron/internal/pb"
 	"errors"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
 	"strings"
 )
 
@@ -21,12 +20,12 @@ func CheckHttp(http *pb.CronHttp) error {
 	if models.ProtocolHttpMethodMap()[http.Method] == "" {
 		return errors.New("未支持的请求method")
 	}
-	if http.Body != "" {
-		temp := map[string]any{} // 目前仅支持json
-		if err := jsoniter.UnmarshalFromString(http.Body, &temp); err != nil {
-			return fmt.Errorf("http body 输入不规范，请确认json字符串是否规范")
-		}
-	}
+	//if http.Body != "" {
+	//	temp := map[string]any{}
+	//	if err := jsoniter.UnmarshalFromString(http.Body, &temp); err != nil {
+	//		return fmt.Errorf("http body 输入不规范，请确认json字符串是否规范")
+	//	}
+	//}
 	return nil
 }
 

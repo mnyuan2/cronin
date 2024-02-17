@@ -471,8 +471,8 @@ func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc stri
 				}
 			}
 		}
-		args["user.username"] = strings.Join(username, ",")
-		args["user.mobile"] = strings.Join(mobile, ",")
+		args["user.username"], _ = jsoniter.MarshalToString(username)
+		args["user.mobile"], _ = jsoniter.MarshalToString(mobile)
 
 		res, err := job.messagePushItem(ctx, []byte(msg.Content), args)
 		if err != nil {
