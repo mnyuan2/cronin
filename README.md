@@ -45,4 +45,5 @@ GOOS=linux go build -ldflags "-X main.version=v0.xx -X main.isBuildResource=true
 ![image](./work/list.png)
 日志详情
 ![image](./work/trace.png)
-
+消息样例
+![image](./work/msg.png)
