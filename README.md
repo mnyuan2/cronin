@@ -41,6 +41,8 @@ GOOS=linux go build -ldflags "-X main.version=v0.xx -X main.isBuildResource=true
 1.  入口页地址： http://127.0.0.1:9003/
 2.  设置自己的任务
 ![image](./work/set.png)
+日志列表
 ![image](./work/list.png)
-
+日志详情
+![image](./work/trace.png)
 
