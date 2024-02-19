@@ -449,19 +449,8 @@ func str2gbk(text []byte) []byte {
 }
 
 func TestTemplate(t *testing.T) {
-	str := []byte(`{
-    "http": {
-        "method": "POST",
-        "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=909ef764-4f7e-44eb-9cba-4a5ca734ebbf",
-        "body": "{\"msgtype\":\"text\",\"text\":{\"content\":\"时间：[[log.create_dt]]\n任务[[config.name]]执行[[log.status_name]]了，总耗时[[log.duration]]秒\n结果：[[log.body]]\",\"mentioned_mobile_list\":[\"[[user.mobile]]\"]}}",
-        "header": [
-            {
-                "key": "a",
-                "value": "[[x]]"
-            }
-        ]
-    }
-}`)
+	var err error
+	str := []byte(`{"http":{"method":"POST","url":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx","body":"{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[log.create_dt]]\\n任务 [[config.name]]执行[[log.status_name]]了 \\n耗时[[log.duration]]秒\\n响应：[[log.body]]\",\n        \"mentioned_mobile_list\": [[user.mobile]]\n    }\n}","header":[{"key":"","value":""}]}}`)
 
 	// 提取模板变量
 	// 重组临时变量，默认置空，有效的写入新值
@@ -472,19 +461,28 @@ func TestTemplate(t *testing.T) {
 		"config.protocol_name": "sql脚本",
 		"log.status_name":      "成功",
 		"log.status_desc":      "success",
-		"log.body": strings.ReplaceAll(`<html>
-<meta http-equiv="refresh" content="0;url=http://www.baidu.com/">
-</html>`, `"`, `\"`),
+		"log.body": strings.ReplaceAll(`Get "http://baidu.com": EOF
+`, `"`, `\\\"`),
 		"log.duration":  "3.2s",
 		"log.create_dt": "2023-01-01 11:12:59",
-		"user.username": "管理员,大王",
-		"user.mobile":   "13118265689,12345678910",
+		"user.username": "",
+		"user.mobile":   "",
 	}
 
-	body := `Get "http://baidu.com": EOF
-`
+	mobles := []string{"01987654321", "12345678910"}
+	args["user.mobile"], err = jsoniter.MarshalToString(mobles)
+	if err != nil {
+		t.Fatal("数据转义错误", err.Error())
+	}
+	args["user.mobile"] = strings.ReplaceAll(args["user.mobile"], `"`, `\"`)
 
-	args["log.body"] = strings.ReplaceAll(body, `"`, `\"`)
+	username := []string{"大王", "二王"}
+	args["user.username"], err = jsoniter.MarshalToString(username)
+	if err != nil {
+		t.Fatal("数据转义错误", err.Error())
+	}
+	args["user.username"] = strings.ReplaceAll(args["user.username"], `"`, `\"`)
+
 	// 变量替换
 	for k, v := range args {
 		str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)

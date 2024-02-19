@@ -6,8 +6,9 @@ import (
 )
 
 type Errs interface {
-	error
-	Code() string
+	error         // 原始错误
+	Code() string // 错误码
+	Desc() string // 自定义错误描述（对错误简要说明）
 	Path() string // 调用错误路径
 	ReloadPath()
 }

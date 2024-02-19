@@ -23,7 +23,7 @@ var dbOnce sync.Once
 
 func DbConf() DataBaseConf {
 	dbOnce.Do(func() {
-		err := YamlParse("configs/database.yaml", &dbConf)
+		err := YamlParse("configs/database.yaml", &dbConf) // ../../../configs/database.yaml
 		if err != nil {
 			panic(err)
 		}
