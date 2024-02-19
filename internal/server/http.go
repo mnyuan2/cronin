@@ -43,6 +43,8 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/config/get")
 	r.POST("/config/run", httpRun)
 	r.GET("/config/register_list", httpRegister)
+	r.GET("/pipeline/list", routerPipelineList)
+	r.POST("/pipeline/set", routerPipelineSet)
 	r.GET("/log/list", routerLogList)
 	r.GET("/log/traces", routerLogTraces)
 	r.POST("/log/del", routerLogDel)

@@ -1,0 +1,49 @@
+package data
+
+import (
+	"context"
+	"cron/internal/basic/conv"
+	"cron/internal/basic/db"
+	"cron/internal/models"
+	"time"
+)
+
+type CronPipelineData struct {
+	db        *db.MyDB
+	tableName string
+}
+
+func NewCronPipelineData(ctx context.Context) *CronPipelineData {
+	return &CronPipelineData{
+		db:        db.New(ctx),
+		tableName: "cron_pipeline",
+	}
+}
+
+func (m *CronPipelineData) GetList(where *db.Where, page, size int, list interface{}) (total int64, err error) {
+	str, args := where.Build()
+
+	return m.db.Paginate(list, page, size, m.tableName, "*", "update_dt desc", str, args...)
+}
+
+func (m *CronPipelineData) Set(data *models.CronPipeline) error {
+	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
+	if data.Id > 0 {
+		return m.db.Where("id=?", data.Id).Omit("status", "status_remark", "status_dt", "entry_id", "env").Updates(data).Error
+	} else {
+		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
+		return m.db.Omit("status_dt").Create(data).Error
+	}
+}
+
+func (m *CronPipelineData) ChangeStatus(data *models.CronPipeline, remark string) error {
+	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
+	data.StatusDt = data.UpdateDt
+	data.StatusRemark = remark
+	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id").Updates(data).Error
+}
+
+func (m *CronPipelineData) GetOne(env string, Id int) (data *models.CronPipeline, err error) {
+	data = &models.CronPipeline{}
+	return data, m.db.Where("env=? and id=?", env, Id).Take(data).Error
+}

@@ -9,6 +9,7 @@ var MyHeader = Vue.extend({
                           active-text-color="#66b1ff">
                           <el-menu-item index="/" style="font-weight: 500;font-size: 110%;">cronin</el-menu-item>
                           <el-menu-item index="/config">任务</el-menu-item>
+                          <el-menu-item index="/pipeline">流水线</el-menu-item>
                           <el-menu-item index="/sql_source">sql连接</el-menu-item>
                           <!--右导航-->
                           <el-menu-item-group class="group-right">
