@@ -34,7 +34,11 @@ func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListRe
 
 	w := db.NewWhere().In("env", []string{dm.user.Env, ""})
 	for k, v := range tags {
-		w.JsonIndexEq("tags_key", "tags_val", k, v)
+		if k == "ref_id" {
+			w.Eq("ref_id", v)
+		} else {
+			w.JsonIndexEq("tags_key", "tags_val", k, v)
+		}
 	}
 
 	list := []*models.CronLogSpan{}

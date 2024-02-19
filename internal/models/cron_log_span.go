@@ -4,9 +4,10 @@ import "cron/internal/basic/enum"
 
 // CronLogSpan 第二版日志 依据规范 OpenTelemetry
 type CronLogSpan struct {
-	Env          string `json:"env" gorm:"column:env;type:varchar(32);comment:环境;"`
+	Env          string `json:"env" gorm:"column:env;type:varchar(32);index:env,priority:10;index:trace_id,priority:10;comment:环境;"`
+	RefId        string `json:"ref_id" gorm:"column:ref_id;type:varchar(32);index:env,priority:11;comment:引用id;"`
 	Timestamp    int64  `json:"timestamp" gorm:"column:timestamp;type:bigint(20);default:0;comment:开始时间us/微秒;"`
-	TraceId      string `json:"trace_id" gorm:"column:trace_id;type:varchar(32);default:'';comment:踪迹id;"` // 可以是索引
+	TraceId      string `json:"trace_id" gorm:"column:trace_id;type:varchar(32);default:'';index:trace_id,priority:11;comment:踪迹id;"`
 	SpanId       string `json:"span_id" gorm:"column:span_id;type:varchar(32);default:'';comment:节点id;"`
 	ParentSpanId string `json:"parent_span_id" gorm:"column:parent_span_id;type:varchar(32);default:'';comment:父节点id;"`
 	Service      string `json:"service" gorm:"column:service;type:varchar(120);default:'';comment:服务名称;"`

@@ -66,7 +66,7 @@ var MyConfigLog = Vue.extend({
     methods:{
         // 配置日志
         logByConfig(id){
-            api.innerGet("/log/list", {tags: JSON.stringify({config_id: id}), limit:15}, (res)=>{
+            api.innerGet("/log/list", {tags: JSON.stringify({ref_id: id}), limit:15}, (res)=>{
                 if (!res.status){
                     console.log("log/list 错误", res)
                     return this.$message.error(res.message);

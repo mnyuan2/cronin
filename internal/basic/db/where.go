@@ -128,7 +128,7 @@ func (builder *Where) JsonPathIn(field string, values interface{}, options ...Op
 
 // JsonIndexEq json查询kv相等 查询
 //
-//	示例： json_search ( tags_key, 'one', 'config_id' ) = json_search ( tags_val, 'one', '8' )
+//	示例： json_search(tags_key, 'one', 'config_id') = json_search(tags_val, 'one', '8')
 func (builder *Where) JsonIndexEq(keyField, valField string, key, val any, options ...Option) *Where {
 	builder.Raw(fmt.Sprintf("json_search(%s, 'one', ?) = json_search(%s,'one', ?)", keyField, valField), key, val)
 	return builder

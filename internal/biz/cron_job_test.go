@@ -461,17 +461,14 @@ func TestTemplate(t *testing.T) {
 		"config.protocol_name": "sql脚本",
 		"log.status_name":      "成功",
 		"log.status_desc":      "success",
-		"log.body": strings.ReplaceAll(`<html>
-<meta http-equiv="refresh" content="0;url=http://www.baidu.com/">
-</html>`, `"`, `\"`),
+		"log.body": strings.ReplaceAll(`Get "http://baidu.com": EOF
+`, `"`, `\\\"`),
 		"log.duration":  "3.2s",
 		"log.create_dt": "2023-01-01 11:12:59",
 		"user.username": "",
 		"user.mobile":   "",
 	}
 
-	body := `Get "http://baidu.com": EOF
-`
 	mobles := []string{"01987654321", "12345678910"}
 	args["user.mobile"], err = jsoniter.MarshalToString(mobles)
 	if err != nil {
@@ -486,7 +483,6 @@ func TestTemplate(t *testing.T) {
 	}
 	args["user.username"] = strings.ReplaceAll(args["user.username"], `"`, `\"`)
 
-	args["log.body"] = strings.ReplaceAll(body, `"`, `\"`)
 	// 变量替换
 	for k, v := range args {
 		str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)

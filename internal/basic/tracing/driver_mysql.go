@@ -146,6 +146,11 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 		logs:      []*MysqlSpanLog{},
 	}
 	span.tags = append(span.tags, conf.Attributes()...)
+	for _, tag := range span.tags {
+		if tag.Key == "ref_id" {
+			span.refId = fmt.Sprintf("%v", tag.Value.AsInterface())
+		}
+	}
 
 	gen := &mysqlIDGenerator{
 		startTime: span.startTime,
@@ -183,7 +188,8 @@ type MysqlSpan struct {
 	parentSpanId trace.SpanID
 	service      string
 	operation    string
-	env          string
+	env          string // 环境
+	refId        string // 来源id
 	// startTime 开始时间
 	startTime time.Time
 	// endTime 结束时间
@@ -210,6 +216,9 @@ func (s *MysqlSpan) SetStatus(status codes.Code, desc string) {
 	}
 	if desc == "" {
 		desc = status.String()
+	}
+	if len(desc) > 240 { // 长度截断
+		desc = desc[:240]
 	}
 	s.status = status
 	s.statusDesc = desc
@@ -252,6 +261,7 @@ func (s *MysqlSpan) End(...trace.SpanEndOption) {
 		Status:     int(s.status),
 		StatusDesc: s.statusDesc,
 		Env:        s.env,
+		RefId:      s.refId,
 	}
 	data.TraceId, _ = gen.ParseID(s.traceId.String())
 	data.SpanId, _ = gen.ParseID(s.spanId.String())

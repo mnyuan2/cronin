@@ -47,9 +47,9 @@ func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
 	if err != nil {
 		return nil, errs.New(err, "执行时间格式不规范")
 	}
-	//if m.execTime.Unix()-60*60*1 < time.Now().Unix() {
-	//	return nil, errs.New(nil, "执行时间至少间隔1小时以后")
-	//}
+	if m.execTime.Unix()+60 < time.Now().Unix() {
+		return nil, errs.New(nil, "执行时间必须大于当前时间")
+	}
 
 	return m, nil
 }
@@ -105,7 +105,7 @@ func (job *CronJob) Run() {
 	var err errs.Errs
 	var res []byte
 	st := time.Now()
-	ctx, span := job.tracer.Start(context.Background(), "job-"+job.conf.GetProtocolName())
+	ctx, span := job.tracer.Start(context.Background(), "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
 		if res != nil {
 			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
@@ -124,7 +124,6 @@ func (job *CronJob) Run() {
 	}()
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
-		attribute.Int("config_id", job.conf.Id),
 		attribute.String("config_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
 		attribute.String("component", "job"),
@@ -352,6 +351,7 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 	span.SetAttributes(
 		attribute.String("component", "grpc-client"),
 		attribute.String("target", r.Addr),
+		attribute.String("action", r.Action),
 	)
 	defer func() {
 		if err != nil {
@@ -413,12 +413,12 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 		err = errs.New(fmt.Errorf("code:%v code_name:%v message:%v", int32(h.GetStatus().Code()), h.GetStatus().Code().String(), h.GetStatus().Message()), "响应错误")
 	}
 
-	span.SetAttributes(attribute.String("method", h.Method))
-	span.AddEvent("", trace.WithAttributes(
-		attribute.String("req_header", string(h.GetSendHeadersMarshal())),
-		attribute.String("resp_header", string(h.GetReceiveHeadersMarshal())),
-		attribute.String("req", string(h.ReqMessages)),
-		attribute.String("resp", h.RespMessages)),
+	span.AddEvent("data", trace.WithAttributes(
+		attribute.String("method", h.Method),
+		attribute.String("request_header", string(h.GetSendHeadersMarshal())),
+		attribute.String("response_header", string(h.GetReceiveHeadersMarshal())),
+		attribute.String("request", string(h.ReqMessages)),
+		attribute.String("response", h.RespMessages)),
 	)
 	return []byte(h.RespMessages), err
 }
@@ -465,7 +465,7 @@ func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc stri
 		"config.protocol_name": job.conf.GetProtocolName(),
 		"log.status_name":      models.LogStatusMap[status],
 		"log.status_desc":      statusDesc,
-		"log.body":             strings.ReplaceAll(string(body), `"`, `\"`), // 内部存在双引号会引发错误
+		"log.body":             strings.ReplaceAll(string(body), `"`, `\\\"`), // 内部存在双引号会引发错误
 		"log.duration":         conv.Float64s().ToString(duration, 3),
 		"log.create_dt":        time.Now().Format(time.DateTime),
 		"user.username":        "",
