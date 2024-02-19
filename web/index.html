@@ -4,158 +4,13 @@
     <meta charset="UTF-8">
     <title>任务列表</title>
     <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
+    <link rel="stylesheet" href="/static/css/home.css?v=[[.version]]">
     <script src="/static/js/vue@2.7.8.js"></script>
     <script src="/static/js/element-ui@2.15.14.js"></script>
     <script src="/static/js/vue-router@3.6.5.js"></script>
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/moment.min.js"></script>
-    <style>
-        body{
-            margin: 0;
-            font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
-        }
-        .left{
-            float: left;
-        }
-        .el-header {
-            background: #151515;
-            padding: 0;
-            border: 0;
-        }
-        .el-menu--horizontal>.el-menu-item,
-        .el-submenu{
-            height: 46px;
-            line-height: 46px;
-        }
-        .el-menu--horizontal>.el-submenu .el-submenu__title {
-            height:auto;
-            line-height: 46px;
-            border-bottom: inherit;
-        }
-        .el-menu-item,.el-submenu__title {
-            list-style: none;
-            height: auto;
-            line-height: inherit;
-            list-style: none
-        }
-        /*右导航*/
-        .el-header .group-right{
-            float: right;
-            margin-right: 10px;
-        }
-        .el-header .group-right>div{
-            padding: 0 !important;
-        }
-        .el-header .group-right>ul>li{
-            display: inline-block;
-            vertical-align: middle;
-            position: relative;
-        }
-        /* menu-group 箭头图标占位正常 */
-        /* 现在的问题是下拉菜单的方位不对 */
-        .el-header .group-right ul li .el-icon-arrow-down{
-            position: static;
-            vertical-align: middle;
-            margin-left: 8px;
-            margin-top: -3px;
-        }
-        .el-header .group-right ul li .el-icon-arrow-right{
-            display: none;
-        }
-        .el-header .group-right .submenu{
-            top: 49px !important;
-            right: 0px !important;
-            left: auto !important;
-        }
-        .el-header .el-dropdown-link{
-            color: #fff;
-            border: 1px solid #525252;
-            border-radius: 6px;
-            padding: 5px 10px;
-        }
 
-        .el-header .submenu ul{
-            background-color: #fff !important;
-        }
-        .el-header .submenu li{
-            background-color: inherit !important;
-            color: #303133 !important;
-        }
-        .el-header .submenu li:hover{
-            background-color: #f2f2f2 !important;
-        }
-        .el-header .submenu a{
-            text-decoration: auto;
-            color: #303133;
-        }
-        .el-menu--popup {
-            min-width: 120px;
-        }
-
-        .icon{
-            font-size: 24px;
-        }
-        .primary{
-            color: #409EFF;
-            cursor: default;
-        }
-        .warning{
-            color: #e6a23c;
-            cursor: default;
-        }
-        .success{
-            color: #67c23a;
-            cursor: default;
-        }
-        .danger{
-            color: #f56c6c;
-            cursor: default;
-        }
-        .version{
-            margin: 0;
-            text-align: right;
-            color: #f2f2f2;
-        }
-
-        /*任务表单弹窗*/
-        .config-form-box .el-dialog__header{
-            padding: 14px 20px 10px;
-        }
-        .config-form-box .el-dialog__body{
-            padding: 6px 20px;
-        }
-        .config-form-box .el-form-item{
-            margin-bottom: 10px;
-        }
-        .config-form-box .el-tabs{
-            margin: 10px 0;
-        }
-        .http_header_box .el-input-group__prepend,
-        .http_header_box .el-input-group__append,
-        .http_url_box .el-input-group__prepend{
-            background: #FFFFFF;
-        }
-        .http_url_box .el-input-group__prepend .el-input{
-            width: 120px;
-        }
-        .http_header_box .el-input-group__prepend{
-            width: 240px;
-            padding: 0 2px;
-        }
-        .http_header_box .el-input-group__prepend input{
-            line-height: 38px;
-            height: 38px;
-            border: 0;
-            padding: 0 13px;
-        }
-        .http_header_box .el-input-group__append{
-            padding: 0 5px;
-            overflow: hidden;
-        }
-        .el-dropdown-link{
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
     <div id="app">
@@ -170,6 +25,7 @@
 <script src="/components/header.js?v=[[.version]]"></script>
 <script src="/components/config.js?v=[[.version]]"></script>
 <script src="/components/config_log.js?v=[[.version]]"></script>
+<script src="/components/trace.js?v=[[.version]]"></script>
 <script src="/components/sql_source.js?v=[[.version]]"></script>
 <script src="/components/env.js?v=[[.version]]"></script>
 <script src="/components/message_template.js?v=[[.version]]"></script>
@@ -183,6 +39,8 @@
             {path: '/sql_source', component: MySqlSource},
             {path: '/message_template', component: MyMessageTemplate},
             {path: '/users', component: MyUsers},
+            {path: '/logs', component: MyConfigLog},
+            {path: '/trace', component: MyTrace},
         ]
     })
     // vue

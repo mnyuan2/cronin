@@ -29,6 +29,91 @@ function getDatetimeString(d) {
 }
 
 /**
+ * 持续时间单位转换
+ * @param duration 持续时间
+ * @param inFormat 输入单位 us.微秒、ms.毫秒、s.秒、m.分钟、h.小时、d.天
+ * @param outFormat 输出格式 latest.表示最近的格式
+ * @param lang 语言 en.英文、zh.中文
+ * @returns {string}
+ */
+function durationTransform(duration, inFormat='us', outFormat='latest',lang='en') {
+    let langue = {
+        us: {zh: "微秒", en: "μs"},
+        ms: {zh: "毫秒", en: "ms"},
+        s: {zh: "秒", en: "s"},
+        m: {zh: "分钟", en: "m"},
+        h: {zh: "小时", en: "h"},
+        d: {zh: "天", en: "d"},
+    };
+
+    if (outFormat == 'latest'){
+        if (inFormat == 'us'){ // 因为包最小支持毫秒，所以微秒要转毫秒
+            inFormat = 'ms'
+            duration /=1000
+        }
+
+        let dur = moment.duration(duration, inFormat)
+        // 关于单位输出示例
+        // moment.duration(6396.528,'ms').seconds()     6
+        // moment.duration(6396.528,'ms').asSeconds()   6.396528
+        // 特别说明
+        // moment.duration(6396.528, 'ms').asMilliseconds()  // 6396.528 输出毫秒单位
+        // moment.duration(6396.528, 'ms').milliseconds()    // 396.528 仅输出毫秒的部分
+
+        if (inFormat == 'ms' && duration < 1){
+            return duration*1000+langue['us'][lang]
+        }else if (dur.asMilliseconds() < 1000){
+            return dur.asMilliseconds()+langue['ms'][lang]
+        } else if (dur.seconds() < 60){
+            return Math.round(dur.asMilliseconds())/1000+langue['s'][lang]
+        }else if (dur.minutes() < 60){
+            return dur.seconds() / 60 + langue['m'][lang]
+        }else if (dur.hours() < 24){
+            return dur.minutes() / 60 + langue['h'][lang]
+        }else{
+            return dur.hours() / 24 + langue['d'][lang]
+        }
+    }
+    // 跟过功能根据需求实现
+    alert("功能未实现...")
+}
+
+/**
+ * 一维array数组转树型多维结构
+ * @param arrList 数组
+ * @param id 主键
+ * @param fid 子健
+ * @param children 子集名称
+ * @returns {*[]|*}
+ */
+function arrayToTree(arrList, id, fid, children = 'children') {
+    let map = []
+    arrList.forEach(item => {
+        let up = arrList.filter(x => x[id] == item[fid])
+        let sit = arrList.filter(x => x[fid] == item[id])
+        if (sit.length) item[children] = sit
+        if (!(up.length && !sit.length)) map.push(item)
+    })
+    return map.length > 0 ? [map[0]] : map;
+    // if (arrList.length == map.length)return map
+    // return arrayToTree(map, id, fid)
+}
+
+/**
+ * 判断字符串是否为json字符串
+ * @param str
+ * @returns {boolean}
+ */
+function isJSON(str) {
+    try {
+        JSON.parse(str);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
  * 业务枚举
  * @type {{dicEnv: number, dicSqlSource: number, envKey: string}}
  */

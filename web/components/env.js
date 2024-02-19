@@ -68,7 +68,7 @@ var MyEnv = Vue.extend({
                     ],
                     name: [
                         { required: true, message: '请输入key', trigger: 'blur'},
-                        { min: 1, max: 60, message: '长度在 1 到 60 个字符', trigger: 'blur' }
+                        { min: 1, max: 8, message: '长度在 1 到 8 个字符', trigger: 'blur' }
                     ],
                 }
             }, // 表单

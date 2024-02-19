@@ -11,7 +11,7 @@ import (
 func AutoMigrate(db *db.MyDB) {
 	// 迁移表结构
 	err := db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-		AutoMigrate(&CronSetting{}, &CronConfig{}, &CronLog{}, &CronUser{})
+		AutoMigrate(&CronSetting{}, &CronConfig{}, &CronLogSpan{}, &CronUser{})
 	if err != nil {
 		panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 	}
@@ -36,10 +36,23 @@ func AutoMigrate(db *db.MyDB) {
 	if msg.Id == 0 { // 后期会有多条默认消息模板
 		db.CreateInBatches([]*CronSetting{
 			{
-				Scene:    "msg",
-				Name:     "",
-				Title:    "企微xx群",
-				Content:  `{"http":{"method":"POST","url":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx","body":"{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[log.create_dt]]\\n任务 [[config.name]]执行[[log.status_name]]了 \\n耗时[[log.duration]]秒\\n响应：[[log.body]]\",\n        \"mentioned_mobile_list\": [\n            \"[[user.mobile]]\"\n        ]\n    }\n}","header":[{"key":"","value":""}]}}`,
+				Scene: "msg",
+				Name:  "",
+				Title: "企微xx群",
+				Content: `{
+	"http":{
+		"method":"POST",
+		"url":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx",
+		"body":"{
+			\"msgtype\": \"text\",
+			\"text\": {
+				\"content\": \"时间：[[log.create_dt]]\\n任务 [[config.name]]执行[[log.status_name]]了 \\n耗时[[log.duration]]秒\\n响应：[[log.body]]\",
+				\"mentioned_mobile_list\": [[user.mobile]]
+			}
+		}",
+		"header":[{"key":"","value":""}]
+	}
+}`,
 				Status:   enum.StatusActive,
 				CreateDt: time.Now().Format(time.DateTime),
 				UpdateDt: time.Now().Format(time.DateTime),

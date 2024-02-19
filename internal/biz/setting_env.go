@@ -85,8 +85,8 @@ func (dm *SettingEnvService) Set(r *pb.SettingEnvSetRequest) (resp *pb.SettingEn
 	if r.Name == "" {
 		return nil, errors.New("key 为必填")
 	}
-	if len(r.Name) >= 32 {
-		return nil, errors.New("key 长度不得超过32字符")
+	if len(r.Name) > 8 {
+		return nil, errors.New("key 长度不得超过8字符")
 	}
 	if !conv.NewStr().IsLettersAndNumbers(r.Name) {
 		return nil, errors.New("key 只能使用字母或数字")
