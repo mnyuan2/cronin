@@ -1,10 +1,11 @@
 package enum
 
 const (
-	DicSqlSource = 1 // sql连接源
-	DicEnv       = 2 // 程序环境
-	DicMsg       = 3 // 消息模板
-	DicUser      = 4 // 用户
+	DicEnv           = 2  // 程序环境
+	DicMsg           = 3  // 消息模板
+	DicUser          = 4  // 用户
+	DicSqlSource     = 11 // sql 资源连接
+	DicJenkinsSource = 12 // jenkins 资源连接
 )
 
 const (

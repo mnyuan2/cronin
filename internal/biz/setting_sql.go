@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -30,7 +31,7 @@ func NewSettingSqlService(ctx context.Context, user *auth.UserToken) *SettingSql
 }
 
 // 任务配置列表
-func (dm *SettingSqlService) List(r *pb.SettingSqlListRequest) (resp *pb.SettingSqlListReply, err error) {
+func (dm *SettingSqlService) List(r *pb.SettingListRequest) (resp *pb.SettingListReply, err error) {
 	// 构建查询条件
 	if r.Page <= 1 {
 		r.Page = 1
@@ -38,27 +39,36 @@ func (dm *SettingSqlService) List(r *pb.SettingSqlListRequest) (resp *pb.Setting
 	if r.Size <= 10 {
 		r.Size = 20
 	}
-	resp = &pb.SettingSqlListReply{
+	resp = &pb.SettingListReply{
 		Page: &pb.Page{
 			Page: r.Page,
 			Size: r.Size,
 		},
 	}
+	source, ok := models.DicToSource[r.Type]
+	if !ok {
+		return nil, errs.New(nil, "type参数错误")
+	}
+
 	list := []*models.CronSetting{}
-	resp.Page.Total, err = data.NewCronSettingData(dm.ctx).GetList(models.SceneSqlSource, dm.user.Env, r.Page, r.Size, &list)
+	resp.Page.Total, err = data.NewCronSettingData(dm.ctx).GetList(source, dm.user.Env, r.Page, r.Size, &list)
 	if err != nil {
 		return nil, err
 	}
 
 	// 格式化
-	resp.List = make([]*pb.SettingSqlListItem, len(list))
+	resp.List = make([]*pb.SettingListItem, len(list))
 	for i, item := range list {
-		data := &pb.SettingSqlListItem{
+		data := &pb.SettingListItem{
 			Id:       item.Id,
 			Title:    item.Title,
 			CreateDt: item.CreateDt,
 			UpdateDt: item.UpdateDt,
-			Source:   &pb.SettingSqlSource{},
+			Type:     models.SourceToDic[item.Scene],
+			Source: &pb.SettingSource{
+				Sql:     &pb.SettingSqlSource{},
+				Jenkins: &pb.SettingJenkinsSource{},
+			},
 		}
 		jsoniter.UnmarshalFromString(item.Content, data.Source)
 		resp.List[i] = data
@@ -69,29 +79,36 @@ func (dm *SettingSqlService) List(r *pb.SettingSqlListRequest) (resp *pb.Setting
 
 // 设置源
 func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
+	source, ok := models.DicToSource[r.Type]
+	if !ok {
+		return nil, errs.New(nil, "type参数错误")
+	}
+
 	one := &models.CronSetting{}
 	_data := data.NewCronSettingData(dm.ctx)
 	ti := conv.TimeNew()
 	oldSource := &pb.SettingSqlSource{}
 	// 分为新增和编辑
 	if r.Id > 0 {
-		one, err = _data.GetSqlSourceOne(dm.user.Env, r.Id)
+		one, err = _data.GetSourceOne(dm.user.Env, r.Id)
 		if err != nil {
 			return nil, err
 		}
 		jsoniter.UnmarshalFromString(one.Content, oldSource)
 	} else {
-		one.Scene = models.SceneSqlSource
+		one.Scene = source
 		one.Env = dm.user.Env
 		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
 	}
 
-	// 提交密码与旧密码不一致就加密
-	if r.Source.Password != "" && r.Source.Password != oldSource.Password {
-		r.Source.Password, err = models.SqlSourceEncrypt(r.Source.Password)
-		if err != nil {
-			return nil, fmt.Errorf("加密失败，%w", err)
+	if r.Source.Sql != nil {
+		// 提交密码与旧密码不一致就加密
+		if r.Source.Sql.Password != "" && r.Source.Sql.Password != oldSource.Password {
+			r.Source.Sql.Password, err = models.SqlSourceEncrypt(r.Source.Sql.Password)
+			if err != nil {
+				return nil, fmt.Errorf("加密失败，%w", err)
+			}
 		}
 	}
 
@@ -136,7 +153,7 @@ func (dm *SettingSqlService) ChangeStatus(r *pb.SettingChangeStatusRequest) (res
 
 	// 同一个任务，这里要加请求锁
 	_data := data.NewCronSettingData(dm.ctx)
-	one, err := _data.GetSqlSourceOne(dm.user.Env, r.Id)
+	one, err := _data.GetSourceOne(dm.user.Env, r.Id)
 	if err != nil {
 		return nil, err
 	}

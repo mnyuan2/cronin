@@ -176,7 +176,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if err := dtos.CheckSql(r.Command.Sql); err != nil {
 			return nil, err
 		}
-		if one, _ := data.NewCronSettingData(dm.ctx).GetSqlSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
 			return nil, errors.New("sql 连接 配置有误，请确认")
 		}
 	}

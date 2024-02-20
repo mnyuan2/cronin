@@ -28,7 +28,7 @@
 <script src="/components/pipeline.js?v=[[.version]]"></script>
 <script src="/components/config_log.js?v=[[.version]]"></script>
 <script src="/components/trace.js?v=[[.version]]"></script>
-<script src="/components/sql_source.js?v=[[.version]]"></script>
+<script src="/components/source.js?v=[[.version]]"></script>
 <script src="/components/env.js?v=[[.version]]"></script>
 <script src="/components/message_template.js?v=[[.version]]"></script>
 <script src="/components/users.js?v=[[.version]]"></script>
@@ -39,7 +39,7 @@
             { path: '/', redirect: '/config'},
             { path: '/config', component: MyConfig},
             { path: '/pipeline', component: MyPipeline},
-            {path: '/sql_source', component: MySqlSource},
+            {path: '/source', component: MySource},
             {path: '/message_template', component: MyMessageTemplate},
             {path: '/users', component: MyUsers},
             {path: '/logs', component: MyConfigLog},

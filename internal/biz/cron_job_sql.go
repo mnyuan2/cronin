@@ -31,7 +31,7 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 		span.End()
 	}()
 
-	source, er := data.NewCronSettingData(ctx).GetSqlSourceOne(job.conf.Env, r.Source.Id)
+	source, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.Source.Id)
 	if er != nil {
 		return errs.New(er, "连接配置异常")
 	}

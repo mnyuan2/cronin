@@ -120,7 +120,7 @@ var MyPipeline = Vue.extend({
             
                     <!-- 任务设置弹窗 -->
                     <el-dialog title="任务设置" :visible.sync="config.boxShow">
-                        <my-config-form :config_id="config.id"></my-config-form>
+                        <my-config-form :config_id="config.id" mode="pipeline"></my-config-form>
                     </el-dialog>
                     <!-- 推送设置弹窗 -->
                     <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">

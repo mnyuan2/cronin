@@ -121,10 +121,11 @@ const Enum ={
     envKey: "env",
     systemInfoKey: "system_info",
     dicKey: "dic",
-    dicSqlSource: 1,
     dicEnv: 2,
     dicMsg: 3,
     dicUser: 4,
+    dicSqlSource: 11,
+    dicJenkinsSource: 12,
 }
 
 /**

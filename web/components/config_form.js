@@ -9,7 +9,7 @@ var MyConfigForm = Vue.extend({
             <el-radio v-model="form.type" label="2">单次</el-radio>
         </el-form-item>
 
-        <el-form-item label="时间*" label-width="76px">
+        <el-form-item label="时间*" label-width="76px" v-if="mode=='config'">
             <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
             <el-date-picker 
                 style="width: 100%"
@@ -21,6 +21,7 @@ var MyConfigForm = Vue.extend({
                 :picker-options="pickerOptions">
             </el-date-picker>
         </el-form-item>
+        
         <el-form-item>
             <el-tabs type="border-card" v-model="form.protocol">
                 <el-tab-pane label="http" name="1">
@@ -32,7 +33,6 @@ var MyConfigForm = Vue.extend({
                             </el-select>
                         </el-input>
                     </el-form-item>
-
                     <el-form-item label="请求Header" class="http_header_box">
                         <el-input v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
                             <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
@@ -43,6 +43,7 @@ var MyConfigForm = Vue.extend({
                         <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                     </el-form-item>
                 </el-tab-pane>
+                
                 <el-tab-pane label="rpc" name="2">
                     <el-form-item label="请求模式">
                         <el-radio v-model="form.command.rpc.method" label="GRPC">GRPC</el-radio>
@@ -74,9 +75,9 @@ var MyConfigForm = Vue.extend({
                     </el-form-item>
                     <el-form-item label="链接">
                         <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
-                            <el-option v-for="(dic_v,dic_k) in dic_sql_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                            <el-option v-for="(dic_v,dic_k) in dic_list.sql_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                         </el-select>
-                        <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
+                        <el-button type="text" style="margin-left: 20px" @click="sourceBox(true)">设置链接</el-button>
                     </el-form-item>
                     <el-form-item label="执行语句">
                         <div><el-button type="text" @click="sqlSetShow(-1,'')">添加<i class="el-icon-plus"></i></el-button></div>
@@ -102,6 +103,25 @@ var MyConfigForm = Vue.extend({
                         </el-tooltip>
                     </el-form-item>
                 </el-tab-pane>
+                
+                <el-tab-pane label="jenkins" name="5">
+                    <el-form-item label="链接">
+                        <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
+                            <el-option v-for="(dic_v,dic_k) in dic_list.jenkins_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                        </el-select>
+                        <el-button type="text" style="margin-left: 20px" @click="sourceBox(true)">设置链接</el-button>
+                    </el-form-item>
+                    <el-form-item label="项目">
+                        <el-input v-model="form.name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="请求Header" class="http_header_box">
+                        <el-input v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
+                            <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
+                            <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
+                        </el-input>
+                    </el-form-item>
+                </el-tab-pane>
+                
             </el-tabs>
         </el-form-item>
         <el-form-item label="备注" label-width="43px">
@@ -117,10 +137,15 @@ var MyConfigForm = Vue.extend({
         </el-form-item>
     </el-form>
     <div slot="footer" class="dialog-footer">
-        <el-button @click="configRun()" class="left" v-show="form.type==1">执行一下</el-button>
+        <el-button @click="configRun()" class="left" v-show="form.type==1" v-if="mode=='config'">执行一下</el-button>
         <el-button @click="setConfigShow = false">取 消</el-button>
         <el-button type="primary" @click="setCron()">确 定</el-button>
     </div>
+    
+    <!-- sql链接源管理弹窗 -->
+    <el-drawer title="链接管理" :visible.sync="source.boxShow" size="40%" wrapperClosable="false" :before-close="sourceBox(-1)">
+        <my-sql-source></my-sql-source>
+    </el-drawer>
 </div>`,
     name: "MyConfigForm",
     props: {
@@ -133,11 +158,19 @@ var MyConfigForm = Vue.extend({
             mode: 'config',
 
             sys_info:{},
-            dic_sql_source:[],
+            dic_list:{
+                sql_source:[],
+                jenkins_source:[],
+                user:[],
+                msg:[],
+            },
 
             form:{},
             hintSpec: "* * * * * *",
-            sqlSourceBoxShow: false,
+            source: {
+                boxShow: false,
+                dic_type: 0,
+            },
             sqlSet: {
                 show: false, // 是否显示
                 title: '添加',
@@ -166,6 +199,7 @@ var MyConfigForm = Vue.extend({
         api.systemInfo((res)=>{
             this.sys_info = res;
         })
+        this.getDicSource()
     },
     // 模块初始化
     mounted(){},
@@ -217,6 +251,13 @@ var MyConfigForm = Vue.extend({
                         statement:[],
                         err_action: "1",
                     },
+                    jenkins:{
+                        source:{
+                            id: "",
+                        },
+                        name: "",
+                        params: [{"key":"","value":""}]
+                    }
                 },
                 msg_set: []
             }
@@ -239,11 +280,12 @@ var MyConfigForm = Vue.extend({
             this.form.command.http.header.splice(index,1)
         },
         // 枚举
-        getDicSqlSource(){
-            api.dicList([Enum.dicSqlSource, Enum.dicUser, Enum.dicMsg],(res) =>{
-                this.dic_sql_source = res[Enum.dicSqlSource]
-                this.dic_user = res[Enum.dicUser]
-                this.dic_msg = res[Enum.dicMsg]
+        getDicSource(){
+            api.dicList([Enum.dicSqlSource, Enum.dicJenkinsSource, Enum.dicUser, Enum.dicMsg],(res) =>{
+                this.dic_list.sql_source = res[Enum.dicSqlSource]
+                this.dic_list.jenkins_source = res[Enum.dicJenkinsSource]
+                this.dic_list.user = res[Enum.dicUser]
+                this.dic_list.msg = res[Enum.dicMsg]
             })
         },
         // 解析proto内容
@@ -258,6 +300,40 @@ var MyConfigForm = Vue.extend({
                 }
                 this.form.command.rpc.actions = res.data.actions
             })
+        },
+        // source box
+        sourceBox(e){
+            if (e == -1){
+                this.source.boxShow = false
+                this.getDicSource() // 关闭弹窗要重载枚举
+                return
+            }else if (e > 1){
+                this.source.dic_type = e
+                this.source.boxShow = true
+            }else{
+                return this.$message.warning('参数不规范')
+            }
+        },
+        // 推送弹窗
+        msgBoxShow(index, oldData){
+            if (index === "" || index == null || isNaN(index)){
+                console.log('msgSetShow', index, oldData)
+                return this.$message.error("索引位标志异常");
+            }
+            if (oldData == undefined || index < 0){
+                oldData = {
+                    status: 1,
+                    msg_id: "",
+                    notify_user_ids: [],
+                }
+            }else if (typeof oldData != 'object'){
+                console.log('推送信息异常', oldData)
+                return this.$message.error("推送信息异常");
+            }
+            this.msgSet.show = true
+            this.msgSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
+            this.msgSet.title = this.msgSet.index < 0? '添加' : '编辑';
+            this.msgSet.data = oldData
         },
     }
 })
