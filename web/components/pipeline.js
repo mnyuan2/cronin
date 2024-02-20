@@ -4,7 +4,7 @@ var MyPipeline = Vue.extend({
 <!--                        <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>-->
 <!--                        <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>-->
                         <div style="float: right">
-                            <el-button type="text" @click="createShow()">添加流水线</el-button>
+                            <el-button type="text" @click="formBox(0)">添加流水线</el-button>
 <!--                            <el-button type="text" @click="getRegisterList()">已注册任务</el-button>-->
                         </div>
                     </el-menu>
@@ -48,8 +48,8 @@ var MyPipeline = Vue.extend({
                     </el-pagination>
                     
                     
-                    <!-- 流水线设置表单 -->
-                    <el-drawer :title="form.boxTitle" :visible.sync="form.boxShow" :close-on-click-modal="false" class="config-form-box">
+                    <!-- 流水线设置表单 :before-close="configLogBox(0)" -->
+                    <el-drawer :title="form.boxTitle" :visible.sync="form.boxShow" size="60%" wrapperClosable="false">
                         <el-form :model="form">
                             <el-form-item label="名称*" label-width="76px">
                                 <el-input v-model="form.name"></el-input>
@@ -60,21 +60,21 @@ var MyPipeline = Vue.extend({
 <!--                            </el-form-item>-->
             
                             <el-form-item label="时间*" label-width="76px">
-                                <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
+                                <el-input v-show="form.data.type==1" v-model="form.data.spec" :placeholder="form.hintSpec"></el-input>
                                 <el-date-picker 
                                     style="width: 100%"
-                                    v-show="form.type==2" 
-                                    v-model="form.spec" 
+                                    v-show="form.data.type==2" 
+                                    v-model="form.data.spec" 
                                     value-format="yyyy-MM-dd HH:mm:ss"
                                     type="datetime" 
                                     placeholder="选择运行时间" 
-                                    :picker-options="pickerOptions">
+                                    :picker-options="form.pickerOptions">
                                 </el-date-picker>
                             </el-form-item>
                             
                             <el-form-item label="任务" label-width="76px">
-                                <div><el-button type="text" @click="msgBoxShow(-1)">添加<i class="el-icon-plus"></i></el-button></div>
-                                <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                <div><el-button type="text" @click="configBox(0)">添加<i class="el-icon-plus"></i></el-button></div>
+                                <div v-for="(msg,msg_index) in form.data.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                     <el-row v-html="msg.descrition"></el-row>
                                     <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
@@ -82,7 +82,7 @@ var MyPipeline = Vue.extend({
                             </el-form-item>
                             
                             <el-form-item label="备注" label-width="43px">
-                                <el-input v-model="form.remark"></el-input>
+                                <el-input v-model="form.data.remark"></el-input>
                             </el-form-item>
                             <el-form-item label-width="2px">
                                 <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
@@ -93,19 +93,19 @@ var MyPipeline = Vue.extend({
                                 </div>
                             </el-form-item>
                         </el-form>
-                        <div slot="footer" class="dialog-footer">
+                        <div>
 <!--                            <el-button @click="configRun()" class="left" v-show="form.type==1">执行一下</el-button>-->
-                            <el-button @click="form.boxShow = false">取 消</el-button>
-                            <el-button type="primary" @click="setCron()">确 定</el-button>
+                            <el-button size="small" @click="formBox(-1)">取 消</el-button>
+                            <el-button type="primary" size="small" @click="submitForm()">确 定</el-button>
                         </div>
                     </el-drawer>
                     <!-- 任务日志弹窗 -->
-                    <el-drawer :title="configLog.title" :visible.sync="configLog.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBox(0)">
-                        <my-config-log :config_id="configLog.id"></my-config-log>
+                    <el-drawer :title="log.title" :visible.sync="log.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBox(0)">
+                        <my-config-log :config_id="log.id"></my-config-log>
                     </el-drawer>
                     <!-- 注册任务列表弹窗 -->
-                    <el-drawer title="已注册任务" :visible.sync="registerListShow" direction="rtl" size="40%" wrapperClosable="false">
-                        <el-table :data="registerList">
+                    <el-drawer title="已注册任务" :visible.sync="register.boxShow" direction="rtl" size="40%" wrapperClosable="false">
+                        <el-table :data="register.items">
                             <el-table-column property="id" label="编号"></el-table-column>
                             <el-table-column property="spec" label="执行时间"></el-table-column>
                             <el-table-column property="update_dt" label="下一次执行"></el-table-column>
@@ -119,8 +119,8 @@ var MyPipeline = Vue.extend({
                     </el-drawer>
             
                     <!-- 任务设置弹窗 -->
-                    <el-dialog title="任务设置" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
-                        <my-config-form></my-config-form>
+                    <el-dialog title="任务设置" :visible.sync="config.boxShow">
+                        <my-config-form :config_id="config.id"></my-config-form>
                     </el-dialog>
                     <!-- 推送设置弹窗 -->
                     <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
@@ -149,7 +149,7 @@ var MyPipeline = Vue.extend({
                         </span>
                     </el-dialog>
                 </el-main>`,
-    name: "MyConfig",
+    name: "MyPipeline",
     data(){
         return {
             dic_user: [],
@@ -181,6 +181,18 @@ var MyPipeline = Vue.extend({
                 boxShow: false, // 新增弹窗
                 boxTitle: '',
                 hintSpec: "* * * * * *",
+                // 日期选择器设置
+                pickerOptions: {
+                    disabledDate(time){
+                        return time.getTime() < Date.now() - 8.64e7
+                    },
+                    selectableRange: "00:00:00 - 23:01:59",
+                },
+            },
+            // 任务弹窗
+            config:{
+                boxShow:false,
+                id:0
             },
             // 消息设置弹窗
             msgSet:{
@@ -196,19 +208,12 @@ var MyPipeline = Vue.extend({
                 id: 0,
                 title:""
             },
-            // 日期选择器设置
-            pickerOptions: {
-                disabledDate(time){
-                    return time.getTime() < Date.now() - 8.64e7
-                },
-                selectableRange: "00:00:00 - 23:01:59",
-            },
 
         }
     },
     // 模块初始化
     created(){
-        this.form = this.initFormData()
+        this.form.data = this.initFormData()
         this.getDicSqlSource()
     },
     // 模块初始化
@@ -218,12 +223,12 @@ var MyPipeline = Vue.extend({
     watch:{
         "form.spec":{
             handler(v){
-                if (this.form.type == 2){ // 年月日的变化控制
+                if (this.form.data.type == 2){ // 年月日的变化控制
                     let cur = moment()
                     if (moment(v).format('YYYY-MM-DD') == cur.format('YYYY-MM-DD')){
-                        this.pickerOptions.selectableRange = `${cur.format('HH:mm:ss')} - 23:59:59`
+                        this.form.pickerOptions.selectableRange = `${cur.format('HH:mm:ss')} - 23:59:59`
                     }else{
-                        this.pickerOptions.selectableRange = "00:00:00 - 23:59:59"
+                        this.form.pickerOptions.selectableRange = "00:00:00 - 23:59:59"
                     }
                 }
             }
@@ -256,7 +261,7 @@ var MyPipeline = Vue.extend({
                     res.data.list[i].topRatio = 100 - ratio * 100
                 }
                 this.list = res.data.list;
-                this.listPage = res.data.page;
+                this.list.page = res.data.page;
             })
         },
         handleSizeChange(val) {
@@ -299,12 +304,6 @@ var MyPipeline = Vue.extend({
                 this.getList(); // 刷新当前页
             })
         },
-        // 添加弹窗
-        addForm(){
-            this.form.boxShow = true
-            this.form.boxTitle = '添加流水线'
-            this.form.data = this.initFormData()
-        },
         initFormData(){
             return  {
                 type: '2',
@@ -313,17 +312,25 @@ var MyPipeline = Vue.extend({
             }
         },
         // 编辑弹窗
-        editForm(row){
-            this.form.boxShow = true
-            this.form.boxTitle = '编辑流水线'
-            this.form.data = row
+        formBox(row){
+            if (row == 0 || row == undefined){ // 添加显示
+                this.form.boxShow = true
+                this.form.boxTitle = '添加流水线'
+                this.form.data = this.initFormData()
+            }else if (row == -1){ // 关闭弹窗盒子
+                this.form.boxShow = false
+            }else{ // 编辑显示
+                this.form.boxShow = true
+                this.form.boxTitle = '编辑流水线'
+                this.form.data = row
 
-            for (let i in row.msg_set){
-                this.form.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
+                for (let i in row.msg_set){
+                    this.form.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
+                }
+                if (this.form.msg_set == null){}
+                this.form.data.status = this.form.data.status.toString() // 这里要转字符串，否则可能显示数字
+                console.log("编辑：",this.form.data)
             }
-            if (this.form.msg_set == null){}
-            this.form.data.status = this.form.data.status.toString() // 这里要转字符串，否则可能显示数字
-            console.log("编辑：",this.form.data)
         },
         // 改变状态
         changeStatus(row, newStatus){
@@ -479,20 +486,21 @@ var MyPipeline = Vue.extend({
 
         // 执行一下
         configRun(){
+            let data = this.form.data
             // 主要是强制类型
             let body = {
-                id: this.form.id,
-                name: this.form.name,
-                type: Number(this.form.type),
-                spec: this.form.spec,
-                protocol: Number(this.form.protocol),
-                command: this.form.command,
-                remark: this.form.remark,
+                id: data.id,
+                name: data.name,
+                type: Number(data.type),
+                spec: data.spec,
+                // protocol: Number(data.protocol),
+                // command: data.command,
+                remark: data.remark,
             }
-            body.command.sql.err_action = Number(body.command.sql.err_action)
-            body.command.sql.source.id = Number(body.command.sql.source.id)
+            // body.command.sql.err_action = Number(body.command.sql.err_action)
+            // body.command.sql.source.id = Number(body.command.sql.source.id)
 
-            api.innerPost("/config/run", body, (res)=>{
+            api.innerPost("/pipeline/run", body, (res)=>{
                 if (!res.status){
                     return this.$message({
                         message: res.message,
@@ -502,7 +510,21 @@ var MyPipeline = Vue.extend({
                 }
                 return this.$message.success("ok."+res.data.result)
             })
-        }
+        },
+        // 任务盒子弹窗
+        configBox(e){
+            if (e == 0 || e == undefined){ // 新增
+                this.config.boxShow = true
+                this.config.id = 0
+            }else if (e == -1){ // 关闭
+                this.config.boxShow = false
+                this.config.id = 0
+            }else{ // 编辑
+                this.config.boxShow = true
+                this.config.id = e
+            }
+            console.log("任务盒子",this.config)
+        },
     }
 })
 

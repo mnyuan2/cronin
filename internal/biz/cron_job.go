@@ -300,7 +300,7 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 	h, _ := jsoniter.Marshal(header)
 	span.AddEvent("", trace.WithAttributes(
 		attribute.String("rul", url),
-		attribute.String("req_header", string(h)),
+		attribute.String("request_header", string(h)),
 		attribute.String("request", string(body)),
 	))
 
@@ -339,7 +339,7 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 
 	h, _ = jsoniter.Marshal(res.Header)
 	span.AddEvent("", trace.WithAttributes(
-		attribute.String("resp_header", string(h)),
+		attribute.String("response_header", string(h)),
 		attribute.String("response", string(resp)),
 	))
 	return resp, err
