@@ -118,9 +118,13 @@ var MyPipeline = Vue.extend({
                         </el-table>
                     </el-drawer>
             
-                    <!-- 任务设置弹窗 -->
-                    <el-dialog title="任务设置" :visible.sync="config.boxShow">
-                        <my-config-form :config_id="config.id" mode="pipeline"></my-config-form>
+                    <!-- 任务选择弹窗 -->
+                    <el-dialog title="任务选择" :visible.sync="config.boxShow">
+                        <my-config-select></my-config-select>
+                        <div slot="footer" class="dialog-footer">
+                            <el-button size="medium" @click="handleStockGoodsOperate('close', 'bill')">关闭</el-button>
+                            <el-button size="medium" type="primary" @click="handleStockGoodsOperate('confirm', 'bill')" :disabled="modalBtn">添加</el-button>
+                        </div>
                     </el-dialog>
                     <!-- 推送设置弹窗 -->
                     <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
