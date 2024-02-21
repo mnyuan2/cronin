@@ -305,7 +305,7 @@ var MyConfigForm = Vue.extend({
         sourceBox(e){
             if (e == -1){
                 this.source.boxShow = false
-                this.getDicSource() // 关闭弹窗要重载枚举
+                // this.getDicSource() // 关闭弹窗要重载枚举 此处会导致死循环
                 return
             }else if (e > 1){
                 this.source.dic_type = e

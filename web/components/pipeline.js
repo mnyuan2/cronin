@@ -133,13 +133,13 @@ var MyPipeline = Vue.extend({
                             </el-form-item>
                             <el-form-item label="发送">
                                 <el-select v-model="msgSet.data.msg_id">
-                                    <el-option v-for="(dic_v,dic_k) in dic_msg" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                    <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
                                 </el-select>
                                 消息
                             </el-form-item>
                             <el-form-item label="并且@用户">
                                 <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
-                                    <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                    <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
                                 </el-select>
                             </el-form-item>
                         </el-form>
@@ -152,8 +152,10 @@ var MyPipeline = Vue.extend({
     name: "MyPipeline",
     data(){
         return {
-            dic_user: [],
-            dic_msg: [],
+            dic:{
+                user: [],
+                msg: [],
+            },
             labelType: '2',
             // 列表数据
             list: {
@@ -214,7 +216,7 @@ var MyPipeline = Vue.extend({
     // 模块初始化
     created(){
         this.form.data = this.initFormData()
-        this.getDicSqlSource()
+        this.getDic()
     },
     // 模块初始化
     mounted(){
@@ -449,12 +451,12 @@ var MyPipeline = Vue.extend({
             }
             let descrition = '当任务<span class="el-tag el-tag--small el-tag--light">'+item1.name+'</span>时'
 
-            let item2 = this.dic_msg.find(option => option.id === data.msg_id)
+            let item2 = this.dic.msg.find(option => option.id === data.msg_id)
             if (item2){
                 data.msg_name = item2.name
                 descrition += '，发送<span class="el-tag el-tag--small el-tag--light">'+item2.name+'</span>消息'
             }
-            let item3 = this.dic_user.filter((option) => {
+            let item3 = this.dic.user.filter((option) => {
                 return data.notify_user_ids.includes(option.id);
             }).map((item)=>{return item.name})
             if (item3.length > 0){
@@ -477,10 +479,10 @@ var MyPipeline = Vue.extend({
             }
         },
         // 枚举
-        getDicSqlSource(){
+        getDic(){
             api.dicList([Enum.dicUser, Enum.dicMsg],(res) =>{
-                this.dic_user = res[Enum.dicUser]
-                this.dic_msg = res[Enum.dicMsg]
+                this.dic.user = res[Enum.dicUser]
+                this.dic.msg = res[Enum.dicMsg]
             })
         },
 

@@ -3,6 +3,7 @@ var MyConfig = Vue.extend({
                     <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
                         <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>
                         <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>
+                        <el-menu-item index="5" :disabled="listRequest">组件任务</el-menu-item>
                         <div style="float: right">
                             <el-button type="text" @click="createShow()">添加任务</el-button>
                             <el-button type="text" @click="getRegisterList()">已注册任务</el-button>
@@ -203,7 +204,7 @@ var MyConfig = Vue.extend({
             
                     <!-- sql链接源管理弹窗 -->
                     <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
-                        <my-sql-source></my-sql-source>
+                        <my-source></my-source>
                     </el-drawer>
                     <!-- 推送设置弹窗 -->
                     <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
