@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
+	"time"
 )
 
 // mysql 命令执行
@@ -30,6 +31,10 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 		}
 		span.End()
 	}()
+	b, _ := jsoniter.Marshal(r)
+	span.AddEvent("sql_set", trace.WithAttributes(
+		attribute.String("sql_set", string(b)),
+	))
 
 	source, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.Source.Id)
 	if er != nil {
@@ -79,7 +84,10 @@ func (job *CronJob) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []string
 		tx = _db
 	}
 
-	for _, sql := range statement {
+	for i, sql := range statement {
+		if i > 0 && r.Interval > 0 {
+			time.Sleep(time.Second * time.Duration(r.Interval)) // 间隔秒
+		}
 		err := job.sqlMysqlItem(r, tx, sql)
 		if err != nil {
 			if r.ErrAction == models.SqlErrActionAbort { // 终止

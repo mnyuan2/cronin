@@ -52,7 +52,7 @@ var MyPipeline = Vue.extend({
                     <el-drawer :title="form.boxTitle" :visible.sync="form.boxShow" size="60%" wrapperClosable="false">
                         <el-form :model="form">
                             <el-form-item label="名称*" label-width="76px">
-                                <el-input v-model="form.name"></el-input>
+                                <el-input v-model="form.data.name"></el-input>
                             </el-form-item>
 <!--                            <el-form-item label="类型*" label-width="76px">-->
 <!--                                <el-radio v-model="form.type" label="1">周期</el-radio>-->
@@ -73,11 +73,9 @@ var MyPipeline = Vue.extend({
                             </el-form-item>
                             
                             <el-form-item label="任务" label-width="76px">
-                                <div><el-button type="text" @click="configBox(0)">添加<i class="el-icon-plus"></i></el-button></div>
-                                <div v-for="(msg,msg_index) in form.data.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <el-row v-html="msg.descrition"></el-row>
-                                    <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
-                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
+                                <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
+                                <div v-for="(conf,conf_index) in form.data.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <el-row><el-tag type="info">{{conf.type_name}}</el-tag>-<el-tag>{{conf.name}}</el-tag>-<el-tag type="info">{{conf.protocol_name}}</el-tag></el-row>
                                 </div>
                             </el-form-item>
                             
@@ -120,10 +118,10 @@ var MyPipeline = Vue.extend({
             
                     <!-- 任务选择弹窗 -->
                     <el-dialog title="任务选择" :visible.sync="config.boxShow">
-                        <my-config-select></my-config-select>
+                        <my-config-select ref="selection"></my-config-select>
                         <div slot="footer" class="dialog-footer">
-                            <el-button size="medium" @click="handleStockGoodsOperate('close', 'bill')">关闭</el-button>
-                            <el-button size="medium" type="primary" @click="handleStockGoodsOperate('confirm', 'bill')" :disabled="modalBtn">添加</el-button>
+                            <el-button size="medium" @click="configSelectBox('close')">关闭</el-button>
+                            <el-button size="medium" type="primary" @click="configSelectBox('confirm')" :disabled="config.running">添加</el-button>
                         </div>
                     </el-dialog>
                     <!-- 推送设置弹窗 -->
@@ -198,7 +196,7 @@ var MyPipeline = Vue.extend({
             // 任务弹窗
             config:{
                 boxShow:false,
-                id:0
+                running: false,// 执行中
             },
             // 消息设置弹窗
             msgSet:{
@@ -260,13 +258,10 @@ var MyPipeline = Vue.extend({
                     if (res.data.list[i].top_number){
                         ratio = res.data.list[i].top_error_number / res.data.list[i].top_number
                     }
-                    if (res.data.list[i].command.sql){
-                        res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
-                    }
                     res.data.list[i].status = res.data.list[i].status.toString()
                     res.data.list[i].topRatio = 100 - ratio * 100
                 }
-                this.list = res.data.list;
+                this.list.items = res.data.list;
                 this.list.page = res.data.page;
             })
         },
@@ -296,10 +291,14 @@ var MyPipeline = Vue.extend({
                 name: data.name,
                 type: Number(data.type),
                 spec: data.spec,
-                config_ids: data.config_ids,
+                config_ids: [],
+                configs:data.configs,
                 remark: data.remark,
                 msg_set: data.msg_set,
             }
+            data.configs.forEach(function (item) {
+                body.config_ids.push(item.id)
+            })
 
             api.innerPost("/pipeline/set", body, (res)=>{
                 if (!res.status){
@@ -312,8 +311,11 @@ var MyPipeline = Vue.extend({
         },
         initFormData(){
             return  {
+                id: 0,
+                name: "",
                 type: '2',
-                config_ids:[],
+                config_ids:[], // 任务id集合
+                configs:[], // 任务集合
                 msg_set: []
             }
         },
@@ -518,16 +520,16 @@ var MyPipeline = Vue.extend({
             })
         },
         // 任务盒子弹窗
-        configBox(e){
-            if (e == 0 || e == undefined){ // 新增
+        configSelectBox(e='show'){
+            if (e == 'show'){ // 显示
                 this.config.boxShow = true
-                this.config.id = 0
-            }else if (e == -1){ // 关闭
+            }else if (e == 'close'){ // 关闭
                 this.config.boxShow = false
-                this.config.id = 0
-            }else{ // 编辑
-                this.config.boxShow = true
-                this.config.id = e
+            }else if (e == 'confirm'){ // 提交
+                this.config.running = true
+                this.form.data.configs = this.$refs.selection.selected
+                this.config.boxShow = false
+                this.config.running = false
             }
             console.log("任务盒子",this.config)
         },

@@ -66,8 +66,16 @@ func CheckSql(sql *pb.CronSql) error {
 	if len(sql.Statement) == 0 {
 		return errors.New("未设置 sql 执行语句")
 	}
-	if _, ok := models.SqlErrActionMap[sql.ErrAction]; !ok {
+	name, ok := models.SqlErrActionMap[sql.ErrAction]
+	if !ok {
 		return errors.New("未设置 sql 错误行为")
+	}
+	sql.ErrActionName = name
+	if sql.ErrAction == models.SqlErrActionRollback && sql.Interval > 0 {
+		return errors.New("事务回滚 时禁用 执行间隔")
+	}
+	if sql.Interval < 0 {
+		sql.Interval = 0
 	}
 	return nil
 }

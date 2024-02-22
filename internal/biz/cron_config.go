@@ -64,6 +64,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 	for _, item := range resp.List {
 		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{Actions: []string{}}, Sql: &pb.CronSql{}}
 		item.MsgSet = []*pb.CronMsgSet{}
+		item.TypeName = models.ConfigTypeMap[item.Type]
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
 		jsoniter.Unmarshal(item.CommandStr, item.Command)
@@ -140,19 +141,12 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		d.Env = dm.user.Env
 	}
 
-	d.Name = r.Name
-	d.Spec = r.Spec
-	d.Protocol = r.Protocol
-	d.Remark = r.Remark
-	d.Command, _ = jsoniter.Marshal(r.Command)
-	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
-	d.Type = r.Type
 	if r.Type == models.TypeCycle {
-		if _, err = secondParser.Parse(d.Spec); err != nil {
+		if _, err = secondParser.Parse(r.Spec); err != nil {
 			return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
 		}
 	} else if r.Type == models.TypeOnce {
-		if _, err = NewScheduleOnce(d.Spec); err != nil {
+		if _, err = NewScheduleOnce(r.Spec); err != nil {
 			return nil, err
 		}
 	} else {
@@ -186,6 +180,13 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 	}
 
+	d.Name = r.Name
+	d.Spec = r.Spec
+	d.Protocol = r.Protocol
+	d.Remark = r.Remark
+	d.Type = r.Type
+	d.Command, _ = jsoniter.Marshal(r.Command)
+	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	err = data.NewCronConfigData(dm.ctx).Set(d)
 	if err != nil {
 		return nil, err

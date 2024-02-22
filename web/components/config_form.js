@@ -102,6 +102,11 @@ var MyConfigForm = Vue.extend({
                           <el-radio v-model="form.command.sql.err_action" label="3">事务回滚</el-radio>
                         </el-tooltip>
                     </el-form-item>
+                    <el-form-item label="执行间隔">
+                        <el-input v-model="form.command.sql.interval" oninput ="value=value.replace(/[^\d]/g,'')">
+                            <template slot="append">秒</template>
+                        </el-input>
+                    </el-form-item>
                 </el-tab-pane>
                 
                 <el-tab-pane label="jenkins" name="5">
@@ -250,6 +255,7 @@ var MyConfigForm = Vue.extend({
                         },
                         statement:[],
                         err_action: "1",
+                        interval: 0, // 与事务回滚互斥
                     },
                     jenkins:{
                         source:{

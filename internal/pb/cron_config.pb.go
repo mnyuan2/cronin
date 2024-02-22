@@ -28,6 +28,7 @@ type CronConfigListItem struct {
 	StatusRemark   string             `json:"status_remark"`
 	StatusDt       string             `json:"status_dt"`
 	Type           int                `json:"type"`
+	TypeName       string             `json:"type_name"`
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
@@ -83,10 +84,12 @@ type CronRpc struct {
 
 // sql任务配置
 type CronSql struct {
-	Driver    string         `json:"driver"`     // 驱动，默认mysql
-	Source    *CronSqlSource `json:"source"`     // 具体链接配置
-	ErrAction int            `json:"err_action"` // 错误后行为
-	Statement []string       `json:"statement"`  // sql语句多条
+	Driver        string         `json:"driver"`          // 驱动，默认mysql
+	Source        *CronSqlSource `json:"source"`          // 具体链接配置
+	ErrAction     int            `json:"err_action"`      // 错误后行为
+	ErrActionName string         `json:"err_action_name"` // 错误后行为名称
+	Interval      int64          `json:"interval"`        // 执行间隔
+	Statement     []string       `json:"statement"`       // sql语句多条
 }
 
 // CronSqlSource sql任务 来源配置

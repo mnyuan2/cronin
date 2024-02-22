@@ -32,14 +32,15 @@ type CronPipelineListItem struct {
 
 // 流水线设置
 type CronPipelineSetRequest struct {
-	Id        int           `json:"id"`         // 主键
-	Name      string        `json:"name"`       // 任务名称
-	Type      int           `json:"type"`       // 类型
-	Spec      string        `json:"spec"`       // 执行时间表达式
-	ConfigIds []int         `json:"config_ids"` // 命令
-	Status    int           `json:"status"`     // 状态
-	Remark    string        `json:"remark"`     // 备注
-	MsgSet    []*CronMsgSet `json:"msg_set"`    // 消息设置
+	Id        int                     `json:"id"`         // 主键
+	Name      string                  `json:"name"`       // 任务名称
+	Type      int                     `json:"type"`       // 类型
+	Spec      string                  `json:"spec"`       // 执行时间表达式
+	ConfigIds []int                   `json:"config_ids"` // 任务id集合
+	Configs   []*CronConfigSetRequest `json:"configs"`    // 任务集合
+	Status    int                     `json:"status"`     // 状态
+	Remark    string                  `json:"remark"`     // 备注
+	MsgSet    []*CronMsgSet           `json:"msg_set"`    // 消息设置
 }
 type CronPipelineSetReply struct {
 	Id int `json:"id"`

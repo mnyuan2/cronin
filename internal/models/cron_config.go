@@ -39,9 +39,17 @@ var ConfigStatusMap = map[int]string{
 }
 
 const (
-	TypeCycle = 1 // 周期
-	TypeOnce  = 2 // 单次
+	TypeCycle  = 1 // 周期
+	TypeOnce   = 2 // 单次
+	TypeModule = 5 // 模块
 )
+
+// 任务类型
+var ConfigTypeMap = map[int]string{
+	TypeCycle:  "周期",
+	TypeOnce:   "单次",
+	TypeModule: "模块",
+}
 
 func ProtocolHttpMethodMap() map[string]string {
 	return map[string]string{
