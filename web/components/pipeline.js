@@ -31,7 +31,7 @@ var MyPipeline = Vue.extend({
                         </el-table-column>
                         <el-table-column label="操作">
                             <template slot-scope="{row}">
-                                <el-button type="text" @click="editShow(row)">编辑</el-button>
+                                <el-button type="text" @click="formBox(row)">编辑</el-button>
                                 <el-button type="text" @click="changeStatus(row, 2)" v-if="row.status!=2">激活</el-button>
                                 <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2">停用</el-button>
                                 <el-button type="text" @click="configLogBox(row.id, row.name)">日志</el-button>
@@ -79,10 +79,22 @@ var MyPipeline = Vue.extend({
                                 </div>
                             </el-form-item>
                             
-                            <el-form-item label="备注" label-width="43px">
+                            <el-form-item label="任务停用" label-width="76px">
+                                <el-tooltip class="item" effect="dark" content="存在停止、错误状态任务时流水线整体停止" placement="top-start">
+                                    <el-radio v-model="form.data.config_disable_action" label="1">停止</el-radio>
+                                </el-tooltip>
+                                <el-tooltip class="item" effect="dark" content="跳过停用、错误状态任务" placement="top-start">
+                                    <el-radio v-model="form.data.config_disable_action" label="2">跳过</el-radio>
+                                </el-tooltip>
+                                <el-tooltip class="item" effect="dark" content="执行停用、错误状态任务" placement="top-start">
+                                    <el-radio v-model="form.data.config_disable_action" label="3">执行</el-radio>
+                                </el-tooltip>
+                            </el-form-item>
+                            
+                            <el-form-item label="备注"  label-width="76px">
                                 <el-input v-model="form.data.remark"></el-input>
                             </el-form-item>
-                            <el-form-item label-width="2px">
+                            <el-form-item  label-width="76px">
                                 <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
                                 <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                     <el-row v-html="msg.descrition"></el-row>
@@ -296,8 +308,10 @@ var MyPipeline = Vue.extend({
                 remark: data.remark,
                 msg_set: data.msg_set,
             }
-            data.configs.forEach(function (item) {
+            data.configs.forEach(function (item,index) {
                 body.config_ids.push(item.id)
+                data.configs[index].status = Number(data.configs[index].status)
+                data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
             })
 
             api.innerPost("/pipeline/set", body, (res)=>{
@@ -316,6 +330,7 @@ var MyPipeline = Vue.extend({
                 type: '2',
                 config_ids:[], // 任务id集合
                 configs:[], // 任务集合
+                config_disable_action: '1',
                 msg_set: []
             }
         },
@@ -327,7 +342,7 @@ var MyPipeline = Vue.extend({
                 this.form.data = this.initFormData()
             }else if (row == -1){ // 关闭弹窗盒子
                 this.form.boxShow = false
-            }else{ // 编辑显示
+            }else if (typeof row == 'object'){ // 编辑显示
                 this.form.boxShow = true
                 this.form.boxTitle = '编辑流水线'
                 this.form.data = row
@@ -336,7 +351,8 @@ var MyPipeline = Vue.extend({
                     this.form.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
                 }
                 if (this.form.msg_set == null){}
-                this.form.data.status = this.form.data.status.toString() // 这里要转字符串，否则可能显示数字
+                this.form.data.status = this.form.data.status.toString()
+                this.form.data.config_disable_action = this.form.data.config_disable_action.toString()
                 console.log("编辑：",this.form.data)
             }
         },

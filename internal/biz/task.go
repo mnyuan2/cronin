@@ -38,7 +38,7 @@ func (dm *TaskService) Init() (err error) {
 	for page := 1; total >= int64(pageSize*page); page++ {
 		list := []*models.CronConfig{}
 		w := db.NewWhere().Eq("status", enum.StatusActive)
-		total, err = cronDb.GetList(w, page, pageSize, &list)
+		total, err = cronDb.ListPage(w, page, pageSize, &list)
 		if err != nil {
 			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
 		}
@@ -87,7 +87,7 @@ func (dm *TaskService) Add(conf *models.CronConfig) error {
 }
 
 // 添加单次任务
-func (dm *TaskService) addOnce(j *CronJob) error {
+func (dm *TaskService) addOnce(j *JobConfig) error {
 	s, err := NewScheduleOnce(j.conf.Spec)
 	if err != nil {
 		return err

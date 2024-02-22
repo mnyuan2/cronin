@@ -5,6 +5,7 @@ import (
 	"cron/internal/basic/auth"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -59,10 +60,19 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 
 	for _, item := range resp.List {
 		item.ConfigIds = []int{}
+		item.Configs = []*pb.CronConfigListItem{}
 		item.MsgSet = []*pb.CronMsgSet{}
 		item.StatusName = models.ConfigStatusMap[item.Status]
-		jsoniter.Unmarshal(item.ConfigIdsStr, item.ConfigIds)
-		jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet)
+		item.ConfigDisableActionName = models.DisableActionMap[item.ConfigDisableAction]
+		if err = jsoniter.Unmarshal(item.ConfigIdsStr, &item.ConfigIds); err != nil {
+			fmt.Println("	", err.Error())
+		}
+		if err = jsoniter.Unmarshal(item.ConfigsStr, &item.Configs); err != nil {
+			fmt.Println("	", err.Error())
+		}
+		if err = jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); err != nil {
+			fmt.Println("	", err.Error())
+		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
 			item.TopErrorNumber = top.ErrorNumber
@@ -94,6 +104,7 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	d.Spec = r.Spec
 	d.Remark = r.Remark
 	d.ConfigIds, _ = jsoniter.Marshal(r.ConfigIds)
+	d.Configs, _ = jsoniter.Marshal(r.Configs)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.Type = r.Type
 	if r.Type == models.TypeCycle {
@@ -117,6 +128,10 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
 		}
 	}
+	if _, ok := models.DisableActionMap[r.ConfigDisableAction]; !ok {
+		return nil, errs.New(nil, "任务停用行为未正确设置")
+	}
+	d.ConfigDisableAction = r.ConfigDisableAction
 
 	err = data.NewCronPipelineData(dm.ctx).Set(d)
 	if err != nil {

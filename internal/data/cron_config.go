@@ -20,7 +20,14 @@ func NewCronConfigData(ctx context.Context) *CronConfigData {
 	}
 }
 
-func (m *CronConfigData) GetList(where *db.Where, page, size int, list interface{}) (total int64, err error) {
+func (m *CronConfigData) List(where *db.Where, size int) (list []*models.CronConfig, err error) {
+	w, args := where.Build()
+	list = []*models.CronConfig{}
+	err = m.db.Where(w, args...).Limit(size).Find(&list).Error
+	return list, err
+}
+
+func (m *CronConfigData) ListPage(where *db.Where, page, size int, list interface{}) (total int64, err error) {
 	str, args := where.Build()
 
 	return m.db.Paginate(list, page, size, m.tableName, "*", "update_dt desc", str, args...)

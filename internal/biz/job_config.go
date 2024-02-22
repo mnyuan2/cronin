@@ -61,7 +61,7 @@ func (m *ScheduleOnce) Next(t time.Time) time.Time {
 	return m.execTime
 }
 
-type CronJob struct {
+type JobConfig struct {
 	conf         *models.CronConfig
 	commandParse *pb.CronConfigCommand
 	msgSetParse  *dtos.MsgSetParse
@@ -70,8 +70,8 @@ type CronJob struct {
 }
 
 // 任务执行器
-func NewCronJob(conf *models.CronConfig) *CronJob {
-	job := &CronJob{
+func NewCronJob(conf *models.CronConfig) *JobConfig {
+	job := &JobConfig{
 		conf:         conf,
 		commandParse: &pb.CronConfigCommand{},
 		msgSetParse:  &dtos.MsgSetParse{MsgIds: []int{}, StatusIn: map[int]any{}, NotifyUserIds: []int{}, Set: []*pb.CronMsgSet{}},
@@ -94,14 +94,13 @@ func NewCronJob(conf *models.CronConfig) *CronJob {
 	job.tracer = tracing.Tracer(job.conf.Env+"-cronin", trace.WithInstrumentationAttributes(
 		attribute.String("driver", "mysql"),
 		attribute.String("env", job.conf.Env),
-		attribute.Int64("nonce", int64(job.conf.Id)),
 	))
 
 	return job
 }
 
 // 执行任务
-func (job *CronJob) Run() {
+func (job *JobConfig) Run() {
 	var err errs.Errs
 	var res []byte
 	st := time.Now()
@@ -165,7 +164,7 @@ func (job *CronJob) Run() {
 	}
 }
 
-func (job *CronJob) Exec(ctx context.Context) (res []byte, err errs.Errs) {
+func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 	switch job.conf.Protocol {
 	case models.ProtocolHttp:
 		res, err = job.httpFunc(ctx, job.commandParse.Http)
@@ -182,7 +181,7 @@ func (job *CronJob) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // http 执行函数
-func (job *CronJob) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte, err errs.Errs) {
+func (job *JobConfig) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte, err errs.Errs) {
 	header := map[string]string{}
 	for _, head := range http.Header {
 		if head.Key == "" {
@@ -198,7 +197,7 @@ func (job *CronJob) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte
 }
 
 // rpc 执行函数
-func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err errs.Errs) {
+func (job *JobConfig) rpcFunc(ctx context.Context) (res []byte, err errs.Errs) {
 	switch job.commandParse.Rpc.Method {
 	case "GRPC":
 		return job.rpcGrpc(ctx, job.commandParse.Rpc)
@@ -211,7 +210,7 @@ func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // rpc 执行函数
-func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err errs.Errs) {
+func (job *JobConfig) cmdFunc(ctx context.Context) (res []byte, err errs.Errs) {
 	if runtime.GOOS == "windows" {
 		_, span := job.tracer.Start(ctx, "cmd-cmd")
 		defer func() {
@@ -273,7 +272,7 @@ func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // rpc 执行函数
-func (job *CronJob) sqlFunc(ctx context.Context) (err errs.Errs) {
+func (job *JobConfig) sqlFunc(ctx context.Context) (err errs.Errs) {
 	switch job.commandParse.Sql.Driver {
 	case models.SqlSourceMysql:
 		return job.sqlMysql(ctx, job.commandParse.Sql)
@@ -283,7 +282,7 @@ func (job *CronJob) sqlFunc(ctx context.Context) (err errs.Errs) {
 }
 
 // http请求
-func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string) (resp []byte, err errs.Errs) {
+func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string) (resp []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "http-request")
 	defer func() {
 		if err != nil {
@@ -346,7 +345,7 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 }
 
 // grpc调用
-func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, err errs.Errs) {
+func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "rpc-grpc")
 	span.SetAttributes(
 		attribute.String("component", "grpc-client"),
@@ -424,7 +423,7 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 }
 
 // 发送消息
-func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc string, body []byte, duration float64) {
+func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc string, body []byte, duration float64) {
 	if _, ok := job.msgSetParse.StatusIn[status]; !ok {
 		return
 	}
@@ -510,7 +509,7 @@ func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc stri
 }
 
 // 消息发送
-func (job *CronJob) messagePushItem(ctx context.Context, templateByte []byte, args map[string]string) (res []byte, err errs.Errs) {
+func (job *JobConfig) messagePushItem(ctx context.Context, templateByte []byte, args map[string]string) (res []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "message-push-item")
 	defer span.End()
 	// 变量替换

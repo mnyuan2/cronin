@@ -20,7 +20,7 @@ import (
 )
 
 // mysql 命令执行
-func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
+func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "exec-mysql")
 	defer func() {
 		if err != nil {
@@ -76,7 +76,7 @@ func (job *CronJob) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs)
 	return err
 }
 
-func (job *CronJob) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []string) errs.Errs {
+func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []string) errs.Errs {
 	var tx *gorm.DB
 	if r.ErrAction == models.SqlErrActionRollback {
 		tx = _db.Begin()
@@ -107,7 +107,7 @@ func (job *CronJob) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []string
 	return nil
 }
 
-func (job *CronJob) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql string) (err error) {
+func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql string) (err error) {
 	ctx, span := job.tracer.Start(_db.Statement.Context, "sql-item")
 	span.AddEvent("", trace.WithAttributes(attribute.String("sql", sql)))
 	defer span.End()

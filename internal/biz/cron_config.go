@@ -49,7 +49,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			Size: r.Size,
 		},
 	}
-	resp.Page.Total, err = data.NewCronConfigData(dm.ctx).GetList(w, r.Page, r.Size, &resp.List)
+	resp.Page.Total, err = data.NewCronConfigData(dm.ctx).ListPage(w, r.Page, r.Size, &resp.List)
 	topList := map[int]*data.SumConfTop{}
 	if len(resp.List) > 0 {
 		endTime := time.Now()
@@ -88,7 +88,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 	list := cronRun.Entries()
 	resp = &pb.CronConfigRegisterListResponse{List: []*pb.CronConfigListItem{}}
 	for _, v := range list {
-		c, ok := v.Job.(*CronJob)
+		c, ok := v.Job.(*JobConfig)
 		if !ok {
 			resp.List = append(resp.List, &pb.CronConfigListItem{
 				Id:       int(v.ID),
