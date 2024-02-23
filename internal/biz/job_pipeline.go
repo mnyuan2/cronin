@@ -2,9 +2,13 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/tracing"
 	"cron/internal/basic/util"
+	"cron/internal/biz/dtos"
+	"cron/internal/data"
 	"cron/internal/models"
 	"fmt"
 	"github.com/robfig/cron/v3"
@@ -14,9 +18,10 @@ import (
 )
 
 type JobPipeline struct {
-	pipeline   *models.CronPipeline
-	ErrorCount int // 连续错误
-	tracer     trace.Tracer
+	pipeline    *models.CronPipeline
+	conf        *JobConfig
+	msgSetParse *dtos.MsgSetParse
+	tracer      trace.Tracer
 }
 
 // 任务执行器
@@ -24,6 +29,22 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 	job := &JobPipeline{
 		pipeline: conf,
 	}
+	job.conf = NewJobConfig(&models.CronConfig{
+		Env:          conf.Env,
+		EntryId:      0,
+		Type:         0,
+		Name:         conf.Name,
+		Spec:         "",
+		Protocol:     0,
+		Command:      nil,
+		Remark:       "",
+		Status:       0,
+		StatusRemark: "",
+		StatusDt:     "",
+		UpdateDt:     "",
+		CreateDt:     "",
+		MsgSet:       conf.MsgSet,
+	})
 
 	// 日志
 	job.tracer = tracing.Tracer(job.pipeline.Env+"-cronin", trace.WithInstrumentationAttributes(
@@ -37,13 +58,13 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 // 执行任务
 func (job *JobPipeline) Run() {
 	var err errs.Errs
-	var res []byte
+	//var res []byte
 	st := time.Now()
 	ctx, span := job.tracer.Start(context.Background(), "job-pipeline", trace.WithAttributes(attribute.Int("ref_id", job.pipeline.Id)))
 	defer func() {
-		if res != nil {
-			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
-		}
+		//if res != nil {
+		//	span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
+		//}
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
@@ -68,39 +89,40 @@ func (job *JobPipeline) Run() {
 		return
 	}
 
+	// 欢迎语
+	job.conf.messagePush(ctx, 0, "开始", nil, 0)
 	fmt.Println(ctx, st)
 
-	//w := db.NewWhere().Eq("env", job.pipeline.Env).In("id", job.pipeline.ConfigIds)
-	//list, er := data.NewCronConfigData(ctx).List(w, len(job.pipeline.ConfigIds))
-	//if er != nil {
-	//	err = errs.New(er, "任务查询错误")
-	//	return
-	//}
-	//jobs := []*JobConfig{}
+	w := db.NewWhere().Eq("env", job.pipeline.Env).In("id", job.pipeline.ConfigIds)
+	list, er := data.NewCronConfigData(ctx).List(w, len(job.pipeline.ConfigIds))
+	if er != nil {
+		err = errs.New(er, "任务查询错误")
+		return
+	}
+	jobs := []*JobConfig{}
+	for _, item := range list {
+		if item.Status != models.ConfigStatusActive && item.Status != models.ConfigStatusFinish {
+			if job.pipeline.ConfigDisableAction == models.DisableActionStop {
+				job.conf.messagePush(ctx, enum.StatusDisable, "任务非激活", []byte(fmt.Sprintf("%s-%s", item.Name, item.GetStatusName())), time.Since(st).Seconds())
+				return
+			} else if job.pipeline.ConfigDisableAction == models.DisableActionOmit {
+				continue
+			}
+		}
+		jobs = append(jobs, NewJobConfig(item))
+	}
 
-	//res, err = job.Exec(ctx)
-	//if err != nil {
-	//	job.ErrorCount++
-	//	go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
-	//} else {
-	//	job.ErrorCount = 0
-	//	go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
-	//}
+	for _, j := range jobs {
+		_, er := j.run(ctx)
+		if er != nil {
+			job.conf.messagePush(ctx, enum.StatusDisable, er.Desc()+" 流水线"+job.pipeline.ConfigErrActionName(), []byte(err.Error()), time.Since(st).Seconds())
+			// 这里要确认一下是否继续执行下去。
+			if job.pipeline.ConfigErrAction == models.ErrActionStop {
+				return
+			}
+		}
+	}
+	// 结束语
+	job.conf.messagePush(ctx, enum.StatusActive, "完成", nil, time.Since(st).Seconds())
 
 }
-
-//func (job *JobPipeline) Exec(ctx context.Context) (res []byte, err errs.Errs) {
-//	switch job.conf.Protocol {
-//	case models.ProtocolHttp:
-//		res, err = job.httpFunc(ctx, job.commandParse.Http)
-//	case models.ProtocolRpc:
-//		res, err = job.rpcFunc(ctx)
-//	case models.ProtocolCmd:
-//		res, err = job.cmdFunc(ctx)
-//	case models.ProtocolSql:
-//		err = job.sqlFunc(ctx)
-//	default:
-//		err = errs.New(nil, fmt.Sprintf("未支持的protocol=%v", job.conf.Protocol))
-//	}
-//	return res, err
-//}

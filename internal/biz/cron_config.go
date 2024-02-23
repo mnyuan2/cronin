@@ -211,7 +211,7 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 		NewTaskService(config.MainConf()).Del(conf)
 		conf.EntryId = 0
 	} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
-		if err = NewTaskService(config.MainConf()).Add(conf); err != nil {
+		if err = NewTaskService(config.MainConf()).AddConfig(conf); err != nil {
 			return nil, err
 		}
 	} else {
@@ -243,7 +243,7 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 		return nil, err
 	}
 
-	res, err := NewCronJob(conf).Exec(dm.ctx)
+	res, err := NewJobConfig(conf).Exec(dm.ctx)
 	if err != nil {
 		return nil, err
 	}

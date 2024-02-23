@@ -74,8 +74,8 @@ var MyPipeline = Vue.extend({
                             
                             <el-form-item label="任务" label-width="76px">
                                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
-                                <div v-for="(conf,conf_index) in form.data.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <el-row><el-tag type="info">{{conf.type_name}}</el-tag>-<el-tag>{{conf.name}}</el-tag>-<el-tag type="info">{{conf.protocol_name}}</el-tag></el-row>
+                                <div id="config-selected-box" v-for="(conf,conf_index) in form.data.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <el-row><el-tag type="info">{{conf.type_name}}</el-tag>-<el-tag>{{conf.name}}</el-tag>-<el-tag type="info">{{conf.protocol_name}}</el-tag><el-tag>{{conf.status_name}}</el-tag></el-row>
                                 </div>
                             </el-form-item>
                             
@@ -88,6 +88,14 @@ var MyPipeline = Vue.extend({
                                 </el-tooltip>
                                 <el-tooltip class="item" effect="dark" content="执行停用、错误状态任务" placement="top-start">
                                     <el-radio v-model="form.data.config_disable_action" label="3">执行</el-radio>
+                                </el-tooltip>
+                            </el-form-item>
+                            <el-form-item label="任务错误" label-width="76px">
+                                <el-tooltip class="item" effect="dark" content="任务结果错误时停止流水线" placement="top-start">
+                                    <el-radio v-model="form.data.config_err_action" label="1">停止</el-radio>
+                                </el-tooltip>
+                                <el-tooltip class="item" effect="dark" content="任务结果错误时跳过继续执行" placement="top-start">
+                                    <el-radio v-model="form.data.config_err_action" label="2">跳过</el-radio>
                                 </el-tooltip>
                             </el-form-item>
                             
@@ -139,7 +147,7 @@ var MyPipeline = Vue.extend({
                     <!-- 推送设置弹窗 -->
                     <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
                         <el-form :model="msgSet" :inline="true" size="mini">
-                            <el-form-item label="当结果">
+                            <el-form-item label="当">
                                 <el-select v-model="msgSet.data.status" style="width: 90px">
                                     <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
                                 </el-select>
@@ -216,7 +224,7 @@ var MyPipeline = Vue.extend({
                 title: '添加',
                 index: -1, // 操作行号
                 data: {}, // 实际内容
-                statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}, {id:0,name:"完成"}],
+                statusList:[{id:1,name:"错误"}, {id:2, name:"结束"}, {id:0,name:"开始"}],
             },
             // 日志弹窗
             log:{
@@ -235,6 +243,8 @@ var MyPipeline = Vue.extend({
     // 模块初始化
     mounted(){
         this.getList()
+        this.configSelectedSort()
+
     },
     watch:{
         "form.spec":{
@@ -307,6 +317,8 @@ var MyPipeline = Vue.extend({
                 configs:data.configs,
                 remark: data.remark,
                 msg_set: data.msg_set,
+                config_disable_action: Number(data.config_disable_action),
+                config_err_action: Number(data.config_err_action),
             }
             data.configs.forEach(function (item,index) {
                 body.config_ids.push(item.id)
@@ -331,6 +343,7 @@ var MyPipeline = Vue.extend({
                 config_ids:[], // 任务id集合
                 configs:[], // 任务集合
                 config_disable_action: '1',
+                config_err_action: '1',
                 msg_set: []
             }
         },
@@ -353,6 +366,7 @@ var MyPipeline = Vue.extend({
                 if (this.form.msg_set == null){}
                 this.form.data.status = this.form.data.status.toString()
                 this.form.data.config_disable_action = this.form.data.config_disable_action.toString()
+                this.form.data.config_err_action = this.form.data.config_err_action.toString()
                 console.log("编辑：",this.form.data)
             }
         },
@@ -471,7 +485,7 @@ var MyPipeline = Vue.extend({
             if (item1){
                 data.status_name = item1.name
             }
-            let descrition = '当任务<span class="el-tag el-tag--small el-tag--light">'+item1.name+'</span>时'
+            let descrition = '<i class="el-icon-bell"></i>当任务<span class="el-tag el-tag--small el-tag--light">'+item1.name+'</span>时'
 
             let item2 = this.dic.msg.find(option => option.id === data.msg_id)
             if (item2){
@@ -549,6 +563,45 @@ var MyPipeline = Vue.extend({
             }
             console.log("任务盒子",this.config)
         },
+        // 拖动
+        configSelectedSort(){
+            const that = this
+            list="pic_url_list"
+            let el = document.querySelector("#config-selected-box");
+            this.sort_table=new Sortable(el, {
+                forceFallback: false, // 忽略 HTML5拖拽行为，强制回调进行
+                // filter: ".items-disable",  // 禁用拖拽节点
+                // handle: ".items-drag",  // 可拖拽节点
+                onEnd: event => {
+                    let box = this.$el.querySelector(id)
+                    let nums = box.childNodes.length;
+                    let newIndex = event.newIndex; // 新位置
+                    let oldIndex = event.oldIndex; // 原(旧)位置
+                    let $label = box.children[newIndex]; // 新节点
+                    let $oldLabel = box.children[oldIndex]; // 原(旧)节点
+                    console.log(nums, "old：" + oldIndex, "new：" + newIndex)
+                    box.removeChild($label);
+                    if (event.newIndex >= nums) {
+                        box.insertBefore($label, $oldLabel.nextSibling);
+                        return;
+                    }
+                    if (newIndex < oldIndex) {
+                        box.insertBefore($label, $oldLabel);
+                    } else {
+                        box.insertBefore($label, $oldLabel.nextSibling);
+                    }
+                    let oldData = JSON.parse(JSON.stringify(that[list]));
+                    const oldKey = oldData[oldIndex];
+                    oldData.splice(oldIndex, 1);
+                    oldData.splice(newIndex, 0, oldKey);
+                    that[list] = []
+                    that.$nextTick(() => {
+                        that[list] = oldData
+                        that.active++
+                    })
+                },
+            });
+        }
     }
 })
 

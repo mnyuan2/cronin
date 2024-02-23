@@ -46,7 +46,7 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 			Size: r.Size,
 		},
 	}
-	resp.Page.Total, err = data.NewCronPipelineData(dm.ctx).GetList(w, r.Page, r.Size, &resp.List)
+	resp.Page.Total, err = data.NewCronPipelineData(dm.ctx).ListPage(w, r.Page, r.Size, &resp.List)
 	topList := map[int]*data.SumConfTop{}
 	if len(resp.List) > 0 {
 		endTime := time.Now()
@@ -131,7 +131,11 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	if _, ok := models.DisableActionMap[r.ConfigDisableAction]; !ok {
 		return nil, errs.New(nil, "任务停用行为未正确设置")
 	}
+	if _, ok := models.ErrActionMap[r.ConfigErrAction]; !ok {
+		return nil, errs.New(nil, "任务错误行为未正确设置")
+	}
 	d.ConfigDisableAction = r.ConfigDisableAction
+	d.ConfigErrAction = r.ConfigErrAction
 
 	err = data.NewCronPipelineData(dm.ctx).Set(d)
 	if err != nil {

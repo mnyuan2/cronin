@@ -20,7 +20,7 @@ func NewCronPipelineData(ctx context.Context) *CronPipelineData {
 	}
 }
 
-func (m *CronPipelineData) GetList(where *db.Where, page, size int, list interface{}) (total int64, err error) {
+func (m *CronPipelineData) ListPage(where *db.Where, page, size int, list interface{}) (total int64, err error) {
 	str, args := where.Build()
 
 	return m.db.Paginate(list, page, size, m.tableName, "*", "update_dt desc", str, args...)

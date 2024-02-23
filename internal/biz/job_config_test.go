@@ -127,7 +127,7 @@ func TestCronJob_Grpc2(t *testing.T) {
 
 	//db.New(context.Background()).Write.Where("id=?", 116).Find(conf)
 
-	r := NewCronJob(conf)
+	r := NewJobConfig(conf)
 	r.commandParse.Rpc.Proto = `syntax = "proto3";
 package merchantpush;
 service Merchantpush {
@@ -145,7 +145,7 @@ message EchoResponse{
 }`
 
 	ctx := context.Background()
-	res, err := NewCronJob(conf).rpcGrpc(ctx, r.commandParse.Rpc)
+	res, err := NewJobConfig(conf).rpcGrpc(ctx, r.commandParse.Rpc)
 
 	fmt.Println(string(res), err)
 }
@@ -391,7 +391,7 @@ func TestCronJob_Mysql(t *testing.T) {
 
 	db.New(context.Background()).Where("id=?", 114).Find(conf)
 
-	r := NewCronJob(conf)
+	r := NewJobConfig(conf)
 	r.Run()
 
 	//ctx := context.Background()

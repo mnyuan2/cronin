@@ -70,7 +70,7 @@ type JobConfig struct {
 }
 
 // 任务执行器
-func NewCronJob(conf *models.CronConfig) *JobConfig {
+func NewJobConfig(conf *models.CronConfig) *JobConfig {
 	job := &JobConfig{
 		conf:         conf,
 		commandParse: &pb.CronConfigCommand{},
@@ -81,12 +81,7 @@ func NewCronJob(conf *models.CronConfig) *JobConfig {
 	_ = jsoniter.Unmarshal(conf.MsgSet, &job.msgSetParse.Set)
 
 	for _, s := range job.msgSetParse.Set {
-		if s.Status == 0 || s.Status == enum.StatusDisable {
-			job.msgSetParse.StatusIn[enum.StatusDisable] = struct{}{}
-		}
-		if s.Status == 0 || s.Status == enum.StatusActive {
-			job.msgSetParse.StatusIn[enum.StatusActive] = struct{}{}
-		}
+		job.msgSetParse.StatusIn[s.Status] = struct{}{}
 		job.msgSetParse.NotifyUserIds = append(job.msgSetParse.NotifyUserIds, s.NotifyUserIds...)
 		job.msgSetParse.MsgIds = append(job.msgSetParse.MsgIds, s.MsgId)
 	}
@@ -162,6 +157,44 @@ func (job *JobConfig) Run() {
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", "完成状态写入失败"+er.Error())))
 		}
 	}
+}
+
+// 执行任务 未注册版本
+func (job *JobConfig) run(ctx context.Context) (res []byte, err errs.Errs) {
+	st := time.Now()
+	ctx, span := job.tracer.Start(ctx, "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
+	defer func() {
+		if res != nil {
+			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
+		}
+		if err != nil {
+			span.SetStatus(tracing.StatusError, err.Desc())
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		} else {
+			span.SetStatus(tracing.StatusOk, "")
+		}
+		if er := util.PanicInfo(recover()); er != "" {
+			span.SetStatus(tracing.StatusError, "执行异常")
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
+		}
+		span.End()
+	}()
+	span.SetAttributes(
+		attribute.String("env", job.conf.Env),
+		attribute.String("config_name", job.conf.Name),
+		attribute.String("protocol_name", job.conf.GetProtocolName()),
+		attribute.String("component", "job"),
+	)
+
+	res, err = job.Exec(ctx)
+	if err != nil {
+		job.ErrorCount++
+		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
+	} else {
+		job.ErrorCount = 0
+		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
+	}
+	return res, err
 }
 
 func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {

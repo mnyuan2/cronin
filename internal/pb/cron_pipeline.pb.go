@@ -43,6 +43,7 @@ type CronPipelineSetRequest struct {
 	ConfigIds           []int                 `json:"config_ids"`            // 任务id集合
 	Configs             []*CronConfigListItem `json:"configs"`               // 任务集合
 	ConfigDisableAction int                   `json:"config_disable_action"` //
+	ConfigErrAction     int                   `json:"config_err_action"`     //
 	Status              int                   `json:"status"`                // 状态
 	Remark              string                `json:"remark"`                // 备注
 	MsgSet              []*CronMsgSet         `json:"msg_set"`               // 消息设置
