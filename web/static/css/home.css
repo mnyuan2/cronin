@@ -268,3 +268,17 @@ i.el-alert__icon{
     padding: 4px 0;
     background: #f7f9fd;
 }
+
+.sort-drag-box .drag{
+    transform: rotate(90deg);
+    cursor: n-resize;
+}
+.sort-drag-box .item-drag-current{
+    background: #c8ebfb !important;
+}
+.sort-drag-box .item-close{
+    cursor: pointer;
+}
+.sort-drag-box .sortable-chosen{
+    color:red;
+}

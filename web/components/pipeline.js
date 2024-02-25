@@ -74,8 +74,15 @@ var MyPipeline = Vue.extend({
                             
                             <el-form-item label="任务" label-width="76px">
                                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
-                                <div id="config-selected-box" v-for="(conf,conf_index) in form.data.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <el-row><el-tag type="info">{{conf.type_name}}</el-tag>-<el-tag>{{conf.name}}</el-tag>-<el-tag type="info">{{conf.protocol_name}}</el-tag><el-tag>{{conf.status_name}}</el-tag></el-row>
+                                <div id="config-selected-box" class="sort-drag-box">
+                                    <div class="item-drag" v-for="(conf,conf_index) in form.data.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                        <i class="el-icon-more-outline drag"></i>
+                                        <el-tag type="info">{{conf.type_name}}</el-tag>-
+                                        <el-tag>{{conf.name}}</el-tag>-
+                                        <el-tag type="info">{{conf.protocol_name}}</el-tag>
+                                        <el-tag>{{conf.status_name}}</el-tag>
+                                        <i class="el-icon-close item-close" @click="removeAt(idx)"></i>
+                                    </div>
                                 </div>
                             </el-form-item>
                             
@@ -100,6 +107,7 @@ var MyPipeline = Vue.extend({
                             </el-form-item>
                             
                             <el-form-item label="备注"  label-width="76px">
+                            <pre>{{form.data.configs}}</pre>
                                 <el-input v-model="form.data.remark"></el-input>
                             </el-form-item>
                             <el-form-item  label-width="76px">
@@ -243,8 +251,6 @@ var MyPipeline = Vue.extend({
     // 模块初始化
     mounted(){
         this.getList()
-        this.configSelectedSort()
-
     },
     watch:{
         "form.spec":{
@@ -355,6 +361,7 @@ var MyPipeline = Vue.extend({
                 this.form.data = this.initFormData()
             }else if (row == -1){ // 关闭弹窗盒子
                 this.form.boxShow = false
+                return
             }else if (typeof row == 'object'){ // 编辑显示
                 this.form.boxShow = true
                 this.form.boxTitle = '编辑流水线'
@@ -369,6 +376,21 @@ var MyPipeline = Vue.extend({
                 this.form.data.config_err_action = this.form.data.config_err_action.toString()
                 console.log("编辑：",this.form.data)
             }
+            const that = this
+            this.$nextTick(() => {
+                this.sort = MySortable(document.getElementById("config-selected-box"), (oldIndex, newIndex)=>{
+                    const oldlist = JSON.parse(JSON.stringify(this.form.data.configs));
+                    const oldItem = oldlist.splice(oldIndex, 1)[0];
+                    oldlist.splice(newIndex, 0, oldItem);
+
+                    that.$nextTick((t)=>{
+                        this.form.data.configs= oldlist
+                        console.log("拖拽后",this.form.data.configs, this, t)
+                    })
+
+                })
+            })
+
         },
         // 改变状态
         changeStatus(row, newStatus){
@@ -557,51 +579,21 @@ var MyPipeline = Vue.extend({
                 this.config.boxShow = false
             }else if (e == 'confirm'){ // 提交
                 this.config.running = true
-                this.form.data.configs = this.$refs.selection.selected
+                this.form.data.configs.push(...this.$refs.selection.selected)
                 this.config.boxShow = false
                 this.config.running = false
             }
             console.log("任务盒子",this.config)
         },
-        // 拖动
-        configSelectedSort(){
-            const that = this
-            list="pic_url_list"
-            let el = document.querySelector("#config-selected-box");
-            this.sort_table=new Sortable(el, {
-                forceFallback: false, // 忽略 HTML5拖拽行为，强制回调进行
-                // filter: ".items-disable",  // 禁用拖拽节点
-                // handle: ".items-drag",  // 可拖拽节点
-                onEnd: event => {
-                    let box = this.$el.querySelector(id)
-                    let nums = box.childNodes.length;
-                    let newIndex = event.newIndex; // 新位置
-                    let oldIndex = event.oldIndex; // 原(旧)位置
-                    let $label = box.children[newIndex]; // 新节点
-                    let $oldLabel = box.children[oldIndex]; // 原(旧)节点
-                    console.log(nums, "old：" + oldIndex, "new：" + newIndex)
-                    box.removeChild($label);
-                    if (event.newIndex >= nums) {
-                        box.insertBefore($label, $oldLabel.nextSibling);
-                        return;
-                    }
-                    if (newIndex < oldIndex) {
-                        box.insertBefore($label, $oldLabel);
-                    } else {
-                        box.insertBefore($label, $oldLabel.nextSibling);
-                    }
-                    let oldData = JSON.parse(JSON.stringify(that[list]));
-                    const oldKey = oldData[oldIndex];
-                    oldData.splice(oldIndex, 1);
-                    oldData.splice(newIndex, 0, oldKey);
-                    that[list] = []
-                    that.$nextTick(() => {
-                        that[list] = oldData
-                        that.active++
-                    })
-                },
-            });
-        }
+        removeAt(idx) {
+            this.$confirm('确定移除任务', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.form.data.configs.splice(idx, 1);
+            }).catch(() => {/*取消*/});
+        },
     }
 })
 
