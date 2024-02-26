@@ -62,7 +62,12 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 	}
 
 	for _, item := range resp.List {
-		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{Actions: []string{}}, Sql: &pb.CronSql{}}
+		item.Command = &pb.CronConfigCommand{
+			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
+			Rpc:     &pb.CronRpc{Actions: []string{}},
+			Sql:     &pb.CronSql{},
+			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
+		}
 		item.MsgSet = []*pb.CronMsgSet{}
 		item.TypeName = models.ConfigTypeMap[item.Type]
 		item.StatusName = models.ConfigStatusMap[item.Status]
@@ -149,6 +154,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if _, err = NewScheduleOnce(r.Spec); err != nil {
 			return nil, err
 		}
+	} else if r.Type == models.TypeModule {
+		//
 	} else {
 		return nil, fmt.Errorf("类型输入有误")
 	}
@@ -207,15 +214,17 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 	if conf.Status == r.Status {
 		return nil, fmt.Errorf("状态相等")
 	}
-	if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
-		NewTaskService(config.MainConf()).Del(conf)
-		conf.EntryId = 0
-	} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
-		if err = NewTaskService(config.MainConf()).AddConfig(conf); err != nil {
-			return nil, err
+	if conf.Type != models.TypeModule {
+		if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
+			NewTaskService(config.MainConf()).Del(conf)
+			conf.EntryId = 0
+		} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
+			if err = NewTaskService(config.MainConf()).AddConfig(conf); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("错误状态请求")
 		}
-	} else {
-		return nil, fmt.Errorf("错误状态请求")
 	}
 
 	conf.Status = r.Status

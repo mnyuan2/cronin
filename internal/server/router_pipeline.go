@@ -38,3 +38,19 @@ func routerPipelineSet(ctx *gin.Context) {
 	rep, err := biz.NewCronPipelineService(ctx.Request.Context(), user).Set(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+// 流水线状态变更
+func routerPipelineChangeStatus(ctx *gin.Context) {
+	r := &pb.CronPipelineChangeStatusRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewCronPipelineService(ctx.Request.Context(), user).ChangeStatus(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

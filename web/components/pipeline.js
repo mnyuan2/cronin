@@ -81,7 +81,7 @@ var MyPipeline = Vue.extend({
                                         <el-tag>{{conf.name}}</el-tag>-
                                         <el-tag type="info">{{conf.protocol_name}}</el-tag>
                                         <el-tag>{{conf.status_name}}</el-tag>
-                                        <i class="el-icon-close item-close" @click="removeAt(idx)"></i>
+                                        <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
                                     </div>
                                 </div>
                             </el-form-item>
@@ -107,12 +107,11 @@ var MyPipeline = Vue.extend({
                             </el-form-item>
                             
                             <el-form-item label="备注"  label-width="76px">
-                            <pre>{{form.data.configs}}</pre>
                                 <el-input v-model="form.data.remark"></el-input>
                             </el-form-item>
                             <el-form-item  label-width="76px">
                                 <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
-                                <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                <div v-for="(msg,msg_index) in form.data.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                     <el-row v-html="msg.descrition"></el-row>
                                     <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
@@ -145,9 +144,10 @@ var MyPipeline = Vue.extend({
                     </el-drawer>
             
                     <!-- 任务选择弹窗 -->
-                    <el-dialog title="任务选择" :visible.sync="config.boxShow">
+                    <el-dialog title="任务选择" :visible.sync="config.boxShow" width="60%" top="10vh" class="config-select-wrap">
                         <my-config-select ref="selection"></my-config-select>
                         <div slot="footer" class="dialog-footer">
+                            <a href="/index#/config" target="_blank" class="el-button el-button--text left">管理任务</a>
                             <el-button size="medium" @click="configSelectBox('close')">关闭</el-button>
                             <el-button size="medium" type="primary" @click="configSelectBox('confirm')" :disabled="config.running">添加</el-button>
                         </div>
@@ -368,9 +368,9 @@ var MyPipeline = Vue.extend({
                 this.form.data = row
 
                 for (let i in row.msg_set){
-                    this.form.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
+                    this.form.data.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
                 }
-                if (this.form.msg_set == null){}
+                if (this.form.data.msg_set == null){}
                 this.form.data.status = this.form.data.status.toString()
                 this.form.data.config_disable_action = this.form.data.config_disable_action.toString()
                 this.form.data.config_err_action = this.form.data.config_err_action.toString()
@@ -383,6 +383,7 @@ var MyPipeline = Vue.extend({
                     const oldItem = oldlist.splice(oldIndex, 1)[0];
                     oldlist.splice(newIndex, 0, oldItem);
 
+                    this.form.data.configs = []
                     that.$nextTick((t)=>{
                         this.form.data.configs= oldlist
                         console.log("拖拽后",this.form.data.configs, this, t)
@@ -493,9 +494,9 @@ var MyPipeline = Vue.extend({
             let data = this.msgSetBuildDesc(this.msgSet.data)
 
             if (this.msgSet.index < 0){
-                this.form.msg_set.push(data)
+                this.form.data.msg_set.push(data)
             }else{
-                this.form.msg_set[this.msgSet.index] = data
+                this.form.data.msg_set[this.msgSet.index] = data
             }
             this.msgSet.show = false
             this.msgSet.index = -1

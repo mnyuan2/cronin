@@ -60,10 +60,11 @@ type CronMsgSet struct {
 	NotifyUserIds []int `json:"notify_user_ids"`
 }
 type CronConfigCommand struct {
-	Http *CronHttp `json:"http"`
-	Rpc  *CronRpc  `json:"rpc"`
-	Cmd  string    `json:"cmd"`
-	Sql  *CronSql  `json:"sql"`
+	Http    *CronHttp    `json:"http"`
+	Rpc     *CronRpc     `json:"rpc"`
+	Cmd     string       `json:"cmd"`
+	Sql     *CronSql     `json:"sql"`
+	Jenkins *CronJenkins `json:"jenkins"`
 }
 
 type CronHttp struct {
@@ -101,6 +102,16 @@ type CronSqlSource struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Port     string `json:"port"`
+}
+
+type CronJenkinsSource struct {
+	Id int `json:"id"`
+}
+
+type CronJenkins struct {
+	Source *CronJenkinsSource `json:"source"` // 具体链接配置
+	Name   string             `json:"name"`   // 项目名称
+	Params []*KvItem          `json:"params"` // 参数
 }
 
 // 已注册列表

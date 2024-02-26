@@ -59,10 +59,11 @@ var MyConfig = Vue.extend({
                             <el-form-item label="类型*" label-width="76px">
                                 <el-radio v-model="form.type" label="1">周期</el-radio>
                                 <el-radio v-model="form.type" label="2">单次</el-radio>
+                                <el-radio v-model="form.type" label="5">组件</el-radio>
                             </el-form-item>
             
             
-                            <el-form-item label="时间*" label-width="76px">
+                            <el-form-item label="时间*" label-width="76px" v-if="form.type != 5">
                                 <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
                                 <el-date-picker 
                                     style="width: 100%"
@@ -155,6 +156,24 @@ var MyConfig = Vue.extend({
                                             </el-tooltip>
                                         </el-form-item>
                                     </el-tab-pane>
+                                    
+                                    <el-tab-pane label="jenkins" name="5">
+                                        <el-form-item label="链接">
+                                            <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
+                                                <el-option v-for="(dic_v,dic_k) in dic_jenkins_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                            </el-select>
+                                            <el-button type="text" style="margin-left: 20px" @click="sourceBox(true)">设置链接</el-button>
+                                        </el-form-item>
+                                        <el-form-item label="项目">
+                                            <el-input v-model="form.command.jenkins.name"></el-input>
+                                        </el-form-item>
+                                        <el-form-item label="参数" class="http_header_box">
+                                            <el-input v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">
+                                                <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput"></el-input>
+                                                <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i)"></el-button>
+                                            </el-input>
+                                        </el-form-item>
+                                    </el-tab-pane>
                                 </el-tabs>
                             </el-form-item>
                             <el-form-item label="备注" label-width="43px">
@@ -239,6 +258,7 @@ var MyConfig = Vue.extend({
             dic_sql_source:[],
             dic_user: [],
             dic_msg: [],
+            dic_jenkins_source: [],
             sys_info:{},
             list: [],
             listPage:{
@@ -361,7 +381,7 @@ var MyConfig = Vue.extend({
         setCron(){
             if (this.form.name == ''){
                 return this.$message.error('请输入任务名称')
-            }else if (this.form.spec == ''){
+            }else if (this.form.spec == '' && this.form.type != 5){
                 return this.$message.error('请输入任务执行时间')
             }else if (!this.form.protocol){
                 return this.$message.error('请选择任务协议')
@@ -418,6 +438,23 @@ var MyConfig = Vue.extend({
             }
             this.form.command.http.header.splice(index,1)
         },
+        // http header 输入值变化时
+        jenkinsParamInput(val){
+            if (val == ""){
+                return
+            }
+            let item = this.form.command.jenkins.params.slice(-1)[0]
+            if (item == undefined || item.key != ""){
+                this.form.command.jenkins.params.push({"key":"","value":""})
+            }
+        },
+        // http header 输入值删除
+        jenkinsParamDel(index){
+            if ((index+1) >= this.form.command.jenkins.params.length){
+                return
+            }
+            this.form.command.jenkins.params.splice(index,1)
+        },
         initFormData(){
             return  {
                 type: '1',
@@ -452,6 +489,13 @@ var MyConfig = Vue.extend({
                         statement:[],
                         err_action: "1",
                     },
+                    jenkins:{
+                        source:{
+                            id: "",
+                        },
+                        name: "",
+                        params: [{"key":"","value":""}]
+                    }
                 },
                 msg_set: []
             }
@@ -469,6 +513,12 @@ var MyConfig = Vue.extend({
             }
             if (this.form.command.http.header.length == 0){
                 this.form.command.http.header = this.initFormData().command.http.header
+            }
+            if (this.form.command.jenkins.source.id == 0){
+                this.form.command.jenkins.source.id = ""
+            }
+            if (this.form.command.jenkins.params.length == 0){
+                this.form.command.jenkins.params = this.initFormData().command.jenkins.params
             }
             for (let i in row.msg_set){
                 this.form.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
@@ -699,8 +749,9 @@ var MyConfig = Vue.extend({
         },
         // 枚举
         getDicSqlSource(){
-            api.dicList([Enum.dicSqlSource, Enum.dicUser, Enum.dicMsg],(res) =>{
+            api.dicList([Enum.dicSqlSource, Enum.dicJenkinsSource, Enum.dicUser, Enum.dicMsg],(res) =>{
                 this.dic_sql_source = res[Enum.dicSqlSource]
+                this.dic_jenkins_source = res[Enum.dicJenkinsSource]
                 this.dic_user = res[Enum.dicUser]
                 this.dic_msg = res[Enum.dicMsg]
             })

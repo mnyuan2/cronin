@@ -40,7 +40,7 @@ var MyConfigSelect = Vue.extend({
                 page: {},
                 param:{
                     page: 1,
-                    size: 20,
+                    size: 10,
                 },
                 request: false,
             },

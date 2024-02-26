@@ -278,7 +278,20 @@ i.el-alert__icon{
 }
 .sort-drag-box .item-close{
     cursor: pointer;
+    position: absolute;
+    right: 6px;
+    color: #72767b;
+}
+.sort-drag-box .item-close:hover{
+    color: #191919;
 }
 .sort-drag-box .sortable-chosen{
     color:red;
+}
+
+.config-select-wrap .el-dialog__body{
+    padding: 0px 20px;
+}
+.config-select .el-table .el-table__cell{
+    padding: 8px 0;
 }

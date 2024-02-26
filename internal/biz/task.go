@@ -156,6 +156,14 @@ func (dm *TaskService) Del(conf *models.CronConfig) {
 	dm.cron.Remove(cron.EntryID(conf.EntryId))
 }
 
+// 删除任务
+func (dm *TaskService) DelPipeline(conf *models.CronPipeline) {
+	if conf.EntryId == 0 { // 这里其实应该到任务队列取找执行id，mysql找是下册
+		return
+	}
+	dm.cron.Remove(cron.EntryID(conf.EntryId))
+}
+
 // sysLogDurationConf 内置任务，日志删除
 func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 	retention := dm.conf.Task.LogRetention

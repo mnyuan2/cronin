@@ -52,3 +52,11 @@ type CronPipelineSetRequest struct {
 type CronPipelineSetReply struct {
 	Id int `json:"id"`
 }
+
+// 状态变更
+type CronPipelineChangeStatusRequest struct {
+	Id     int `json:"id"`
+	Status int `json:"status"` // 状态
+}
+
+type CronPipelineChangeStatusReply struct{}

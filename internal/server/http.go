@@ -45,6 +45,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/config/register_list", httpRegister)
 	r.GET("/pipeline/list", routerPipelineList)
 	r.POST("/pipeline/set", routerPipelineSet)
+	r.POST("/pipeline/change_status", routerPipelineChangeStatus)
 	r.GET("/log/list", routerLogList)
 	r.GET("/log/traces", routerLogTraces)
 	r.POST("/log/del", routerLogDel)

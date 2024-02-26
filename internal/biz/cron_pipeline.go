@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"cron/internal/basic/auth"
+	"cron/internal/basic/config"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
@@ -144,4 +145,35 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	return &pb.CronPipelineSetReply{
 		Id: d.Id,
 	}, err
+}
+
+// 任务状态变更
+func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusRequest) (resp *pb.CronPipelineChangeStatusReply, err error) {
+	// 同一个任务，这里要加请求锁
+	da := data.NewCronPipelineData(dm.ctx)
+	conf, err := da.GetOne(dm.user.Env, r.Id)
+	if err != nil {
+		return nil, err
+	}
+	if conf.Status == r.Status {
+		return nil, fmt.Errorf("状态相等")
+	}
+
+	if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
+		NewTaskService(config.MainConf()).DelPipeline(conf)
+		conf.EntryId = 0
+	} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
+		if err = NewTaskService(config.MainConf()).AddPipeline(conf); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("错误状态请求")
+	}
+
+	conf.Status = r.Status
+	if err = da.ChangeStatus(conf, "视图操作"+models.ConfigStatusMap[r.Status]); err != nil {
+		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
+		return nil, err
+	}
+	return &pb.CronPipelineChangeStatusReply{}, nil
 }
