@@ -331,7 +331,7 @@ func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body 
 
 	h, _ := jsoniter.Marshal(header)
 	span.AddEvent("", trace.WithAttributes(
-		attribute.String("rul", url),
+		attribute.String("url", url),
 		attribute.String("request_header", string(h)),
 		attribute.String("request", string(body)),
 	))
