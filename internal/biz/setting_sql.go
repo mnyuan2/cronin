@@ -113,6 +113,8 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 				return nil, fmt.Errorf("加密失败，%w", err)
 			}
 		}
+	} else if r.Source.Jenkins != nil {
+		r.Source.Jenkins.Hostname = strings.Trim(r.Source.Jenkins.Hostname, "/")
 	}
 
 	one.UpdateDt = ti.String()

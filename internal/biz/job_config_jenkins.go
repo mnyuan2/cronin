@@ -79,9 +79,10 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		return errs.New(er, "构建失败")
 	}
 
+	// 查询队列获取任务id；最大尝试次数20
 	queueData := &JenkinsQueueResponse{Executable: &JenkinsQueueExecutable{}}
-	for range time.Tick(time.Second * 3) {
-		// 查询队列获取任务id
+	for index := 0; index < 20; index++ {
+		time.Sleep(time.Second * 5)
 		queueRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/queue/item/%v/api/json", string(queueId)), nil, "get-queue")
 		if er != nil {
 			return errs.New(er, "队列信息请求错误")
@@ -90,22 +91,16 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		if er := jsoniter.Unmarshal(queueRes, queueData); er != nil {
 			return errs.New(er, "队列结果解析错误")
 		}
-		if queueData.Why != nil {
-			why := *queueData.Why
-			if len(why) > 20 && why[:20] == "In the quiet period." {
-				continue
-			} else {
-				span.AddEvent("error", trace.WithAttributes(attribute.String("result_error", why)))
-			}
-		}
 		if queueData.Executable.Number > 0 {
 			break
 		}
-		queueData = &JenkinsQueueResponse{Executable: &JenkinsQueueExecutable{}}
+	}
+	if queueData.Executable.Number == 0 {
+		return errs.New(er, "工作流程 编号获取失败")
 	}
 
-	// 循环轮询任务，直到成功或失败
-	for range time.Tick(time.Second * 3) {
+	// 循环轮询任务，直到成功或失败；这里是真的可能很久。
+	for range time.Tick(time.Second * 5) {
 		workflowRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/job/%s/%v/api/json", r.Name, queueData.Executable.Number), nil, "find-workflow")
 		if er != nil {
 			return errs.New(er, "工作流程 请求错误")

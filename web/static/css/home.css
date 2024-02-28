@@ -157,6 +157,7 @@ i.el-alert__icon{
 /* 日志 踪迹 */
 .trace-page{
     position: relative;
+    margin-bottom: 50px;
 }
 .trace-page .median{
     position: absolute;
