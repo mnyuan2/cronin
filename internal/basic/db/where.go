@@ -120,8 +120,8 @@ func (builder *Where) JsonPathIn(field string, values interface{}, options ...Op
 			str += "'$.\"" + v + "\"',"
 		}
 
-		_where := fmt.Sprintf("JSON_CONTAINS_PATH(%s, 'one', %s)", field, strings.Trim(str, ","))
-		builder.wheres = append(builder.wheres, _where)
+		//_where := fmt.Sprintf("JSON_CONTAINS_PATH(%s, 'one', %s)", field, strings.Trim(str, ","))
+		//builder.wheres = append(builder.wheres, _where)
 	}
 	return builder
 }

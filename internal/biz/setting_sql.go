@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
-	"strings"
 )
 
 type SettingSqlService struct {
@@ -150,14 +149,20 @@ func (dm *SettingSqlService) ChangeStatus(r *pb.SettingChangeStatusRequest) (res
 	// 这里还是要做是否使用的检测；
 	// 如果使用未启用就联动置空（也不能删除，要么删除任务或者改任务），如果使用并启用禁止删除；
 	// 如果没有试用就直接删除。
-	list := []string{}
-	err = dm.db.Raw(fmt.Sprintf("SELECT `name` FROM `cron_config` WHERE protocol=%v and JSON_CONTAINS(command, '%v', '$.sql.source.id') = 1", models.ProtocolSql, one.Id)).
+	list := []*models.CronConfig{}
+	err = dm.db.Raw(fmt.Sprintf(`SELECT name,command FROM cron_config WHERE protocol=%v and command like '%"id": %v%'`, models.ProtocolSql, one.Id)).
 		Scan(&list).Error
 	if err != nil {
 		return nil, fmt.Errorf("任务检测错误，%w", err)
 	}
 	if len(list) > 0 {
-		return nil, fmt.Errorf("任务 %s 已使用连接，删除失败！", strings.Join(list, "、"))
+		for _, item := range list {
+			cmd := &pb.CronConfigCommand{Sql: &pb.CronSql{Source: &pb.CronSqlSource{}}}
+			jsoniter.Unmarshal(item.Command, cmd)
+			if cmd.Sql.Source.Id == one.Id {
+				return nil, fmt.Errorf("任务 %s 已使用连接，删除失败！", item.Name)
+			}
+		}
 	}
 
 	err = _data.Del(one.Scene, dm.user.Env, one.Id)

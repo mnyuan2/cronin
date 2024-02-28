@@ -13,10 +13,10 @@ type CronLogSpan struct {
 	Service      string `json:"service" gorm:"column:service;type:varchar(120);default:'';comment:服务名称;"`
 	Operation    string `json:"operation" gorm:"column:operation;type:varchar(120);default:'';comment:操作名称;"`
 	Duration     int64  `json:"duration" gorm:"column:duration;type:bigint(20);default:0;comment:耗时us/微秒;"`
-	Tags         []byte `json:"tags" gorm:"column:tags;type:json;default:null;comment:描述;"`
-	TagsKey      []byte `json:"tags_key" gorm:"column:tags_key;type:json;default:null;comment:描述key数组;"`
-	TagsVal      []byte `json:"tags_val" gorm:"column:tags_val;type:json;default:null;comment:描述val数组;"`
-	Logs         []byte `json:"logs" gorm:"column:logs;type:json;default:null;comment:日志;"`
+	Tags         []byte `json:"tags" gorm:"column:tags;type:text;default:null;comment:描述;"`
+	TagsKey      []byte `json:"tags_key" gorm:"column:tags_key;type:text;default:null;comment:描述key数组;"`
+	TagsVal      []byte `json:"tags_val" gorm:"column:tags_val;type:text;default:null;comment:描述val数组;"`
+	Logs         []byte `json:"logs" gorm:"column:logs;type:text;default:null;comment:日志;"`
 	Status       int    `json:"status" gorm:"column:status;type:tinyint(2);default:0;comment:状态：0.无、1.错误、2.正常;"`
 	StatusDesc   string `json:"status_desc" gorm:"column:status_desc;type:varchar(255);default:'';comment:状态描述;"`
 }

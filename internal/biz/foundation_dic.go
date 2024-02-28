@@ -138,7 +138,7 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 	}
 	// 查默认环境
 	envData := &DicGetItem{}
-	err = db.New(dm.ctx).Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE scene='env' and status=2 and json_contains(content, '2', '$.default');`).Scan(&envData).Error
+	err = db.New(dm.ctx).Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE scene='env' and status=2 and (content like '%"default":2%' or content like '%"default": 2%');`).Scan(&envData).Error
 	if err != nil {
 		return resp, fmt.Errorf("环境查询异常,%w", err)
 	}
