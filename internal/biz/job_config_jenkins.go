@@ -3,6 +3,7 @@ package biz
 import (
 	"bytes"
 	"context"
+	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/tracing"
 	"cron/internal/basic/util"
@@ -23,6 +24,7 @@ import (
 
 // 队列响应
 type JenkinsQueueResponse struct {
+	Why        *string                 `json:"why"`
 	Executable *JenkinsQueueExecutable `json:"executable"`
 }
 type JenkinsQueueExecutable struct {
@@ -42,9 +44,11 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
 			span.AddEvent("执行错误", trace.WithAttributes(attribute.String("error.object", err.Error())))
+			go job.messagePush(ctx, enum.StatusDisable, err.Desc(), nil, 0)
 		} else if er := util.PanicInfo(recover()); er != "" {
 			span.SetStatus(tracing.StatusError, "执行异常")
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
+			go job.messagePush(ctx, enum.StatusDisable, "执行异常", []byte(er), 0)
 		} else {
 			span.SetStatus(tracing.StatusOk, "")
 		}
@@ -70,49 +74,39 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 	*/
 
 	// 请求构建
-	buildRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/buildWithParameters", r.Name), r.Params)
+	queueId, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/buildWithParameters", r.Name), r.Params, "exec-build")
 	if er != nil {
 		return errs.New(er, "构建失败")
 	}
 
-	dom, er := goquery.NewDocumentFromReader(bytes.NewReader(buildRes))
-	if er != nil {
-		return errs.New(er, "构建结果解析错误")
-	}
-
-	title := ""
-	dom.Find("head title").Each(func(i int, selection *goquery.Selection) {
-		title = selection.Text()
-	})
-	if title != "Error 404 Not Found" {
-		return errs.New(errors.New(title), "构建错误")
-	}
-	// 解析响应并获得队列id
-	buildData := map[string]string{}
-	dom.Find("body table tr").Each(func(i int, selection *goquery.Selection) {
-		th := selection.Find("th").Text()
-		buildData[th[:len(th)-1]] = selection.Find("td").Text()
-	})
-	queueURI, ok := buildData["URI"]
-	if !ok {
-		return errs.New(errors.New(title), "构建队列错误")
-	}
-	queueParse := strings.Split(strings.Trim(queueURI, "/"), "/")
-	queueId := queueParse[len(queueParse)-1]
-
-	// 查询队列获取任务id
-	queueRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/queue/item/%v/api/json", queueId), nil)
-	if er != nil {
-		return errs.New(er, "队列信息请求错误")
-	}
 	queueData := &JenkinsQueueResponse{Executable: &JenkinsQueueExecutable{}}
-	if er := jsoniter.Unmarshal(queueRes, queueData); er != nil {
-		return errs.New(er, "队列结果解析错误")
+	for range time.Tick(time.Second * 3) {
+		// 查询队列获取任务id
+		queueRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/queue/item/%v/api/json", string(queueId)), nil, "get-queue")
+		if er != nil {
+			return errs.New(er, "队列信息请求错误")
+		}
+
+		if er := jsoniter.Unmarshal(queueRes, queueData); er != nil {
+			return errs.New(er, "队列结果解析错误")
+		}
+		if queueData.Why != nil {
+			why := *queueData.Why
+			if len(why) > 20 && why[:20] == "In the quiet period." {
+				continue
+			} else {
+				span.AddEvent("error", trace.WithAttributes(attribute.String("result_error", why)))
+			}
+		}
+		if queueData.Executable.Number > 0 {
+			break
+		}
+		queueData = &JenkinsQueueResponse{Executable: &JenkinsQueueExecutable{}}
 	}
 
 	// 循环轮询任务，直到成功或失败
-	for range time.Tick(time.Second * 5) {
-		workflowRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/job/%s/%v/api/json", r.Name, queueData.Executable.Number), nil)
+	for range time.Tick(time.Second * 3) {
+		workflowRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/job/%s/%v/api/json", r.Name, queueData.Executable.Number), nil, "find-workflow")
 		if er != nil {
 			return errs.New(er, "工作流程 请求错误")
 		}
@@ -123,16 +117,18 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		}
 		if workflowData.Result == "SUCCESS" {
 			return nil
+		} else if workflowData.Result == "FAILURE" {
+			return errs.New(nil, "构建失败 FAILURE")
 		}
-		// 失败的标志后面看一下，进行中的标志同理
+		// 进行中就延迟后 再次查询检测
 	}
 
-	return err
+	return nil
 }
 
 // http请求
-func (job *JobConfig) httpJenkins(ctx context.Context, source *pb.SettingJenkinsSource, method, path string, params []*pb.KvItem) (resp []byte, err errs.Errs) {
-	ctx, span := job.tracer.Start(ctx, "http")
+func (job *JobConfig) httpJenkins(ctx context.Context, source *pb.SettingJenkinsSource, method, path string, params []*pb.KvItem, operateName string) (resp []byte, err errs.Errs) {
+	ctx, span := job.tracer.Start(ctx, operateName)
 	defer func() {
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
@@ -150,9 +146,14 @@ func (job *JobConfig) httpJenkins(ctx context.Context, source *pb.SettingJenkins
 	if len(params) > 0 {
 		ps := []string{}
 		for _, pram := range params {
+			if pram.Key == "" {
+				continue
+			}
 			ps = append(ps, pram.Key+"="+pram.Value)
 		}
-		paramStr = "?" + strings.Join(ps, "&")
+		if len(ps) > 0 {
+			paramStr = "?" + strings.Join(ps, "&")
+		}
 	}
 
 	req, er := http.NewRequest(method, source.Hostname+path+paramStr, nil)
@@ -190,9 +191,13 @@ func (job *JobConfig) httpJenkins(ctx context.Context, source *pb.SettingJenkins
 	}
 	defer res.Body.Close()
 
-	resp, er = io.ReadAll(res.Body)
-	if er != nil {
-		err = errs.New(er, "响应错误")
+	if operateName == "exec-build" {
+		resp, er = job.jenkinsBuildParse(span, res)
+	} else {
+		resp, er = io.ReadAll(res.Body)
+		if er != nil {
+			err = errs.New(er, "响应错误")
+		}
 	}
 
 	h, _ = jsoniter.Marshal(res.Header)
@@ -202,4 +207,54 @@ func (job *JobConfig) httpJenkins(ctx context.Context, source *pb.SettingJenkins
 		attribute.String("response", string(resp)),
 	))
 	return resp, err
+}
+
+// 构建解析
+func (job *JobConfig) jenkinsBuildParse(span trace.Span, res *http.Response) (resp []byte, err error) {
+	if res.StatusCode == http.StatusCreated {
+		//res.Header.Get("Location")
+		// https://jenkins.xxx.cn/queue/item/34170/
+		queueParse := strings.Split(strings.Trim(res.Header.Get("Location"), "/"), "/")
+		queueId := queueParse[len(queueParse)-1]
+
+		return []byte(queueId), nil
+
+	} else if res.StatusCode == http.StatusNotFound {
+		resp, err = io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+		span.AddEvent("", trace.WithAttributes(
+			attribute.String("response_body", string(resp)),
+		))
+
+		dom, er := goquery.NewDocumentFromReader(bytes.NewReader(resp))
+		if er != nil {
+			return nil, errs.New(er, "构建结果解析错误")
+		}
+
+		title := ""
+		dom.Find("head title").Each(func(i int, selection *goquery.Selection) {
+			title = selection.Text()
+		})
+		if title != "Error 404 Not Found" {
+			return nil, errs.New(errors.New(title), "构建错误")
+		}
+		// 解析响应并获得队列id
+		buildData := map[string]string{}
+		dom.Find("body table tr").Each(func(i int, selection *goquery.Selection) {
+			th := selection.Find("th").Text()
+			buildData[th[:len(th)-1]] = selection.Find("td").Text()
+		})
+		queueURI, ok := buildData["URI"]
+		if !ok {
+			return nil, errs.New(errors.New(title), "构建队列错误")
+		}
+		queueParse := strings.Split(strings.Trim(queueURI, "/"), "/")
+		queueId := queueParse[len(queueParse)-1]
+
+		return []byte(queueId), nil
+	}
+
+	return nil, errs.New(nil, "错误")
 }

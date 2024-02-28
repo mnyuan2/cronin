@@ -94,6 +94,9 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 		if err != nil {
 			return nil, err
 		}
+		if one.Scene != source {
+			return nil, errs.New(nil, "数据场景不一致")
+		}
 		jsoniter.UnmarshalFromString(one.Content, oldSource)
 	} else {
 		one.Scene = source

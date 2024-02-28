@@ -264,6 +264,24 @@ var api = {
         }
         callback(reply)
     },
+    /**
+     * 移除dic缓存
+     * @param types array 枚举key列表
+     */
+    dicDel: function (types) {
+        let list = JSON.parse(localStorage.getItem(Enum.dicKey)) ?? {}
+        let reply = {}
+        // 从存储查看要请求的枚举是否存在 存在从存储取出
+        types.forEach((type, index) => {
+            if (list[type]) {
+                delete list[type]
+            }else if (type == -1){
+                list = []
+            }
+        })
+
+        window.localStorage.setItem(Enum.dicKey, JSON.stringify(list))
+    },
 
     // 系统信息
     // 信息具有缓存功能

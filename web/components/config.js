@@ -165,7 +165,7 @@ var MyConfig = Vue.extend({
                                             <el-button type="text" style="margin-left: 20px" @click="sourceBox(true)">设置链接</el-button>
                                         </el-form-item>
                                         <el-form-item label="项目">
-                                            <el-input v-model="form.command.jenkins.name"></el-input>
+                                            <el-input v-model="form.command.jenkins.name" placeholder="jenkins job name"></el-input>
                                         </el-form-item>
                                         <el-form-item label="参数" class="http_header_box">
                                             <el-input v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">

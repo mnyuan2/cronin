@@ -56,7 +56,7 @@ func TestJenkins2(t *testing.T) {
         <table>
             <tr>
                 <th>URI:</th>
-                <td>/queue/item/34129/</td>
+                <td>https://jenkins.xxx.cn/queue/item/34170/</td>
             </tr>
             <tr>
                 <th>STATUS:</th>

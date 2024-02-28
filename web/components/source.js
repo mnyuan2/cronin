@@ -1,7 +1,7 @@
 var MySource = Vue.extend({
     template: `<el-main>
         <el-menu :default-active="list.labelIndex" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
-            <el-menu-item index="11" :disabled="list.request">sql</el-menu-item>
+            <el-menu-item index="11" :disabled="list.request">mysql</el-menu-item>
             <el-menu-item index="12" :disabled="list.request">jenkins</el-menu-item>
             <div style="float: right">
                 <el-button type="text" @click="initForm(true)">新增链接</el-button>
@@ -47,14 +47,14 @@ var MySource = Vue.extend({
                     </el-tab-pane>
                     
                     <el-tab-pane label="jenkins" name="12">
-                        <el-form-item label="主机*">
-                            <el-input v-model="form.data.source.jenkins.hostname"></el-input>
+                        <el-form-item label="地址*">
+                            <el-input v-model="form.data.source.jenkins.hostname" placeholder="http://127.0.0.1:8080 或 https://jks.cn"></el-input>
                         </el-form-item>
                         <el-form-item label="用户名">
-                            <el-input v-model="form.data.source.jenkins.username"></el-input>
+                            <el-input v-model="form.data.source.jenkins.username" placeholder="登录账户"></el-input>
                         </el-form-item>
                         <el-form-item label="密码">
-                            <el-input v-model="form.data.source.jenkins.password" show-password="true"></el-input>
+                            <el-input v-model="form.data.source.jenkins.password" show-password="true" placeholder="api token"></el-input>
                         </el-form-item>
                     </el-tab-pane>
                 </el-tabs>
@@ -146,6 +146,8 @@ var MySource = Vue.extend({
                 }
                 this.initForm(false)
                 this.getList()
+
+                api.dicDel([body.type])
             })
         },
         // sql连接连接

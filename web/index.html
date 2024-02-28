@@ -61,13 +61,17 @@
         created(){
             let q = window.location.search
             let searchParams = new URLSearchParams(q)
-            let env = searchParams.get("env")
-            if (env != null && env !==""){
-                api.setEnv(env,"***")
+            let envKey = searchParams.get("env")
+            if (envKey != null && envKey !==""){
+                oldEnv = api.getEnv()
+                if (oldEnv.length>0 && oldEnv.env != envKey){
+                    api.dicDel([-1])
+                }
+                api.setEnv(envKey,"***")
             }
 
             this.getSysInfo()
-            this.getDic()
+            // this.getDic()
         },
         watch:{},
         methods:{
@@ -91,21 +95,21 @@
                 }, true)
             },
             // 枚举
-            getDic(){
-                api.dicList([Enum.dicSqlSource, Enum.dicEnv, Enum.dicUser, Enum.dicMsg], (list) =>{
-                    this.dicMap = list
-                    // 补充环境名称
-                    if (this.sysInfo.env_name == "***"){
-                        for (let i in list[Enum.dicEnv]){
-                            if (list[Enum.dicEnv][i].key == this.sysInfo.env){
-                                this.sysInfo.env_name = list[Enum.dicEnv][i].name
-                                api.setEnv(this.sysInfo.env, list[Enum.dicEnv][i].name)
-                                break
-                            }
-                        }
-                    }
-                },true)
-            },
+            // getDic(){
+            //     api.dicList([Enum.dicSqlSource, Enum.dicEnv, Enum.dicUser, Enum.dicMsg], (list) =>{
+            //         this.dicMap = list
+            //         // 补充环境名称
+            //         if (this.sysInfo.env_name == "***"){
+            //             for (let i in list[Enum.dicEnv]){
+            //                 if (list[Enum.dicEnv][i].key == this.sysInfo.env){
+            //                     this.sysInfo.env_name = list[Enum.dicEnv][i].name
+            //                     api.setEnv(this.sysInfo.env, list[Enum.dicEnv][i].name)
+            //                     break
+            //                 }
+            //             }
+            //         }
+            //     },true)
+            // },
         }
     })
 </script>

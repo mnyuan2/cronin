@@ -125,7 +125,7 @@ var MyPipeline = Vue.extend({
                         </div>
                     </el-drawer>
                     <!-- 任务日志弹窗 -->
-                    <el-drawer :title="log.title" :visible.sync="log.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBox(0)">
+                    <el-drawer :title="log.title" :visible.sync="log.show" direction="rtl" size="40%" wrapperClosable="false" > <!-- :before-close="configLogBox(0)"-->
                         <my-config-log :config_id="log.id"></my-config-log>
                     </el-drawer>
                     <!-- 注册任务列表弹窗 -->
@@ -452,6 +452,7 @@ var MyPipeline = Vue.extend({
                 this.log.title = title+' 日志'
                 this.log.show = true
             }
+            console.log("configLogBox",id,title, this.log)
         },
         // 推送弹窗
         msgBoxShow(index, oldData){

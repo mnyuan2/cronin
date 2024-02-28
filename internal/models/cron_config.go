@@ -9,17 +9,19 @@ type CronProtocol int
 type CronStatus int
 
 const (
-	ProtocolHttp = 1 // http
-	ProtocolRpc  = 2 // rpc
-	ProtocolCmd  = 3 // 命令行 cmd
-	ProtocolSql  = 4 // sql 执行
+	ProtocolHttp    = 1 // http
+	ProtocolRpc     = 2 // rpc
+	ProtocolCmd     = 3 // 命令行 cmd
+	ProtocolSql     = 4 // sql 执行
+	ProtocolJenkins = 5 // jenkins 构建
 )
 
 var ProtocolMap = map[int]string{
-	ProtocolHttp: "http",
-	ProtocolRpc:  "rpc",
-	ProtocolCmd:  "cmd",
-	ProtocolSql:  "sql",
+	ProtocolHttp:    "http",
+	ProtocolRpc:     "rpc",
+	ProtocolCmd:     "cmd",
+	ProtocolSql:     "sql",
+	ProtocolJenkins: "jenkins",
 }
 
 const (
