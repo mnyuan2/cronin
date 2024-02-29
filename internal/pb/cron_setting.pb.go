@@ -3,6 +3,7 @@ package pb
 type SettingSource struct {
 	Sql     *SettingSqlSource     `json:"sql"`
 	Jenkins *SettingJenkinsSource `json:"jenkins"`
+	Git     *SettingGitSource     `json:"git"`
 }
 
 // sql 源
@@ -19,6 +20,12 @@ type SettingJenkinsSource struct {
 	Hostname string `json:"hostname"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+// git 源
+type SettingGitSource struct {
+	Type        string `json:"type"`
+	AccessToken string `json:"access_token"` // 用户授权码
 }
 
 // 任务列表

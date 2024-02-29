@@ -167,6 +167,7 @@ const Enum ={
     dicUser: 4,
     dicSqlSource: 11,
     dicJenkinsSource: 12,
+    dicGitSource: 13,
 }
 
 /**

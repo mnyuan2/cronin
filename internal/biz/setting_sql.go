@@ -105,7 +105,8 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 		one.CreateDt = ti.String()
 	}
 
-	if r.Source.Sql != nil {
+	switch r.Type {
+	case enum.DicSqlSource:
 		// 提交密码与旧密码不一致就加密
 		if r.Source.Sql.Password != "" && r.Source.Sql.Password != oldSource.Password {
 			r.Source.Sql.Password, err = models.SqlSourceEncrypt(r.Source.Sql.Password)
@@ -113,8 +114,14 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 				return nil, fmt.Errorf("加密失败，%w", err)
 			}
 		}
-	} else if r.Source.Jenkins != nil {
+	case enum.DicJenkinsSource:
 		r.Source.Jenkins.Hostname = strings.Trim(r.Source.Jenkins.Hostname, "/")
+	case enum.DicGitSource:
+		if r.Source.Git.Type != "gitee" {
+			return nil, fmt.Errorf("git 类型错误 %s", r.Source.Git.Type)
+		}
+	default:
+		return nil, errs.New(nil, "type参数错误")
 	}
 
 	one.UpdateDt = ti.String()

@@ -4,13 +4,14 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // mysql最低版本
 // 5.7.8 开始支持json函数，低于程序会报错
-var mysqlLower = []string{"5", "7", "8"}
+var mysqlLower = []int{5, 7, 7}
 
 // 注册表结构
 func AutoMigrate(db *db.MyDB) {
@@ -83,13 +84,14 @@ func mysqlLowerCheck(db *db.MyDB) error {
 	temp2 := strings.Split(temp1[0], ".")
 	isLower := true
 	for i, n := range temp2 {
-		if mysqlLower[i] < n {
+		val, _ := strconv.Atoi(n)
+		if mysqlLower[i] < val {
 			isLower = false
 			break
 		}
 	}
 	if isLower {
-		return fmt.Errorf("mysql最低要求版本 5.7.8")
+		return fmt.Errorf("mysql最低要求版本 5.7.8 当前为 %s", version)
 	}
 	return nil
 }

@@ -54,8 +54,10 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		}
 		span.End()
 	}()
+	p, _ := jsoniter.MarshalToString(r.Params)
 	span.AddEvent("set", trace.WithAttributes(
 		attribute.String("name", r.Name),
+		attribute.String("params", p),
 	))
 
 	source, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.Source.Id)

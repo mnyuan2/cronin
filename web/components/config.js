@@ -133,7 +133,14 @@ var MyConfig = Vue.extend({
                                             <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
                                         </el-form-item>
                                         <el-form-item label="执行语句">
-                                            <div><el-button type="text" @click="sqlSetShow(-1,'')">添加<i class="el-icon-plus"></i></el-button></div>
+                                            <div>
+                                                来源
+                                                <el-select v-model="form.command.sql.statement_source">
+                                                    <el-option label="本地" value="local"></el-option>
+                                                    <el-option label="git" value="git"></el-option>
+                                                </el-select>
+                                                <el-button type="text" @click="sqlSetShow(-1,'')">添加<i class="el-icon-plus"></i></el-button>
+                                            </div>
                                             <div style="overflow-y: auto;max-height: 420px;">
                                                 <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                                     <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 56px;"><code class="language-sql hljs">{{statement}}</code></pre>
@@ -189,7 +196,7 @@ var MyConfig = Vue.extend({
                             </el-form-item>
                         </el-form>
                         <div slot="footer" class="dialog-footer">
-                            <el-button @click="configRun()" class="left" v-show="form.type==1">执行一下</el-button>
+                            <el-button @click="configRun()" class="left">执行一下</el-button>
                             <el-button @click="setConfigShow = false">取 消</el-button>
                             <el-button type="primary" @click="setCron()">确 定</el-button>
                         </div>
@@ -214,7 +221,32 @@ var MyConfig = Vue.extend({
                     </el-drawer>
                     <!-- sql设置弹窗 -->
                     <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
-                        <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.data"></el-input>
+                        <el-form :model="ruleForm" v-if="sqlSet.source=='git'">
+                            <el-form-item label="连接" prop="name">
+                                <el-select v-model="sqlSet.git_data.link_id" placement="请选择git链接">
+                                    <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="仓库空间">
+                                <el-input v-model="sqlSet.git_data.owner"></el-input>
+                            </el-form-item>
+                            <el-form-item label="项目名称">
+                                <el-input v-model="sqlSet.git_data.project"></el-input>
+                            </el-form-item>
+                            <el-form-item label="文件路径">
+                                <el-input v-for="(path_v,path_i) in sqlSet.git_data.path" v-model="path_v" placeholder="文件的路径" @input="sqlGitPathInput">
+                                    <el-button slot="append" icon="el-icon-delete" @click="sqlGitPathDel(path_i)"></el-button>
+                                </el-input>
+                            </el-form-item>
+                            <el-form-item label="分支">
+                                <el-input v-model="sqlSet.git_data.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
+                            </el-form-item>
+                        </el-form>
+                        
+                        <el-form :model="ruleForm"  v-if="sqlSet.source=='local'">
+                            <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.data"></el-input>
+                        </el-form>
+                       
                         <span slot="footer" class="dialog-footer">
                             <el-button @click="sqlSet.show = false">取 消</el-button>
                             <el-button type="primary" @click="sqlSetConfirm()">确 定</el-button>
@@ -259,6 +291,7 @@ var MyConfig = Vue.extend({
             dic_user: [],
             dic_msg: [],
             dic_jenkins_source: [],
+            dic_git_source: [],
             sys_info:{},
             list: [],
             listPage:{
@@ -286,7 +319,9 @@ var MyConfig = Vue.extend({
                 show: false, // 是否显示
                 title: '添加',
                 index: -1, // 操作行号
-                data: "", // 实际内容
+                source: '', // sql 来源
+                local_data: "", // 实际内容
+                git_data: {},
             }, // sql设置弹窗
             msgSet:{
                 show: false, // 是否显示
@@ -403,6 +438,7 @@ var MyConfig = Vue.extend({
             }
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.source.id = Number(body.command.sql.source.id)
+            body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
 
             api.innerPost("/config/set", body, (res)=>{
                 if (!res.status){
@@ -438,7 +474,7 @@ var MyConfig = Vue.extend({
             }
             this.form.command.http.header.splice(index,1)
         },
-        // http header 输入值变化时
+        // jenkinsParam 输入值变化时
         jenkinsParamInput(val){
             if (val == ""){
                 return
@@ -448,12 +484,29 @@ var MyConfig = Vue.extend({
                 this.form.command.jenkins.params.push({"key":"","value":""})
             }
         },
-        // http header 输入值删除
+        // jenkinsParam 输入值删除
         jenkinsParamDel(index){
             if ((index+1) >= this.form.command.jenkins.params.length){
                 return
             }
             this.form.command.jenkins.params.splice(index,1)
+        },
+        // sqlGitPath 输入值变化时
+        sqlGitPathInput(val){
+            if (val == ""){
+                return
+            }
+            let item = this.sqlSet.git_data.path.slice(-1)[0]
+            if (item == undefined || item != ""){
+                this.sqlSet.git_data.path.push("")
+            }
+        },
+        // sqlGitPath 输入值删除
+        sqlGitPathDel(index){
+            if ((index+1) >= this.sqlSet.git_data.path.length){
+                return
+            }
+            this.sqlSet.git_data.path.splice(index,1)
         },
         initFormData(){
             return  {
@@ -486,6 +539,7 @@ var MyConfig = Vue.extend({
                             // username:"",
                             // password:""
                         },
+                        statement_source: 'local',
                         statement:[],
                         err_action: "1",
                     },
@@ -614,41 +668,83 @@ var MyConfig = Vue.extend({
             if (typeof oldData != 'string'){
                 return this.$message.error("sql内容异常");
             }
+            this.sqlSet.source = this.form.command.sql.statement_source
             this.sqlSet.show = true
             this.sqlSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
-            this.sqlSet.data = oldData // 原来的内容
+
+            if (this.sqlSet.source == 'git'){
+                this.sqlSet.git_data = {
+                    link_id: "",
+                    owner: "",
+                    project: "",
+                    path: [""],
+                    ref: "",
+                }
+            }else{ // this.sqlSet.source == 'local'
+                this.sqlSet.local_data = oldData // 原来的内容
+            }
             this.sqlSet.title = this.sqlSet.index < 0? '添加' : '编辑';
         },
         // sql设置确定
         sqlSetConfirm(){
-            if (this.sqlSet.data == ""){
-                return this.$message.error("sql内容不得为空");
-            }
             if (typeof this.sqlSet.index !== 'number'){
                 console.log('sqlSetShow', this.sqlSet)
                 return this.$message.error("索引位标志异常");
             }
-            // 支持批量添加
-            let temp = this.sqlSet.data.split(";")
-            let datas = []
-            for (let i in temp){
-                let val = temp[i].trim()
-                if (val != ""){
-                    datas.push(val)
+
+            if (this.sqlSet.source == 'git'){
+                if (this.sqlSet.git_data.link_id == ""){
+                    return this.$message.error("请选择连接")
+                }
+
+                if (this.sqlSet.git_data.owner == ""){
+                    return this.$message.error("仓库空间为必填")
+                }
+                if (this.sqlSet.git_data.project == ""){
+                    return this.$message.error("项目名称为必填")
+                }
+                if (this.sqlSet.git_data.path.length == 0){
+                    return this.$message.error("请输入文件的路径")
+                }
+                let data = JSON.parse(JSON.stringify(this.sqlSet.git_data));
+                data.link_id = Number(data.link_id)
+                if (data.ref == ""){
+                    data.ref = 'master'
+                }
+                if (this.sqlSet.index < 0){
+                    this.form.command.sql.statement.push(data)
+                }else{
+                    this.form.command.sql.statement[this.sqlSet.index] = data
+                }
+
+            }else{
+                if (this.sqlSet.local_data == ""){
+                    return this.$message.error("sql内容不得为空");
+                }
+                // 支持批量添加
+                let temp = this.sqlSet.local_data.split(";")
+                let datas = []
+                for (let i in temp){
+                    let val = temp[i].trim()
+                    if (val != ""){
+                        datas.push(val)
+                    }
+                }
+
+                if (this.sqlSet.index < 0){
+                    this.form.command.sql.statement.push(...datas)
+                }else if (datas.length > 1){
+                    return this.$message.warning("不支持单sql的拆分，建议删除后批量添加");
+                }else if (datas.length == 0){
+                    return this.$message.warning("不存在有效sql，请确认输入");
+                }else{
+                    this.form.command.sql.statement[this.sqlSet.index] = datas[0]
                 }
             }
 
-            if (this.sqlSet.index < 0){
-                this.form.command.sql.statement.push(...datas)
-            }else if (datas.length > 1){
-                return this.$message.warning("不支持单sql的拆分，建议删除后批量添加");
-            }else if (datas.length == 0){
-                return this.$message.warning("不存在有效sql，请确认输入");
-            }else{
-                this.form.command.sql.statement[this.sqlSet.index] = datas[0]
-            }
             this.sqlSet.show = false
-            this.sqlSet.data = ""
+            this.sqlSet.local_data = ""
+            this.sqlSet.git_data = {}
             this.sqlSet.index = -1
         },
         // 删除sql元素
@@ -749,9 +845,10 @@ var MyConfig = Vue.extend({
         },
         // 枚举
         getDicSqlSource(){
-            api.dicList([Enum.dicSqlSource, Enum.dicJenkinsSource, Enum.dicUser, Enum.dicMsg],(res) =>{
+            api.dicList([Enum.dicSqlSource, Enum.dicJenkinsSource, Enum.dicGitSource, Enum.dicUser, Enum.dicMsg],(res) =>{
                 this.dic_sql_source = res[Enum.dicSqlSource]
                 this.dic_jenkins_source = res[Enum.dicJenkinsSource]
+                this.dic_git_source =res[Enum.dicGitSource]
                 this.dic_user = res[Enum.dicUser]
                 this.dic_msg = res[Enum.dicMsg]
             })
@@ -783,6 +880,7 @@ var MyConfig = Vue.extend({
             }
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.source.id = Number(body.command.sql.source.id)
+            body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
 
             api.innerPost("/config/run", body, (res)=>{
                 if (!res.status){

@@ -22,6 +22,7 @@ type SettingSqlSource struct {
 const (
 	SceneSqlSource     = "sql_source"     // sql数据源配置
 	SceneJenkinsSource = "jenkins_source" // jenkins 连接配置
+	SceneGitSource     = "git_source"     // git
 	SceneEnv           = "env"            // 程序环境
 	SceneMsg           = "msg"            // 消息推送
 )
@@ -32,9 +33,11 @@ const EnvDefault = "public" // 默认环境 是不可以删除的
 var DicToSource = map[int]string{
 	enum.DicSqlSource:     SceneSqlSource,
 	enum.DicJenkinsSource: SceneJenkinsSource,
+	enum.DicGitSource:     SceneGitSource,
 }
 
 var SourceToDic = map[string]int{
 	SceneSqlSource:     enum.DicSqlSource,
 	SceneJenkinsSource: enum.DicJenkinsSource,
+	SceneGitSource:     enum.DicGitSource,
 }

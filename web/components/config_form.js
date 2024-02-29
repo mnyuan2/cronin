@@ -142,7 +142,7 @@ var MyConfigForm = Vue.extend({
         </el-form-item>
     </el-form>
     <div slot="footer" class="dialog-footer">
-        <el-button @click="configRun()" class="left" v-show="form.type==1" v-if="mode=='config'">执行一下</el-button>
+        <el-button @click="configRun()" class="left" v-if="mode=='config'">执行一下</el-button>
         <el-button @click="setConfigShow = false">取 消</el-button>
         <el-button type="primary" @click="setCron()">确 定</el-button>
     </div>

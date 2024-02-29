@@ -3,6 +3,7 @@ var MySource = Vue.extend({
         <el-menu :default-active="list.labelIndex" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
             <el-menu-item index="11" :disabled="list.request">mysql</el-menu-item>
             <el-menu-item index="12" :disabled="list.request">jenkins</el-menu-item>
+            <el-menu-item index="13" :disabled="list.request">git</el-menu-item>
             <div style="float: right">
                 <el-button type="text" @click="initForm(true)">新增链接</el-button>
             </div>
@@ -55,6 +56,17 @@ var MySource = Vue.extend({
                         </el-form-item>
                         <el-form-item label="密码">
                             <el-input v-model="form.data.source.jenkins.password" show-password="true" placeholder="api token"></el-input>
+                        </el-form-item>
+                    </el-tab-pane>
+                    <el-tab-pane label="git" name="13">
+                        <el-form-item label="类型">
+                            <el-select v-model="form.data.source.git.type">
+                                <el-option label="gitee" value="gitee"></el-option>
+                                <!--<el-option label="github" value="github"></el-option>-->
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="授权码">
+                            <el-input v-model="form.data.source.git.access_token" placeholder="gitee.com / 个人设置 / 私密令牌 可进行获取"></el-input>
                         </el-form-item>
                     </el-tab-pane>
                 </el-tabs>
@@ -184,6 +196,10 @@ var MySource = Vue.extend({
                             hostname: "",
                             database:"",
                             username: ""
+                        },
+                        git:{
+                            type: 'gitee',
+                            access_token: ''
                         }
                     }
                 }

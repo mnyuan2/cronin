@@ -6,6 +6,7 @@ const (
 	DicUser          = 4  // 用户
 	DicSqlSource     = 11 // sql 资源连接
 	DicJenkinsSource = 12 // jenkins 资源连接
+	DicGitSource     = 13 // git 连接
 )
 
 const (

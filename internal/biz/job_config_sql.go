@@ -66,9 +66,31 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 		return errs.New(_db.Error, "连接失败")
 	}
 
+	statement := []*pb.KvItem{} // value.具体sql、key.描述备注
+
+	// 远程sql要在这里解析了
+	switch r.StatementSource {
+	case enum.SqlStatementSourceGit:
+		for _, s := range r.Statement {
+			job.giteeGetFile()
+			// 获取文件，解析文件，拆解sql
+		}
+
+		// 这里大集合，就丢失了错误时具体文件的描述；
+		// 或者这里搞一个二级，就是分组的意思；
+		// 写到结构体，组也不能解决问题。
+
+	case enum.SqlStatementSourceLocal:
+		for _, s := range r.Statement {
+			statement = append(statement, &pb.KvItem{Value: s})
+		}
+	default:
+		return errs.New(_db.Error, "sql 语句来源异常")
+	}
+
 	// 执行sql
 	// 此处为局部错误，大框架是完成的，错误不必返回
-	err = job.sqlMysqlExec(r, _db, r.Statement)
+	err = job.sqlMysqlExec(r, _db, statement)
 	if err != nil {
 		// 执行告警推送
 		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), 0)
@@ -76,7 +98,7 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 	return err
 }
 
-func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []string) errs.Errs {
+func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []*pb.KvItem) errs.Errs {
 	var tx *gorm.DB
 	if r.ErrAction == models.SqlErrActionRollback {
 		tx = _db.Begin()
@@ -107,12 +129,12 @@ func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []stri
 	return nil
 }
 
-func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql string) (err error) {
+func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) (err error) {
 	ctx, span := job.tracer.Start(_db.Statement.Context, "sql-item")
-	span.AddEvent("", trace.WithAttributes(attribute.String("sql", sql)))
+	span.AddEvent("", trace.WithAttributes(attribute.String("sql", sql.Value)))
 	defer span.End()
 
-	resp := _db.Exec(sql)
+	resp := _db.Exec(sql.Value)
 	if resp.Error != nil {
 		err = resp.Error
 		span.SetStatus(codes.Error, "执行失败")
@@ -125,4 +147,9 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql string) (err
 		span.AddEvent("", trace.WithAttributes(attribute.Int64("rows affected", resp.RowsAffected)))
 	}
 	return err
+}
+
+// gitee 抓取文件数据
+func (job *JobConfig) giteeGetFile() {
+
 }
