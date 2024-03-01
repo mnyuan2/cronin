@@ -1,11 +1,13 @@
 package biz
 
 import (
+	"bytes"
 	"context"
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
+	"cron/internal/basic/git/gitee"
 	"cron/internal/basic/tracing"
 	"cron/internal/data"
 	"cron/internal/models"
@@ -71,15 +73,13 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 	// 远程sql要在这里解析了
 	switch r.StatementSource {
 	case enum.SqlStatementSourceGit:
-		for _, s := range r.Statement {
-			job.giteeGetFile()
-			// 获取文件，解析文件，拆解sql
+		for _, s := range r.StatementGit {
+			temp, err := job.giteeGetFile(ctx, s)
+			if err != nil {
+				return err
+			}
+			statement = append(statement, temp...)
 		}
-
-		// 这里大集合，就丢失了错误时具体文件的描述；
-		// 或者这里搞一个二级，就是分组的意思；
-		// 写到结构体，组也不能解决问题。
-
 	case enum.SqlStatementSourceLocal:
 		for _, s := range r.Statement {
 			statement = append(statement, &pb.KvItem{Value: s})
@@ -150,6 +150,37 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) 
 }
 
 // gitee 抓取文件数据
-func (job *JobConfig) giteeGetFile() {
+func (job *JobConfig) giteeGetFile(ctx context.Context, r *pb.StatementGit) (statement []*pb.KvItem, err errs.Errs) {
+	//r.LinkId
+	link, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.LinkId)
+	if er != nil {
+		return nil, errs.New(er, "链接配置查询错误")
+	}
+	conf := &pb.SettingGitSource{}
+	if er := jsoniter.UnmarshalFromString(link.Content, conf); er != nil {
+		return nil, errs.New(er, "链接配置解析错误")
+	}
 
+	api := gitee.NewApiV5(conf)
+	statement = []*pb.KvItem{}
+
+	for _, path := range r.Path {
+		res, err := api.ReposContents(r.Owner, r.Project, path, r.Ref)
+		if err != nil {
+			return
+		}
+		// 解析文件内容，并拆分sql
+		list := bytes.Split(res, []byte(";"))
+		for _, item := range list {
+			s := bytes.TrimSpace(item)
+			if s != nil {
+				statement = append(statement, &pb.KvItem{
+					Key:   path,
+					Value: string(s),
+				})
+			}
+		}
+	}
+
+	return statement, nil
 }

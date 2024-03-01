@@ -541,6 +541,7 @@ var MyConfig = Vue.extend({
                         },
                         statement_source: 'local',
                         statement:[],
+                        statement_git:[],
                         err_action: "1",
                     },
                     jenkins:{
@@ -712,9 +713,9 @@ var MyConfig = Vue.extend({
                     data.ref = 'master'
                 }
                 if (this.sqlSet.index < 0){
-                    this.form.command.sql.statement.push(data)
+                    this.form.command.sql.statement_git.push(data)
                 }else{
-                    this.form.command.sql.statement[this.sqlSet.index] = data
+                    this.form.command.sql.statement_git[this.sqlSet.index] = data
                 }
 
             }else{

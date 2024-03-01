@@ -28,6 +28,10 @@ type SettingGitSource struct {
 	AccessToken string `json:"access_token"` // 用户授权码
 }
 
+func (m *SettingGitSource) GetAccessToken() string {
+	return m.AccessToken
+}
+
 // 任务列表
 type SettingListRequest struct {
 	Type int `form:"type"`
