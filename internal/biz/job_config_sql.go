@@ -151,7 +151,6 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) 
 
 // gitee 抓取文件数据
 func (job *JobConfig) giteeGetFile(ctx context.Context, r *pb.StatementGit) (statement []*pb.KvItem, err errs.Errs) {
-	//r.LinkId
 	link, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.LinkId)
 	if er != nil {
 		return nil, errs.New(er, "链接配置查询错误")
@@ -165,9 +164,9 @@ func (job *JobConfig) giteeGetFile(ctx context.Context, r *pb.StatementGit) (sta
 	statement = []*pb.KvItem{}
 
 	for _, path := range r.Path {
-		res, err := api.ReposContents(r.Owner, r.Project, path, r.Ref)
-		if err != nil {
-			return
+		res, er := api.ReposContents(r.Owner, r.Project, path, r.Ref)
+		if er != nil {
+			return nil, errs.New(er, "gite文件获取失败")
 		}
 		// 解析文件内容，并拆分sql
 		list := bytes.Split(res, []byte(";"))

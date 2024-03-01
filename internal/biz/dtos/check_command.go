@@ -1,6 +1,7 @@
 package dtos
 
 import (
+	"cron/internal/basic/enum"
 	"cron/internal/basic/grpcurl"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -63,9 +64,35 @@ func CheckSql(sql *pb.CronSql) error {
 	if sql.Source.Id == 0 {
 		return fmt.Errorf("请选择 sql 连接")
 	}
-	if len(sql.Statement) == 0 {
-		return errors.New("未设置 sql 执行语句")
+	if sql.StatementSource == enum.SqlStatementSourceLocal {
+		if len(sql.Statement) == 0 {
+			return errors.New("未设置 sql 执行语句")
+		}
+	} else if sql.StatementSource == enum.SqlStatementSourceGit {
+		if len(sql.StatementGit) == 0 {
+			return errors.New("未设置 sql 执行语句")
+		}
+		for _, git := range sql.StatementGit {
+			if git.LinkId == 0 {
+				return errors.New("未设置 sql 语句 连接")
+			}
+			if git.Owner == "" {
+				return errors.New("未设置 sql 语句 仓库空间")
+			}
+			if git.Project == "" {
+				return errors.New("未设置 sql 语句 项目名称")
+			}
+			if len(git.Path) <= 1 {
+				return errors.New("未设置 sql 语句 文件路径")
+			}
+			for i, path := range git.Path {
+				git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
+			}
+		}
+	} else {
+		return errors.New("sql来源有误")
 	}
+
 	name, ok := models.SqlErrActionMap[sql.ErrAction]
 	if !ok {
 		return errors.New("未设置 sql 错误行为")

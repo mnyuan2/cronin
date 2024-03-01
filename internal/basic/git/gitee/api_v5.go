@@ -1,6 +1,7 @@
 package gitee
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -64,9 +65,12 @@ func (m *ApiV5) ReposContents(owner, repo, path, ref string) (res []byte, err er
 		if message, ok := out["message"]; ok {
 			return nil, errors.New(message.(string))
 		}
+	} else if content, oK := out["content"].(string); oK {
+		return base64.StdEncoding.DecodeString(content)
 	} else {
 		//out["root"]["content"]
-		fmt.Println(out)
+		return nil, errors.New("操作异常")
+
 	}
 
 	return b, nil

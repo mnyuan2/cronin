@@ -135,20 +135,30 @@ var MyConfig = Vue.extend({
                                         <el-form-item label="执行语句">
                                             <div>
                                                 来源
-                                                <el-select v-model="form.command.sql.statement_source">
+                                                <el-select v-model="form.command.sql.statement_source" size="mini" style="width:80px">
                                                     <el-option label="本地" value="local"></el-option>
                                                     <el-option label="git" value="git"></el-option>
                                                 </el-select>
                                                 <el-button type="text" @click="sqlSetShow(-1,'')">添加<i class="el-icon-plus"></i></el-button>
                                             </div>
                                             <div style="overflow-y: auto;max-height: 420px;">
-                                                <div v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                                <!--本地sql展示-->
+                                                <div v-if="form.command.sql.statement_source == 'local'" v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                                     <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 56px;"><code class="language-sql hljs">{{statement}}</code></pre>
                                                     <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
                                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
                                                     <i style="position: absolute;right: 1px;top: 49px;font-size: 16px;">#{{sql_index}}</i>
                                                 </div>
-                                                <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
+                                                <el-alert v-if="form.command.sql.statement_source == 'local'" v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
+                                                <!--git sql展示-->
+                                                <div v-if="form.command.sql.statement_source == 'git'" v-for="(statement,sql_index) in form.command.sql.statement_git" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                                    <el-row v-html="statement.descrition"></el-row>
+                                                    <pre v-for="path_item in statement.path" style="margin: 0;padding-left: 30px;"><code class="">{{path_item}}</code></pre>
+                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
+                                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
+                                                    <i style="position: absolute;right: 1px;top: 49px;font-size: 16px;">#{{sql_index}}</i>
+                                                </div>
+                                                <el-alert v-if="form.command.sql.statement_source == 'git'" v-show="form.command.sql.statement_git.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
                                             </div>
                                         </el-form-item>
                                         <el-form-item label="错误行为">
@@ -221,30 +231,30 @@ var MyConfig = Vue.extend({
                     </el-drawer>
                     <!-- sql设置弹窗 -->
                     <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
-                        <el-form :model="ruleForm" v-if="sqlSet.source=='git'">
-                            <el-form-item label="连接" prop="name">
+                        <el-form :model="sqlSet.git_data" v-if="sqlSet.source=='git'" label-width="70px" size="small">
+                            <el-form-item label="连接" prop="name" label-width="">
                                 <el-select v-model="sqlSet.git_data.link_id" placement="请选择git链接">
                                     <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                                 </el-select>
                             </el-form-item>
                             <el-form-item label="仓库空间">
-                                <el-input v-model="sqlSet.git_data.owner"></el-input>
+                                <el-input v-model="sqlSet.git_data.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
                             </el-form-item>
                             <el-form-item label="项目名称">
-                                <el-input v-model="sqlSet.git_data.project"></el-input>
+                                <el-input v-model="sqlSet.git_data.project" placeholder="仓库路径"></el-input>
                             </el-form-item>
                             <el-form-item label="文件路径">
-                                <el-input v-for="(path_v,path_i) in sqlSet.git_data.path" v-model="path_v" placeholder="文件的路径" @input="sqlGitPathInput">
+                                <el-input v-for="(path_v,path_i) in sqlSet.git_data.path" v-model="sqlSet.git_data.path[path_i]" placeholder="文件的路径" @input="sqlGitPathInput">
                                     <el-button slot="append" icon="el-icon-delete" @click="sqlGitPathDel(path_i)"></el-button>
                                 </el-input>
                             </el-form-item>
-                            <el-form-item label="分支">
+                            <el-form-item label="引用">
                                 <el-input v-model="sqlSet.git_data.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
                             </el-form-item>
                         </el-form>
                         
-                        <el-form :model="ruleForm"  v-if="sqlSet.source=='local'">
-                            <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.data"></el-input>
+                        <el-form :model="sqlSet.local_data"  v-if="sqlSet.source=='local'">
+                            <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.local_data"></el-input>
                         </el-form>
                        
                         <span slot="footer" class="dialog-footer">
@@ -566,6 +576,10 @@ var MyConfig = Vue.extend({
             if (this.form.command.sql.source.id == 0){
                 this.form.command.sql.source.id = ""
             }
+            for (let i in row.command.sql.statement_git){
+                this.form.command.sql.statement_git[i] = this.sqlGitBuildDesc(row.command.sql.statement_git[i])
+            }
+
             if (this.form.command.http.header.length == 0){
                 this.form.command.http.header = this.initFormData().command.http.header
             }
@@ -712,11 +726,13 @@ var MyConfig = Vue.extend({
                 if (data.ref == ""){
                     data.ref = 'master'
                 }
+                data = this.sqlGitBuildDesc(data)
                 if (this.sqlSet.index < 0){
                     this.form.command.sql.statement_git.push(data)
                 }else{
                     this.form.command.sql.statement_git[this.sqlSet.index] = data
                 }
+                console.log("git data",data)
 
             }else{
                 if (this.sqlSet.local_data == ""){
@@ -830,6 +846,17 @@ var MyConfig = Vue.extend({
                 descrition += '，并且@人员<span class="el-tag el-tag--small el-tag--light">'+data.notify_users_name+'</span>'
             }
             data.descrition = descrition
+            return data
+        },
+        // 构建git sql 描述
+        sqlGitBuildDesc(data){
+            let git = this.dic_git_source.filter(item=>{
+                return item.id == data.link_id
+            })
+
+            data.descrition = '连接<span class="el-tag el-tag--small el-tag--light">'+git.length>0 ? git[0].name: '' +
+                '</span> 访问<span class="el-tag el-tag--small el-tag--light">'+data.owner+'/'+data.project +'</span>'+
+                '</span> 引用<span class="el-tag el-tag--small el-tag--light">'+data.ref +'</span> 拉取以下文件内容执行'
             return data
         },
         statusClass(status){
