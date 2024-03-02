@@ -10,6 +10,7 @@ import (
 	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
+	"cron/internal/pb"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
@@ -21,6 +22,7 @@ import (
 
 type JobPipeline struct {
 	pipeline    *models.CronPipeline
+	confs       []*pb.CronConfigListItem // 配置任务集合
 	conf        *JobConfig
 	msgSetParse *dtos.MsgSetParse
 	tracer      trace.Tracer
@@ -47,6 +49,10 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 		CreateDt:     "",
 		MsgSet:       conf.MsgSet,
 	})
+	if err := job.parse(conf); err != nil {
+		log.Println("流水线配置解析错误", err.Error())
+		// ...
+	}
 
 	// 日志
 	job.tracer = tracing.Tracer(job.pipeline.Env+"-cronin", trace.WithInstrumentationAttributes(
@@ -55,6 +61,11 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 	))
 
 	return job
+}
+
+func (job *JobPipeline) parse(conf *models.CronPipeline) error {
+	job.confs = []*pb.CronConfigListItem{}
+	return jsoniter.Unmarshal(conf.Configs, &job.confs)
 }
 
 // 执行任务
@@ -119,17 +130,28 @@ func (job *JobPipeline) Run() {
 		err = errs.New(er, "任务查询错误")
 		return
 	}
-	jobs := []*JobConfig{}
+	listMap := map[int]*models.CronConfig{}
 	for _, item := range list {
+		listMap[item.Id] = item
+	}
+
+	jobs := []*JobConfig{}
+	for _, item := range job.confs { // 要保持设置时的顺序关系
+		temp, ok := listMap[item.Id]
+		if !ok {
+			err = errs.New(fmt.Errorf("%v·%v 未找到匹配", item.Id, item.Name), "任务配置异常")
+			return
+		}
+
 		if item.Status != models.ConfigStatusActive && item.Status != models.ConfigStatusFinish {
 			if job.pipeline.ConfigDisableAction == models.DisableActionStop {
-				job.conf.messagePush(ctx, enum.StatusDisable, "任务非激活", []byte(fmt.Sprintf("%s-%s", item.Name, item.GetStatusName())), time.Since(st).Seconds())
+				job.conf.messagePush(ctx, enum.StatusDisable, "任务非激活", []byte(fmt.Sprintf("%s-%s", item.Name, temp.GetStatusName())), time.Since(st).Seconds())
 				return
 			} else if job.pipeline.ConfigDisableAction == models.DisableActionOmit {
 				continue
 			}
 		}
-		jobs = append(jobs, NewJobConfig(item))
+		jobs = append(jobs, NewJobConfig(temp))
 	}
 
 	for _, j := range jobs {

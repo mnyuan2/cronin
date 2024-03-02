@@ -34,7 +34,7 @@ func NewApiV5(c Config) *ApiV5 {
 //		@param string repo 项目名称 仓库路径(path)
 //		@param string path 文件的路径
 //		@param string ref 分支、tag或commit。默认: 仓库的默认分支(通常是master)
-func (m *ApiV5) ReposContents(owner, repo, path, ref string) (res []byte, err error) {
+func (m *ApiV5) ReposContents(handler *Handler, owner, repo, path, ref string) (res []byte, err error) {
 	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/contents/%s", apiV5BaseUrl, owner, repo, url.QueryEscape(path)))
 	params := url.Values{}
 	if m.conf.GetAccessToken() != "" {
@@ -46,32 +46,30 @@ func (m *ApiV5) ReposContents(owner, repo, path, ref string) (res []byte, err er
 	if len(params) > 0 {
 		u.RawQuery = params.Encode()
 	}
-
 	resp, err := http.Get(u.String())
+	handler.OnGeneral(http.MethodGet, u.String(), resp.StatusCode)
+	handler.OnRequestHeader(resp.Request.Header)
+	handler.OnResponseHeader(resp.Header)
+
 	if err != nil {
 		return nil, fmt.Errorf("请求失败，%w", err)
 	}
 	defer resp.Body.Close()
 
 	b, er := io.ReadAll(resp.Body)
+	handler.OnResponseBody(b)
 	if er != nil {
-		fmt.Println("错误", er)
 		return nil, fmt.Errorf("响应获取失败，%w", err)
 	}
 
 	out := map[string]any{}
-	jsoniter.Unmarshal(b, &out)
+	_ = jsoniter.Unmarshal(b, &out)
 	if resp.StatusCode != 200 { // {"message":"401 Unauthorized: Access token is expired"}
 		if message, ok := out["message"]; ok {
 			return nil, errors.New(message.(string))
 		}
 	} else if content, oK := out["content"].(string); oK {
 		return base64.StdEncoding.DecodeString(content)
-	} else {
-		//out["root"]["content"]
-		return nil, errors.New("操作异常")
-
 	}
-
-	return b, nil
+	return b, errors.New("请求异常")
 }
