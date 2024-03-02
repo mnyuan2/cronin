@@ -160,7 +160,7 @@ func (job *JobConfig) Run() {
 }
 
 // 执行任务 未注册版本
-func (job *JobConfig) run(ctx context.Context) (res []byte, err errs.Errs) {
+func (job *JobConfig) Running(ctx context.Context, remark string) (res []byte, err errs.Errs) {
 	st := time.Now()
 	ctx, span := job.tracer.Start(ctx, "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
@@ -184,6 +184,7 @@ func (job *JobConfig) run(ctx context.Context) (res []byte, err errs.Errs) {
 		attribute.String("config_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
 		attribute.String("component", "job"),
+		attribute.String("remark", remark),
 	)
 
 	res, err = job.Exec(ctx)
@@ -294,7 +295,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context) (res []byte, err errs.Errs) {
 			}
 			span.End()
 		}()
-		span.SetAttributes(attribute.String("component", "cmd"))
+		span.SetAttributes(attribute.String("component", "bash"))
 		span.AddEvent("", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
 
 		cmd := exec.Command("/bin/bash", "-c", job.commandParse.Cmd)

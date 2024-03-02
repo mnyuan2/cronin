@@ -132,6 +132,7 @@ type CronConfigRegisterListResponse struct {
 
 // 任务设置
 type CronConfigRunRequest struct {
+	Id       int                `json:"id"`                 // 任务编号
 	Name     string             `json:"name,omitempty"`     // 任务名称
 	Type     int                `json:"type"`               // 类型
 	Spec     string             `json:"spec"`               // 执行时间表达式

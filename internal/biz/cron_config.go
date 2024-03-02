@@ -244,6 +244,8 @@ func (dm *CronConfigService) Del() {
 // 任务执行
 func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfigRunResponse, err error) {
 	conf := &models.CronConfig{
+		Id:       r.Id,
+		Env:      dm.user.Env,
 		Type:     r.Type,
 		Protocol: r.Protocol,
 	}
@@ -252,7 +254,7 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 		return nil, err
 	}
 
-	res, err := NewJobConfig(conf).Exec(dm.ctx)
+	res, err := NewJobConfig(conf).Running(dm.ctx, "手动执行")
 	if err != nil {
 		return nil, err
 	}

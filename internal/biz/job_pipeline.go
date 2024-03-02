@@ -133,7 +133,7 @@ func (job *JobPipeline) Run() {
 	}
 
 	for _, j := range jobs {
-		_, er := j.run(ctx)
+		_, er := j.Running(ctx, "流水线执行")
 		if er != nil {
 			job.conf.messagePush(ctx, enum.StatusDisable, er.Desc()+" 流水线"+job.pipeline.ConfigErrActionName(), []byte(err.Error()), time.Since(st).Seconds())
 			// 这里要确认一下是否继续执行下去。
