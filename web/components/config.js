@@ -118,7 +118,44 @@ var MyConfig = Vue.extend({
                                         </el-form-item>
                                     </el-tab-pane>
                                     <el-tab-pane label="cmd" name="3">
-                                        <el-input type="textarea" v-model="form.command.cmd" rows="5" :placeholder="sys_info.cmd_name + ': 请输入命令行执行内容'"></el-input>
+                                        来源
+                                        <el-select v-model="form.command.cmd.statement_source" size="mini" style="width:80px">
+                                            <el-option label="本地" value="local"></el-option>
+                                            <el-option label="git" value="git"></el-option>
+                                        </el-select>
+                                        &nbsp;
+                                        类型
+                                        <el-select v-model="form.command.cmd.type" size="mini" clearable style="width:80px">
+                                            <el-option label="cmd" value="cmd"></el-option>
+                                            <el-option label="bash" value="bash"></el-option>
+                                            <el-option label="sh" value="sh"></el-option>
+                                        </el-select>
+                                        <el-card class="box-card" shadow="hover" v-if="form.command.cmd.statement_source=='git'">
+                                            <el-form :model="form.command.cmd.statement_git" label-width="70px" size="small">
+                                                <el-form-item label="连接">
+                                                    <el-select v-model="form.command.cmd.statement_git.link_id" placement="请选择git链接">
+                                                        <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                                    </el-select>
+                                                </el-form-item>
+                                                <el-form-item label="仓库空间">
+                                                    <el-input v-model="form.command.cmd.statement_git.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
+                                                </el-form-item>
+                                                <el-form-item label="项目名称">
+                                                    <el-input v-model="form.command.cmd.statement_git.project" placeholder="仓库路径"></el-input>
+                                                </el-form-item>
+                                                <el-form-item label="文件路径">
+                                                    <el-input v-for="(path_v,path_i) in form.command.cmd.statement_git.path" v-model="form.command.cmd.statement_git.path[path_i]" placeholder="文件的路径"> <!-- @input="sqlGitPathInput" -->
+<!--                                                        <el-button slot="append" icon="el-icon-delete" @click="sqlGitPathDel(path_i)"></el-button>-->
+                                                    </el-input>
+                                                </el-form-item>
+                                                <el-form-item label="引用">
+                                                    <el-input v-model="sqlSet.git_data.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
+                                                </el-form-item>
+                                            </el-form>
+                                        </el-card>
+                                        <el-card class="box-card"  shadow="hover" v-if="form.command.cmd.statement_source=='local'">
+                                            <el-input type="textarea" v-model="form.command.cmd.statement_local[0]" rows="5" placeholder="请输入命令行执行内容"></el-input>
+                                        </el-card>
                                     </el-tab-pane>
                                     <el-tab-pane label="sql" name="4" label-position="left">
                                         <el-form-item label="驱动">
@@ -538,7 +575,18 @@ var MyConfig = Vue.extend({
                         header: [],
                         body: ''
                     },
-                    cmd:'',
+                    cmd:{
+                        statement_source: 'local', // git、local
+                        type: "", // cmd、bash、sh ...
+                        statement_git:{
+                            link_id: "",
+                            owner: "",
+                            project: "",
+                            path: [""], // 目前不支持多选，但数据结构要能为后续支持扩展
+                            ref: "",
+                        },
+                        statement_local: [""]
+                    },
                     sql:{
                         driver: "mysql",
                         source:{
