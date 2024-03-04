@@ -5,6 +5,20 @@ type KvItem struct {
 	Value string `json:"value"`
 }
 
+// 任务语句
+type CronStatement struct {
+	Local string `json:"local"` // 本地输入
+	Git   *Git   `json:"git"`   // git输入
+}
+
+type Git struct {
+	LinkId  int      `json:"link_id"` // 连接配置id
+	Owner   string   `json:"owner"`   // 仓库所属空间
+	Project string   `json:"project"` // 仓库项目
+	Path    []string `json:"path"`    // 文件的路径
+	Ref     string   `json:"ref"`     // 分支、tag或commit。默认: 仓库的默认分支(通常是master)
+}
+
 // 任务列表
 type CronConfigListRequest struct {
 	Type int `form:"type"`
@@ -62,9 +76,15 @@ type CronMsgSet struct {
 type CronConfigCommand struct {
 	Http    *CronHttp    `json:"http"`
 	Rpc     *CronRpc     `json:"rpc"`
-	Cmd     string       `json:"cmd"`
+	Cmd     *CronCmd     `json:"cmd"`
 	Sql     *CronSql     `json:"sql"`
 	Jenkins *CronJenkins `json:"jenkins"`
+}
+
+type CronCmd struct {
+	Type      string         `json:"type"`
+	Origin    string         `json:"origin"` // 语句来源
+	Statement *CronStatement `json:"statement"`
 }
 
 type CronHttp struct {
@@ -85,14 +105,13 @@ type CronRpc struct {
 
 // sql任务配置
 type CronSql struct {
-	Driver          string          `json:"driver"`           // 驱动，默认mysql
-	Source          *CronSqlSource  `json:"source"`           // 具体链接配置
-	ErrAction       int             `json:"err_action"`       // 错误后行为
-	ErrActionName   string          `json:"err_action_name"`  // 错误后行为名称
-	Interval        int64           `json:"interval"`         // 执行间隔
-	Statement       []string        `json:"statement"`        // sql语句多条
-	StatementGit    []*StatementGit `json:"statement_git"`    // git来源语句
-	StatementSource string          `json:"statement_source"` // sql来源
+	Driver        string           `json:"driver"`          // 驱动，默认mysql
+	Source        *CronSqlSource   `json:"source"`          // 具体链接配置
+	ErrAction     int              `json:"err_action"`      // 错误后行为
+	ErrActionName string           `json:"err_action_name"` // 错误后行为名称
+	Interval      int64            `json:"interval"`        // 执行间隔
+	Origin        string           `json:"origin"`          // 语句来源
+	Statement     []*CronStatement `json:"statement"`
 }
 
 // CronSqlSource sql任务 来源配置
@@ -104,14 +123,6 @@ type CronSqlSource struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Port     string `json:"port"`
-}
-
-type StatementGit struct {
-	LinkId  int      `json:"link_id"` // 连接配置id
-	Owner   string   `json:"owner"`   // 仓库所属空间
-	Project string   `json:"project"` // 仓库项目
-	Path    []string `json:"path"`    // 文件的路径
-	Ref     string   `json:"ref"`     // 分支、tag或commit。默认: 仓库的默认分支(通常是master)
 }
 
 type CronJenkinsSource struct {

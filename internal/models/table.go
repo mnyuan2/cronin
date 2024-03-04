@@ -4,6 +4,7 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +71,8 @@ func AutoMigrate(db *db.MyDB) {
 		}, 10)
 	}
 
+	// 历史 数据修正
+	historyDataRevise(db)
 }
 
 // mysql 最低版本检测
@@ -94,4 +97,23 @@ func mysqlLowerCheck(db *db.MyDB) error {
 		return fmt.Errorf("mysql最低要求版本 5.7.8 当前为 %s", version)
 	}
 	return nil
+}
+
+// 历史源修正
+// 解决 0.6.1 之前的版本格式不一致问题
+func historyDataRevise(db *db.MyDB) {
+	if err := db.Exec("UPDATE cron_setting set content=concat('{\"sql\":',content,'}') WHERE scene='sql_source' and content->'$.sql' is null;").Error; err != nil {
+		log.Println("历史 sql_source 数据修正错误", err.Error())
+	}
+
+	// config也要修正
+	//SELECT
+	//JSON_TYPE(command->'$.cmd'),
+	//	id,
+	//	command,
+	//	JSON_REPLACE(command, '$.cmd', CAST(concat('{"type":"sh","statement_git":{},"statement_local":[',command->'$.cmd','],"statement_source":"local"}') as JSON))
+	//FROM
+	//cron_config
+	//WHERE
+	//JSON_TYPE(command->'$.cmd') = 'STRING'
 }

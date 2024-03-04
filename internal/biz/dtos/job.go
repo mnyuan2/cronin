@@ -9,3 +9,9 @@ type MsgSetParse struct {
 	NotifyUserIds []int
 	Set           []*pb.CronMsgSet
 }
+
+// 文件信息
+type File struct {
+	Name string
+	Byte []byte
+}

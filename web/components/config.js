@@ -119,7 +119,7 @@ var MyConfig = Vue.extend({
                                     </el-tab-pane>
                                     <el-tab-pane label="cmd" name="3">
                                         来源
-                                        <el-select v-model="form.command.cmd.statement_source" size="mini" style="width:80px">
+                                        <el-select v-model="form.command.cmd.origin" size="mini" style="width:80px">
                                             <el-option label="本地" value="local"></el-option>
                                             <el-option label="git" value="git"></el-option>
                                         </el-select>
@@ -130,7 +130,7 @@ var MyConfig = Vue.extend({
                                             <el-option label="bash" value="bash"></el-option>
                                             <el-option label="sh" value="sh"></el-option>
                                         </el-select>
-                                        <el-card class="box-card" shadow="hover" v-if="form.command.cmd.statement_source=='git'">
+                                        <el-card class="box-card" shadow="hover" v-if="form.command.cmd.origin=='git'">
                                             <el-form :model="form.command.cmd.statement_git" label-width="70px" size="small">
                                                 <el-form-item label="连接">
                                                     <el-select v-model="form.command.cmd.statement_git.link_id" placement="请选择git链接">
@@ -153,7 +153,7 @@ var MyConfig = Vue.extend({
                                                 </el-form-item>
                                             </el-form>
                                         </el-card>
-                                        <el-card class="box-card"  shadow="hover" v-if="form.command.cmd.statement_source=='local'">
+                                        <el-card class="box-card"  shadow="hover" v-if="form.command.cmd.origin=='local'">
                                             <el-input type="textarea" v-model="form.command.cmd.statement_local[0]" rows="5" placeholder="请输入命令行执行内容"></el-input>
                                         </el-card>
                                     </el-tab-pane>
@@ -172,7 +172,7 @@ var MyConfig = Vue.extend({
                                         <el-form-item label="执行语句">
                                             <div>
                                                 来源
-                                                <el-select v-model="form.command.sql.statement_source" size="mini" style="width:80px">
+                                                <el-select v-model="form.command.sql.origin" size="mini" style="width:80px">
                                                     <el-option label="本地" value="local"></el-option>
                                                     <el-option label="git" value="git"></el-option>
                                                 </el-select>
@@ -180,22 +180,22 @@ var MyConfig = Vue.extend({
                                             </div>
                                             <div style="overflow-y: auto;max-height: 420px;">
                                                 <!--本地sql展示-->
-                                                <div v-if="form.command.sql.statement_source == 'local'" v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                                <div v-if="form.command.sql.origin == 'local'" v-for="(statement,sql_index) in form.command.sql.statement" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                                     <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 56px;"><code class="language-sql hljs">{{statement}}</code></pre>
                                                     <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
                                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
                                                     <i style="position: absolute;right: 1px;top: 49px;font-size: 16px;">#{{sql_index}}</i>
                                                 </div>
-                                                <el-alert v-if="form.command.sql.statement_source == 'local'" v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
+                                                <el-alert v-if="form.command.sql.origin == 'local'" v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
                                                 <!--git sql展示-->
-                                                <div v-if="form.command.sql.statement_source == 'git'" v-for="(statement,sql_index) in form.command.sql.statement_git" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                                <div v-if="form.command.sql.origin == 'git'" v-for="(statement,sql_index) in form.command.sql.statement_git" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
                                                     <el-row v-html="statement.descrition"></el-row>
                                                     <pre v-for="path_item in statement.path" style="margin: 0;padding-left: 30px;"><code class="">{{path_item}}</code></pre>
                                                     <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
                                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
                                                     <i style="position: absolute;right: 1px;top: 49px;font-size: 16px;">#{{sql_index}}</i>
                                                 </div>
-                                                <el-alert v-if="form.command.sql.statement_source == 'git'" v-show="form.command.sql.statement_git.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
+                                                <el-alert v-if="form.command.sql.origin == 'git'" v-show="form.command.sql.statement_git.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
                                             </div>
                                         </el-form-item>
                                         <el-form-item label="错误行为">
@@ -576,7 +576,7 @@ var MyConfig = Vue.extend({
                         body: ''
                     },
                     cmd:{
-                        statement_source: 'local', // git、local
+                        origin: 'local', // git、local
                         type: "", // cmd、bash、sh ...
                         statement_git:{
                             link_id: "",
@@ -597,7 +597,7 @@ var MyConfig = Vue.extend({
                             // username:"",
                             // password:""
                         },
-                        statement_source: 'local',
+                        origin: 'local',
                         statement:[],
                         statement_git:[],
                         err_action: "1",
@@ -731,7 +731,7 @@ var MyConfig = Vue.extend({
             if (typeof oldData != 'string'){
                 return this.$message.error("sql内容异常");
             }
-            this.sqlSet.source = this.form.command.sql.statement_source
+            this.sqlSet.source = this.form.command.sql.origin
             this.sqlSet.show = true
             this.sqlSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
 

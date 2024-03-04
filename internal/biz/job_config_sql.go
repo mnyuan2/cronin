@@ -7,7 +7,6 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
-	"cron/internal/basic/git/gitee"
 	"cron/internal/basic/tracing"
 	"cron/internal/data"
 	"cron/internal/models"
@@ -74,11 +73,22 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 	switch r.StatementSource {
 	case enum.SqlStatementSourceGit:
 		for _, s := range r.StatementGit {
-			temp, err := job.giteeGetFile(ctx, s)
+			files, err := job.getGitFile(ctx, s)
 			if err != nil {
 				return err
 			}
-			statement = append(statement, temp...)
+			for _, file := range files {
+				list := bytes.Split(file.Byte, []byte(";"))
+				for _, item := range list {
+					s := bytes.TrimSpace(item)
+					if s != nil {
+						statement = append(statement, &pb.KvItem{
+							Key:   file.Name,
+							Value: string(s),
+						})
+					}
+				}
+			}
 		}
 	case enum.SqlStatementSourceLocal:
 		for _, s := range r.Statement {
@@ -150,75 +160,4 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) 
 		span.AddEvent("", trace.WithAttributes(attribute.Int64("rows affected", resp.RowsAffected)))
 	}
 	return err
-}
-
-// gitee 抓取文件数据
-func (job *JobConfig) giteeGetFile(ctx context.Context, r *pb.StatementGit) (statement []*pb.KvItem, err errs.Errs) {
-	link, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.LinkId)
-	if er != nil {
-		return nil, errs.New(er, "链接配置查询错误")
-	}
-	conf := &pb.SettingSource{
-		Git: &pb.SettingGitSource{},
-	}
-	if er := jsoniter.UnmarshalFromString(link.Content, conf); er != nil {
-		return nil, errs.New(er, "链接配置解析错误")
-	}
-
-	api := gitee.NewApiV5(conf.Git)
-	statement = []*pb.KvItem{}
-	for _, path := range r.Path {
-		if path == "" {
-			continue
-		}
-		list, err := job.gitSqlReposContents(ctx, api, r, path)
-		if err != nil {
-			return nil, err
-		}
-		statement = append(statement, list...)
-	}
-
-	return statement, nil
-}
-
-func (job *JobConfig) gitSqlReposContents(ctx context.Context, api *gitee.ApiV5, r *pb.StatementGit, path string) (statement []*pb.KvItem, err errs.Errs) {
-	h := gitee.NewHandler(ctx)
-	ctx, span := job.tracer.Start(ctx, "repos-contents")
-	defer func() {
-		if err != nil {
-			span.SetStatus(tracing.StatusError, err.Desc())
-			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
-		}
-		span.SetAttributes(
-			attribute.String("component", "HTTP"),
-			attribute.String("method", h.General.Method),
-		)
-		span.AddEvent("", trace.WithAttributes(
-			attribute.String("url", h.General.Url),
-			attribute.Int("status_code", h.General.StatusCode),
-			attribute.String("response_header", string(h.ResponseHeaderBytes())),
-			attribute.String("response_body", string(h.ResponseBody)),
-		))
-		span.End()
-	}()
-
-	res, er := api.ReposContents(h, r.Owner, r.Project, path, r.Ref)
-	if er != nil {
-		return nil, errs.New(er, "gite文件获取失败")
-	}
-	span.AddEvent("", trace.WithAttributes(attribute.String("response", string(res))))
-
-	// 解析文件内容，并拆分sql
-	statement = []*pb.KvItem{}
-	list := bytes.Split(res, []byte(";"))
-	for _, item := range list {
-		s := bytes.TrimSpace(item)
-		if s != nil {
-			statement = append(statement, &pb.KvItem{
-				Key:   path,
-				Value: string(s),
-			})
-		}
-	}
-	return statement, nil
 }

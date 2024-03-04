@@ -29,7 +29,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -205,7 +204,7 @@ func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 	case models.ProtocolRpc:
 		res, err = job.rpcFunc(ctx)
 	case models.ProtocolCmd:
-		res, err = job.cmdFunc(ctx)
+		res, err = job.cmdFunc(ctx, job.commandParse.Cmd)
 	case models.ProtocolSql:
 		err = job.sqlFunc(ctx)
 	case models.ProtocolJenkins:
@@ -246,65 +245,70 @@ func (job *JobConfig) rpcFunc(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // rpc 执行函数
-func (job *JobConfig) cmdFunc(ctx context.Context) (res []byte, err errs.Errs) {
-	if runtime.GOOS == "windows" {
-		_, span := job.tracer.Start(ctx, "cmd-cmd")
-		defer func() {
-			if res != nil {
-				span.AddEvent("", trace.WithAttributes(attribute.String("console", string(res))))
-			}
-			if err != nil {
-				span.SetStatus(tracing.StatusError, err.Desc())
-				span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
-			}
-			span.End()
-		}()
-		span.SetAttributes(attribute.String("component", "cmd"))
-		span.AddEvent("", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
+func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, err errs.Errs) {
+	ctx, span := job.tracer.Start(ctx, "cmd-"+r.Type)
+	defer func() {
+		if res != nil {
+			span.AddEvent("", trace.WithAttributes(attribute.String("console", string(res))))
+		}
+		if err != nil {
+			span.SetStatus(tracing.StatusError, err.Desc())
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		}
+		span.End()
+	}()
+	span.SetAttributes(attribute.String("component", r.Type))
 
-		data := strings.Split(job.commandParse.Cmd, " ")
-		if len(data) < 2 {
+	//确认数据来源
+	data := ""
+	if r.StatementSource == "git" {
+		files, err := job.getGitFile(ctx, r.StatementGit)
+		if err != nil {
+			return nil, err
+		}
+		if len(files) < 1 { // 仅支持单文件
+			return nil, errs.New(nil, "未配置有效文件")
+		} else if len(files) > 1 {
+			return nil, errs.New(nil, "仅支持单文件")
+		}
+		data = string(files[0].Byte)
+	} else {
+		data = r.StatementLocal[0]
+	}
+	span.AddEvent("", trace.WithAttributes(attribute.String("statement", data)))
+
+	switch r.Type {
+	case "cmd":
+		args := strings.Split(data, " ")
+		if len(args) < 2 {
 			return nil, errs.New(nil, "命令参数不合法，已跳过")
 		}
-
-		cmd := exec.Command(data[0], data[1:]...) // 合并 winds 命令
-		if res, er := cmd.Output(); err != nil {
-			return res, errs.New(er, "执行错误")
+		cmd := exec.Command(args[0], args[1:]...) // 合并 winds 命令
+		if re, er := cmd.Output(); err != nil {
+			return re, errs.New(er, "执行错误")
 		} else {
-			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(res))
-			return []byte(srcCoder), nil
+			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(re))
+			res = []byte(srcCoder)
 		}
 
-		// windows下安装了sh.exe 可以使用；就是git；但要添加环境变量 git/bin
-		//cmd := exec.Command("sh.exe","-c", job.commandParse.Cmd)
-		//if res, err = cmd.Output(); err != nil{
-		//	return nil, err
-		//}else {
-		//	return res, nil
-		//}
-
-	} else {
-		_, span := job.tracer.Start(ctx, "cmd-bash")
-		defer func() {
-			if res != nil {
-				span.AddEvent("", trace.WithAttributes(attribute.String("console", string(res))))
-			}
-			if err != nil {
-				span.SetStatus(tracing.StatusError, err.Desc())
-				span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
-			}
-			span.End()
-		}()
-		span.SetAttributes(attribute.String("component", "bash"))
-		span.AddEvent("", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
-
-		cmd := exec.Command("/bin/bash", "-c", job.commandParse.Cmd)
-		if res, er := cmd.Output(); er != nil {
-			return res, errs.New(err, "执行结果错误")
-		} else {
-			return res, nil
+	case "sh":
+		e := exec.Command("sh", "-c", data)
+		cmd, er := e.Output()
+		if er != nil {
+			return nil, errs.New(er, "执行结果错误")
 		}
+		srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(cmd))
+		res = []byte(srcCoder)
+
+	case "bash":
+		cmd := exec.Command("/bin/bash", "-c", data)
+		re, er := cmd.Output()
+		if er != nil {
+			return nil, errs.New(er, "执行结果错误")
+		}
+		res = re
 	}
+	return res, nil
 }
 
 // rpc 执行函数

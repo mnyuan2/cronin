@@ -34,6 +34,14 @@ type DicGetItem struct {
 	Extend string `json:"extend"`
 }
 
+//var enumSource = map[int][]*pb.DicGetItem{
+//	enum.DicCmdType: {
+//		{Key: "cmd", Name: "cmd"},
+//		{Key: "bash", Name: "bash"},
+//		{Key: "sh", Name: "sh"},
+//	},
+//}
+
 func NewDicService(ctx context.Context, user *auth.UserToken) *FoundationService {
 	return &FoundationService{
 		ctx:  ctx,
@@ -128,8 +136,19 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 
 // 通过枚举获取
 func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
-	// 待完善
-	return nil, nil
+	items := []*pb.DicGetItem{}
+
+	switch t {
+	case enum.DicCmdType:
+		if runtime.GOOS == "windows" {
+			items = append(items, &pb.DicGetItem{Key: "cmd", Name: "cmd"})
+		} else {
+			items = append(items, &pb.DicGetItem{Key: "bash", Name: "bash"},
+				&pb.DicGetItem{Key: "sh", Name: "sh"})
+		}
+	}
+
+	return items, nil
 }
 
 func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.SystemInfoReply, err error) {

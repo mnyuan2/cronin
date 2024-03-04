@@ -106,3 +106,38 @@ func CheckSql(sql *pb.CronSql) error {
 	}
 	return nil
 }
+
+func CheckCmd(cmd *pb.CronCmd) error {
+	if cmd.Type == "" {
+		return fmt.Errorf("未指定命令行类型")
+	}
+	if cmd.StatementSource == enum.SqlStatementSourceLocal {
+		if len(cmd.StatementLocal) < 1 || cmd.StatementLocal[0] == "" {
+			return fmt.Errorf("请输入 cmd 命令类容")
+		}
+	} else if cmd.StatementSource == enum.SqlStatementSourceGit {
+		if cmd.StatementGit.LinkId == 0 {
+			return errors.New("未设置 命令 连接")
+		}
+		if cmd.StatementGit.Owner == "" {
+			return errors.New("未设置 命令 仓库空间")
+		}
+		if cmd.StatementGit.Project == "" {
+			return errors.New("未设置 命令 项目名称")
+		}
+		pathLen := len(cmd.StatementGit.Path)
+		if pathLen == 0 {
+			return errors.New("未设置 命令 文件路径")
+		} else if pathLen > 1 {
+			return errors.New("命令 文件路径 不支持多文件")
+		}
+
+		for i, path := range cmd.StatementGit.Path {
+			cmd.StatementGit.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
+		}
+	} else {
+		return fmt.Errorf("未指定命令行来源")
+	}
+
+	return nil
+}

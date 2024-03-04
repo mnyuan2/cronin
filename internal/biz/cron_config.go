@@ -65,7 +65,8 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		item.Command = &pb.CronConfigCommand{
 			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
 			Rpc:     &pb.CronRpc{Actions: []string{}},
-			Sql:     &pb.CronSql{StatementSource: "local", StatementGit: []*pb.StatementGit{}},
+			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{}}},
+			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}},
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
 		}
 		item.MsgSet = []*pb.CronMsgSet{}
@@ -170,8 +171,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 
 	} else if r.Protocol == models.ProtocolCmd {
-		if r.Command.Cmd == "" {
-			return nil, fmt.Errorf("请输入 cmd 命令类容")
+		if err := dtos.CheckCmd(r.Command.Cmd); err != nil {
+			return nil, err
 		}
 	} else if r.Protocol == models.ProtocolSql {
 		if err := dtos.CheckSql(r.Command.Sql); err != nil {
