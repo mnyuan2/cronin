@@ -14,7 +14,7 @@ import (
 )
 
 // git 抓取文件数据
-func (job *JobConfig) getGitFile(ctx context.Context, r *pb.StatementGit) (flies []*dtos.File, err errs.Errs) {
+func (job *JobConfig) getGitFile(ctx context.Context, r *pb.Git) (flies []*dtos.File, err errs.Errs) {
 	link, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.LinkId)
 	if er != nil {
 		return nil, errs.New(er, "链接配置查询错误")
@@ -42,7 +42,7 @@ func (job *JobConfig) getGitFile(ctx context.Context, r *pb.StatementGit) (flies
 	return flies, nil
 }
 
-func (job *JobConfig) gitReposContents(ctx context.Context, api *gitee.ApiV5, r *pb.StatementGit, path string) (file []byte, err errs.Errs) {
+func (job *JobConfig) gitReposContents(ctx context.Context, api *gitee.ApiV5, r *pb.Git, path string) (file []byte, err errs.Errs) {
 	h := gitee.NewHandler(ctx)
 	ctx, span := job.tracer.Start(ctx, "repos-contents")
 	defer func() {

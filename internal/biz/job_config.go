@@ -261,8 +261,8 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 
 	//确认数据来源
 	data := ""
-	if r.StatementSource == "git" {
-		files, err := job.getGitFile(ctx, r.StatementGit)
+	if r.Origin == "git" {
+		files, err := job.getGitFile(ctx, r.Statement.Git)
 		if err != nil {
 			return nil, err
 		}
@@ -273,7 +273,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		}
 		data = string(files[0].Byte)
 	} else {
-		data = r.StatementLocal[0]
+		data = r.Statement.Local
 	}
 	span.AddEvent("", trace.WithAttributes(attribute.String("statement", data)))
 

@@ -131,30 +131,29 @@ var MyConfig = Vue.extend({
                                             <el-option label="sh" value="sh"></el-option>
                                         </el-select>
                                         <el-card class="box-card" shadow="hover" v-if="form.command.cmd.origin=='git'">
-                                            <el-form :model="form.command.cmd.statement_git" label-width="70px" size="small">
+                                            <el-form :model="form.command.cmd.statement.git" label-width="70px" size="small">
                                                 <el-form-item label="连接">
-                                                    <el-select v-model="form.command.cmd.statement_git.link_id" placement="请选择git链接">
+                                                    <el-select v-model="form.command.cmd.statement.git.link_id" placement="请选择git链接">
                                                         <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                                                     </el-select>
                                                 </el-form-item>
                                                 <el-form-item label="仓库空间">
-                                                    <el-input v-model="form.command.cmd.statement_git.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
+                                                    <el-input v-model="form.command.cmd.statement.git.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
                                                 </el-form-item>
                                                 <el-form-item label="项目名称">
-                                                    <el-input v-model="form.command.cmd.statement_git.project" placeholder="仓库路径"></el-input>
+                                                    <el-input v-model="form.command.cmd.statement.git.project" placeholder="仓库路径"></el-input>
                                                 </el-form-item>
                                                 <el-form-item label="文件路径">
-                                                    <el-input v-for="(path_v,path_i) in form.command.cmd.statement_git.path" v-model="form.command.cmd.statement_git.path[path_i]" placeholder="文件的路径"> <!-- @input="sqlGitPathInput" -->
-<!--                                                        <el-button slot="append" icon="el-icon-delete" @click="sqlGitPathDel(path_i)"></el-button>-->
+                                                    <el-input v-for="(path_v,path_i) in form.command.cmd.statement.git.path" v-model="form.command.cmd.statement.git.path[path_i]" placeholder="文件的路径">
                                                     </el-input>
                                                 </el-form-item>
                                                 <el-form-item label="引用">
-                                                    <el-input v-model="sqlSet.git_data.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
+                                                    <el-input v-model="form.command.cmd.statement.git.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
                                                 </el-form-item>
                                             </el-form>
                                         </el-card>
                                         <el-card class="box-card"  shadow="hover" v-if="form.command.cmd.origin=='local'">
-                                            <el-input type="textarea" v-model="form.command.cmd.statement_local[0]" rows="5" placeholder="请输入命令行执行内容"></el-input>
+                                            <el-input type="textarea" v-model="form.command.cmd.statement.local" rows="5" placeholder="请输入命令行执行内容"></el-input>
                                         </el-card>
                                     </el-tab-pane>
                                     <el-tab-pane label="sql" name="4" label-position="left">
@@ -578,14 +577,16 @@ var MyConfig = Vue.extend({
                     cmd:{
                         origin: 'local', // git、local
                         type: "", // cmd、bash、sh ...
-                        statement_git:{
-                            link_id: "",
-                            owner: "",
-                            project: "",
-                            path: [""], // 目前不支持多选，但数据结构要能为后续支持扩展
-                            ref: "",
+                        statement:{
+                            git:{
+                                link_id: "",
+                                owner: "",
+                                project: "",
+                                path: [""], // 目前不支持多选，但数据结构要能为后续支持扩展
+                                ref: "",
+                            },
+                            local: ""
                         },
-                        statement_local: [""]
                     },
                     sql:{
                         driver: "mysql",
@@ -618,6 +619,11 @@ var MyConfig = Vue.extend({
             this.setConfigShow = true
             this.setConfigTitle = '编辑任务'
             this.form = row
+
+            if (row.command.cmd.statement.git.path == null){
+                this.form.command.cmd.statement.git.path = this.initFormData().command.cmd.statement.git.path
+            }
+
             if (this.form.command.sql.driver == ""){ // 历史数据兼容
                 this.form.command.sql = this.initFormData().command.sql
             }

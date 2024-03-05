@@ -64,33 +64,30 @@ func CheckSql(sql *pb.CronSql) error {
 	if sql.Source.Id == 0 {
 		return fmt.Errorf("请选择 sql 连接")
 	}
-	if sql.StatementSource == enum.SqlStatementSourceLocal {
-		if len(sql.Statement) == 0 {
-			return errors.New("未设置 sql 执行语句")
-		}
-	} else if sql.StatementSource == enum.SqlStatementSourceGit {
-		if len(sql.StatementGit) == 0 {
-			return errors.New("未设置 sql 执行语句")
-		}
-		for _, git := range sql.StatementGit {
-			if git.LinkId == 0 {
+	for _, item := range sql.Statement {
+		if sql.Origin == enum.SqlStatementSourceLocal {
+			if item.Local == "" {
+				return errors.New("未设置 sql 执行语句")
+			}
+		} else if sql.Origin == enum.SqlStatementSourceGit {
+			if item.Git.LinkId == 0 {
 				return errors.New("未设置 sql 语句 连接")
 			}
-			if git.Owner == "" {
+			if item.Git.Owner == "" {
 				return errors.New("未设置 sql 语句 仓库空间")
 			}
-			if git.Project == "" {
+			if item.Git.Project == "" {
 				return errors.New("未设置 sql 语句 项目名称")
 			}
-			if len(git.Path) <= 1 {
+			if len(item.Git.Path) <= 1 {
 				return errors.New("未设置 sql 语句 文件路径")
 			}
-			for i, path := range git.Path {
-				git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
+			for i, path := range item.Git.Path {
+				item.Git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
 			}
+		} else {
+			return errors.New("sql来源有误")
 		}
-	} else {
-		return errors.New("sql来源有误")
 	}
 
 	name, ok := models.SqlErrActionMap[sql.ErrAction]
@@ -111,29 +108,29 @@ func CheckCmd(cmd *pb.CronCmd) error {
 	if cmd.Type == "" {
 		return fmt.Errorf("未指定命令行类型")
 	}
-	if cmd.StatementSource == enum.SqlStatementSourceLocal {
-		if len(cmd.StatementLocal) < 1 || cmd.StatementLocal[0] == "" {
+	if cmd.Origin == enum.SqlStatementSourceLocal {
+		if cmd.Statement.Local == "" {
 			return fmt.Errorf("请输入 cmd 命令类容")
 		}
-	} else if cmd.StatementSource == enum.SqlStatementSourceGit {
-		if cmd.StatementGit.LinkId == 0 {
+	} else if cmd.Origin == enum.SqlStatementSourceGit {
+		if cmd.Statement.Git.LinkId == 0 {
 			return errors.New("未设置 命令 连接")
 		}
-		if cmd.StatementGit.Owner == "" {
+		if cmd.Statement.Git.Owner == "" {
 			return errors.New("未设置 命令 仓库空间")
 		}
-		if cmd.StatementGit.Project == "" {
+		if cmd.Statement.Git.Project == "" {
 			return errors.New("未设置 命令 项目名称")
 		}
-		pathLen := len(cmd.StatementGit.Path)
+		pathLen := len(cmd.Statement.Git.Path)
 		if pathLen == 0 {
 			return errors.New("未设置 命令 文件路径")
 		} else if pathLen > 1 {
 			return errors.New("命令 文件路径 不支持多文件")
 		}
 
-		for i, path := range cmd.StatementGit.Path {
-			cmd.StatementGit.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
+		for i, path := range cmd.Statement.Git.Path {
+			cmd.Statement.Git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
 		}
 	} else {
 		return fmt.Errorf("未指定命令行来源")

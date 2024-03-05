@@ -70,10 +70,10 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 	statement := []*pb.KvItem{} // value.具体sql、key.描述备注
 
 	// 远程sql要在这里解析了
-	switch r.StatementSource {
+	switch r.Origin {
 	case enum.SqlStatementSourceGit:
-		for _, s := range r.StatementGit {
-			files, err := job.getGitFile(ctx, s)
+		for _, item := range r.Statement {
+			files, err := job.getGitFile(ctx, item.Git)
 			if err != nil {
 				return err
 			}
@@ -91,8 +91,8 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 			}
 		}
 	case enum.SqlStatementSourceLocal:
-		for _, s := range r.Statement {
-			statement = append(statement, &pb.KvItem{Value: s})
+		for _, item := range r.Statement {
+			statement = append(statement, &pb.KvItem{Value: item.Local})
 		}
 	default:
 		return errs.New(_db.Error, "sql 语句来源异常")

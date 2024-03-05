@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"log"
 	"time"
 )
 
@@ -66,15 +67,19 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
 			Rpc:     &pb.CronRpc{Actions: []string{}},
 			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{}}},
-			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}},
+			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
 		}
 		item.MsgSet = []*pb.CronMsgSet{}
 		item.TypeName = models.ConfigTypeMap[item.Type]
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
-		jsoniter.Unmarshal(item.CommandStr, item.Command)
-		jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet)
+		if er := jsoniter.Unmarshal(item.CommandStr, item.Command); er != nil {
+			log.Println("	command 解析错误", item.Id, er.Error())
+		}
+		if er := jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); er != nil {
+			log.Println("	msg_set 解析错误", item.Id, er.Error())
+		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
 			item.TopErrorNumber = top.ErrorNumber
