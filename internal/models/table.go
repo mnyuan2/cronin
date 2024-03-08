@@ -120,7 +120,7 @@ func historyDataRevise(db *db.MyDB) {
 	if runtime.GOOS == "windows" {
 		cmdType = "cmd"
 	}
-	err := db.Exec(fmt.Sprintf(`UPDATE cron_config SET command=JSON_REPLACE(command,'$.cmd', CAST(concat('{"type":"%s","origin":"local","statement":{"git":{},"local":',command->'$.cmd','}}') as JSON)) WHERE JSON_TYPE(command->'$.cmd') = 'STRING';`, cmdType)).Error
+	err := db.Exec(fmt.Sprintf(`UPDATE cron_config SET command=JSON_REPLACE(command,'$.cmd', CAST(concat('{"type":"%s","origin":"local","statement":{"type":"local","git":{},"local":',command->'$.cmd','}}') as JSON)) WHERE JSON_TYPE(command->'$.cmd') = 'STRING';`, cmdType)).Error
 	if err != nil {
 		log.Println("历史 config cmd 数据修正错误", err.Error())
 	}
@@ -143,6 +143,7 @@ func historyDataRevise(db *db.MyDB) {
 			newStatement := make([]map[string]string, len(cmd.Sql.Statement))
 			for i, statement := range cmd.Sql.Statement {
 				newStatement[i] = map[string]string{
+					"type":  "local",
 					"local": statement,
 				}
 			}

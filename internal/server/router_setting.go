@@ -56,7 +56,7 @@ func routerSqlChangeStatus(ctx *gin.Context) {
 
 // sql连接ping
 func routerSqlPing(ctx *gin.Context) {
-	r := &pb.SettingSqlPingRequest{}
+	r := &pb.SettingSqlSetRequest{}
 	if err := ctx.BindJSON(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return

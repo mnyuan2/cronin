@@ -77,8 +77,10 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		if er := jsoniter.Unmarshal(item.CommandStr, item.Command); er != nil {
 			log.Println("	command 解析错误", item.Id, er.Error())
 		}
-		if er := jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); er != nil {
-			log.Println("	msg_set 解析错误", item.Id, er.Error())
+		if item.MsgSetStr != nil {
+			if er := jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); er != nil {
+				log.Println("	msg_set 解析错误", item.Id, er.Error())
+			}
 		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber

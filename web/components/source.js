@@ -49,7 +49,7 @@ var MySource = Vue.extend({
                     
                     <el-tab-pane label="jenkins" name="12">
                         <el-form-item label="地址*">
-                            <el-input v-model="form.data.source.jenkins.hostname" placeholder="http://127.0.0.1:8080 或 https://jks.cn"></el-input>
+                            <el-input v-model="form.data.source.jenkins.hostname" placeholder="http://ip:prod 或 https://hostname"></el-input>
                         </el-form-item>
                         <el-form-item label="用户名">
                             <el-input v-model="form.data.source.jenkins.username" placeholder="登录账户"></el-input>
@@ -164,10 +164,10 @@ var MySource = Vue.extend({
         },
         // sql连接连接
         pingForm(){
-            let body = this.form.data.source
-            api.innerPost("/setting/sql_source_ping", body, (res) =>{
+            let body = JSON.parse(JSON.stringify(this.form.data));
+            body.type = Number(body.type)
+            api.innerPost("/setting/source_ping", body, (res) =>{
                 if (!res.status){
-                    console.log("setting/sql_source_ping 错误", res)
                     return this.$message.error(res.message)
                 }
                 return this.$message.success('连接成功');

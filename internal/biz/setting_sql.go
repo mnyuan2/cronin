@@ -8,12 +8,16 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
+	"cron/internal/basic/git/gitee"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"io"
+	"net/http"
 	"strings"
 )
 
@@ -68,6 +72,7 @@ func (dm *SettingSqlService) List(r *pb.SettingListRequest) (resp *pb.SettingLis
 			Source: &pb.SettingSource{
 				Sql:     &pb.SettingSqlSource{},
 				Jenkins: &pb.SettingJenkinsSource{},
+				Git:     &pb.SettingGitSource{},
 			},
 		}
 		jsoniter.UnmarshalFromString(item.Content, data.Source)
@@ -140,23 +145,68 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 	}, err
 }
 
-func (dm *SettingSqlService) Ping(r *pb.SettingSqlPingRequest) (resp *pb.SettingSqlPingReply, err error) {
-	password, err := models.SqlSourceDecode(r.Password)
-	if err != nil {
-		return nil, fmt.Errorf("密码异常,%w", err)
+func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
+
+	switch r.Type {
+	case enum.DicSqlSource:
+		password, err := models.SqlSourceDecode(r.Source.Sql.Password)
+		if err != nil {
+			return nil, fmt.Errorf("密码异常,%w", err)
+		}
+		conf := &config.MysqlSource{
+			Hostname: r.Source.Sql.Hostname,
+			Database: r.Source.Sql.Database,
+			Username: r.Source.Sql.Username,
+			Password: password,
+			Port:     r.Source.Sql.Port,
+		}
+		err = db.Conn(conf).Error
+		if err != nil {
+			return nil, err
+		}
+
+	case enum.DicJenkinsSource:
+		r.Source.Jenkins.Hostname = strings.Trim(r.Source.Jenkins.Hostname, "/")
+		req, er := http.NewRequest("GET", r.Source.Jenkins.Hostname+"/api/json", nil)
+		if er != nil {
+			return nil, errs.New(er, "请求构建失败")
+		}
+		if r.Source.Jenkins.Username != "" {
+			req.SetBasicAuth(r.Source.Jenkins.Username, r.Source.Jenkins.Password)
+		}
+		// 创建 HTTP 客户端
+		client := &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		}
+		res, er := client.Do(req)
+		if er != nil {
+			return nil, errs.New(er, "请求执行失败")
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != 200 {
+			b, _ := io.ReadAll(res.Body)
+			return nil, errs.New(fmt.Errorf(string(b)), "链接失败")
+		}
+
+	case enum.DicGitSource:
+		if r.Source.Git.Type != "gitee" {
+			return nil, fmt.Errorf("git 类型错误 %s", r.Source.Git.Type)
+		}
+
+		_, er := gitee.NewApiV5(r.Source.Git).User(gitee.NewHandler(dm.ctx))
+		if err != nil {
+			return nil, errs.New(er, "链接失败")
+		}
+	default:
+		return nil, errs.New(nil, "type参数错误")
 	}
-	conf := &config.MysqlSource{
-		Hostname: r.Hostname,
-		Database: r.Database,
-		Username: r.Username,
-		Password: password,
-		Port:     r.Port,
-	}
-	err = db.Conn(conf).Error
-	if err != nil {
-		return nil, err
-	}
-	return &pb.SettingSqlPingReply{}, nil
+
+	return &pb.SettingSqlSetReply{}, nil
 }
 
 // 删除源

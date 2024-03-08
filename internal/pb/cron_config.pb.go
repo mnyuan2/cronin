@@ -7,6 +7,7 @@ type KvItem struct {
 
 // 任务语句
 type CronStatement struct {
+	Type  string `json:"type"`
 	Local string `json:"local"` // 本地输入
 	Git   *Git   `json:"git"`   // git输入
 }
