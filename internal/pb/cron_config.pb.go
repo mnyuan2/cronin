@@ -22,9 +22,10 @@ type Git struct {
 
 // 任务列表
 type CronConfigListRequest struct {
-	Type int `form:"type"`
-	Page int `form:"page"`
-	Size int `form:"size"`
+	Ids  []int `form:"ids[]"`
+	Type int   `form:"type"`
+	Page int   `form:"page"`
+	Size int   `form:"size"`
 }
 type CronConfigListReply struct {
 	List []*CronConfigListItem `json:"list"`

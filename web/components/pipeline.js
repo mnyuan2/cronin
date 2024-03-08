@@ -270,6 +270,23 @@ var MyPipeline = Vue.extend({
     // 具体方法
     methods:{
         // 任务列表
+        getConfigHash(ids){
+            if (ids == undefined || ids == []){
+                return []
+            }
+            let list = {}
+            api.innerGet("/config/list", {ids: ids,page:1,size:ids.length}, (res)=>{
+                if (!res.status){
+                    this.$message.error(res.message);
+                }else{
+                    res.data.list.forEach(function (item) {
+                        list[item.id] = item;
+                    })
+                }
+            }, {async:false})
+            return list
+        },
+        // 任务列表
         getList(){
             if (this.list.request){
                 return this.$message.info('请求执行中,请稍等.');
@@ -306,9 +323,9 @@ var MyPipeline = Vue.extend({
         },
         // 表单提交 流水线
         submitForm(){
-            if (this.form.name == ''){
+            if (this.form.data.name == ''){
                 return this.$message.error('请输入任务名称')
-            }else if (this.form.spec == ''){
+            }else if (this.form.data.spec == ''){
                 return this.$message.error('请输入任务执行时间')
             }
 
@@ -329,7 +346,9 @@ var MyPipeline = Vue.extend({
             data.configs.forEach(function (item,index) {
                 body.config_ids.push(item.id)
                 data.configs[index].status = Number(data.configs[index].status)
-                data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
+                if (data.configs[index].command.sql != null){
+                    data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
+                }
             })
 
             api.innerPost("/pipeline/set", body, (res)=>{
@@ -365,11 +384,23 @@ var MyPipeline = Vue.extend({
             }else if (typeof row == 'object'){ // 编辑显示
                 this.form.boxShow = true
                 this.form.boxTitle = '编辑流水线'
-                this.form.data = row
 
                 for (let i in row.msg_set){
-                    this.form.data.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
+                    row.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
                 }
+                if (row){ // 拉取最新的任务信息进行展示
+                    let configList = this.getConfigHash(row.config_ids)
+                    for (let i=0; i<row.configs.length;i++){
+                        let config = configList[row.configs[i].id]
+                        if (config != undefined){
+                            row.configs[i].name = config.name
+                            row.configs[i].type_name = config.type_name
+                            row.configs[i].status_name = config.status_name
+                            row.configs[i].protocol_name = config.protocol_name
+                        }
+                    }
+                }
+                this.form.data = row
                 if (this.form.data.msg_set == null){}
                 this.form.data.status = this.form.data.status.toString()
                 this.form.data.config_disable_action = this.form.data.config_disable_action.toString()

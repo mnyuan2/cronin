@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
@@ -32,10 +33,10 @@ func NewCronConfigService(ctx context.Context, user *auth.UserToken) *CronConfig
 
 // 任务配置列表
 func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronConfigListReply, err error) {
-	if r.Type == 0 {
-		r.Type = models.TypeCycle
+	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption()).In("id", r.Ids)
+	if w.Len() == 0 {
+		return nil, errs.New(nil, "未指定查询条件")
 	}
-	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption())
 	// 构建查询条件
 	if r.Page <= 1 {
 		r.Page = 1

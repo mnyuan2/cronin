@@ -184,8 +184,9 @@ var api = {
      * @param path string 请求路径
      * @param param object 请求参数 将拼url参数
      * @param success func 响应结果
+     * @param setting object 请求设置
      */
-    innerGet: function (path,param, success) {
+    innerGet: function (path,param, success, setting) {
         let url =  this.baseUrl+path
         // if (param){
         //     url += "?"
@@ -196,11 +197,15 @@ var api = {
         //     }
         //     url = url.slice(0,-1)
         // }
+        let async = true
+        if (setting && typeof setting.async == "boolean"){
+            async = setting.async
+        }
 
         let header = {
             'env': this.getEnv().env
         }
-        this.ajax('get', url, param, header,success)
+        this.ajax('get', url, param, header,success, async)
     },
 
     /**

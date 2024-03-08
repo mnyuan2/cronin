@@ -182,6 +182,11 @@ func (builder *Where) Lte(field string, value interface{}, options ...Option) *W
 	return builder.op(field, OpLte, value, options...)
 }
 
+// 条件数量
+func (builder *Where) Len() int {
+	return len(builder.wheres)
+}
+
 // 开始构建, 生成查询语句以及参数
 func (builder *Where) Build() (whereStr string, args []interface{}) {
 	// 固定加上1=1， 防止外部查询条件还需要判断
