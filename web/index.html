@@ -5,11 +5,12 @@
     <title>任务列表</title>
     <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
     <link rel="stylesheet" href="/static/css/home.css?v=[[.version]]">
-    <script src="/static/js/vue@2.7.8.js"></script>
+    <script src="/static/js/vue@2.7.16.js"></script>
     <script src="/static/js/element-ui@2.15.14.js"></script>
     <script src="/static/js/vue-router@3.6.5.js"></script>
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/moment.min.js"></script>
+    <script src="/static/js/Sortable.min.js"></script>
 
 </head>
 <body>
@@ -24,9 +25,12 @@
 <script src="/static/js/home.js?v=[[.version]]"></script>
 <script src="/components/header.js?v=[[.version]]"></script>
 <script src="/components/config.js?v=[[.version]]"></script>
+<script src="/components/config_form.js?v=[[.version]]"></script>
+<script src="/components/config_select.js?v=[[.version]]"></script>
+<script src="/components/pipeline.js?v=[[.version]]"></script>
 <script src="/components/config_log.js?v=[[.version]]"></script>
 <script src="/components/trace.js?v=[[.version]]"></script>
-<script src="/components/sql_source.js?v=[[.version]]"></script>
+<script src="/components/source.js?v=[[.version]]"></script>
 <script src="/components/env.js?v=[[.version]]"></script>
 <script src="/components/message_template.js?v=[[.version]]"></script>
 <script src="/components/users.js?v=[[.version]]"></script>
@@ -36,7 +40,8 @@
         routes: [
             { path: '/', redirect: '/config'},
             { path: '/config', component: MyConfig},
-            {path: '/sql_source', component: MySqlSource},
+            { path: '/pipeline', component: MyPipeline},
+            {path: '/source', component: MySource},
             {path: '/message_template', component: MyMessageTemplate},
             {path: '/users', component: MyUsers},
             {path: '/logs', component: MyConfigLog},
@@ -56,13 +61,17 @@
         created(){
             let q = window.location.search
             let searchParams = new URLSearchParams(q)
-            let env = searchParams.get("env")
-            if (env != null && env !==""){
-                api.setEnv(env,"***")
+            let envKey = searchParams.get("env")
+            if (envKey != null && envKey !==""){
+                oldEnv = api.getEnv()
+                if (oldEnv.length>0 && oldEnv.env != envKey){
+                    api.dicDel([-1])
+                }
+                api.setEnv(envKey,"***")
             }
 
             this.getSysInfo()
-            this.getDic()
+            // this.getDic()
         },
         watch:{},
         methods:{
@@ -86,21 +95,21 @@
                 }, true)
             },
             // 枚举
-            getDic(){
-                api.dicList([Enum.dicSqlSource, Enum.dicEnv, Enum.dicUser, Enum.dicMsg], (list) =>{
-                    this.dicMap = list
-                    // 补充环境名称
-                    if (this.sysInfo.env_name == "***"){
-                        for (let i in list[Enum.dicEnv]){
-                            if (list[Enum.dicEnv][i].key == this.sysInfo.env){
-                                this.sysInfo.env_name = list[Enum.dicEnv][i].name
-                                api.setEnv(this.sysInfo.env, list[Enum.dicEnv][i].name)
-                                break
-                            }
-                        }
-                    }
-                },true)
-            },
+            // getDic(){
+            //     api.dicList([Enum.dicSqlSource, Enum.dicEnv, Enum.dicUser, Enum.dicMsg], (list) =>{
+            //         this.dicMap = list
+            //         // 补充环境名称
+            //         if (this.sysInfo.env_name == "***"){
+            //             for (let i in list[Enum.dicEnv]){
+            //                 if (list[Enum.dicEnv][i].key == this.sysInfo.env){
+            //                     this.sysInfo.env_name = list[Enum.dicEnv][i].name
+            //                     api.setEnv(this.sysInfo.env, list[Enum.dicEnv][i].name)
+            //                     break
+            //                 }
+            //             }
+            //         }
+            //     },true)
+            // },
         }
     })
 </script>

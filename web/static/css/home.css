@@ -157,6 +157,7 @@ i.el-alert__icon{
 /* 日志 踪迹 */
 .trace-page{
     position: relative;
+    margin-bottom: 50px;
 }
 .trace-page .median{
     position: absolute;
@@ -267,4 +268,31 @@ i.el-alert__icon{
     border: none;
     padding: 4px 0;
     background: #f7f9fd;
+}
+
+.sort-drag-box .drag{
+    transform: rotate(90deg);
+    cursor: n-resize;
+}
+.sort-drag-box .item-drag-current{
+    background: #c8ebfb !important;
+}
+.sort-drag-box .item-close{
+    cursor: pointer;
+    position: absolute;
+    right: 6px;
+    color: #72767b;
+}
+.sort-drag-box .item-close:hover{
+    color: #191919;
+}
+.sort-drag-box .sortable-chosen{
+    color:red;
+}
+
+.config-select-wrap .el-dialog__body{
+    padding: 0px 20px;
+}
+.config-select .el-table .el-table__cell{
+    padding: 8px 0;
 }

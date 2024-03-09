@@ -5,11 +5,27 @@ type KvItem struct {
 	Value string `json:"value"`
 }
 
+// 任务语句
+type CronStatement struct {
+	Type  string `json:"type"`
+	Local string `json:"local"` // 本地输入
+	Git   *Git   `json:"git"`   // git输入
+}
+
+type Git struct {
+	LinkId  int      `json:"link_id"` // 连接配置id
+	Owner   string   `json:"owner"`   // 仓库所属空间
+	Project string   `json:"project"` // 仓库项目
+	Path    []string `json:"path"`    // 文件的路径
+	Ref     string   `json:"ref"`     // 分支、tag或commit。默认: 仓库的默认分支(通常是master)
+}
+
 // 任务列表
 type CronConfigListRequest struct {
-	Type int `form:"type"`
-	Page int `form:"page"`
-	Size int `form:"size"`
+	Ids  []int `form:"ids[]"`
+	Type int   `form:"type"`
+	Page int   `form:"page"`
+	Size int   `form:"size"`
 }
 type CronConfigListReply struct {
 	List []*CronConfigListItem `json:"list"`
@@ -28,6 +44,7 @@ type CronConfigListItem struct {
 	StatusRemark   string             `json:"status_remark"`
 	StatusDt       string             `json:"status_dt"`
 	Type           int                `json:"type"`
+	TypeName       string             `json:"type_name"`
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
@@ -59,10 +76,17 @@ type CronMsgSet struct {
 	NotifyUserIds []int `json:"notify_user_ids"`
 }
 type CronConfigCommand struct {
-	Http *CronHttp `json:"http"`
-	Rpc  *CronRpc  `json:"rpc"`
-	Cmd  string    `json:"cmd"`
-	Sql  *CronSql  `json:"sql"`
+	Http    *CronHttp    `json:"http"`
+	Rpc     *CronRpc     `json:"rpc"`
+	Cmd     *CronCmd     `json:"cmd"`
+	Sql     *CronSql     `json:"sql"`
+	Jenkins *CronJenkins `json:"jenkins"`
+}
+
+type CronCmd struct {
+	Type      string         `json:"type"`
+	Origin    string         `json:"origin"` // 语句来源
+	Statement *CronStatement `json:"statement"`
 }
 
 type CronHttp struct {
@@ -83,10 +107,13 @@ type CronRpc struct {
 
 // sql任务配置
 type CronSql struct {
-	Driver    string         `json:"driver"`     // 驱动，默认mysql
-	Source    *CronSqlSource `json:"source"`     // 具体链接配置
-	ErrAction int            `json:"err_action"` // 错误后行为
-	Statement []string       `json:"statement"`  // sql语句多条
+	Driver        string           `json:"driver"`          // 驱动，默认mysql
+	Source        *CronSqlSource   `json:"source"`          // 具体链接配置
+	ErrAction     int              `json:"err_action"`      // 错误后行为
+	ErrActionName string           `json:"err_action_name"` // 错误后行为名称
+	Interval      int64            `json:"interval"`        // 执行间隔
+	Origin        string           `json:"origin"`          // 语句来源
+	Statement     []*CronStatement `json:"statement"`
 }
 
 // CronSqlSource sql任务 来源配置
@@ -100,6 +127,16 @@ type CronSqlSource struct {
 	Port     string `json:"port"`
 }
 
+type CronJenkinsSource struct {
+	Id int `json:"id"`
+}
+
+type CronJenkins struct {
+	Source *CronJenkinsSource `json:"source"` // 具体链接配置
+	Name   string             `json:"name"`   // 项目名称
+	Params []*KvItem          `json:"params"` // 参数
+}
+
 // 已注册列表
 type CronConfigRegisterListRequest struct{}
 type CronConfigRegisterListResponse struct {
@@ -108,6 +145,7 @@ type CronConfigRegisterListResponse struct {
 
 // 任务设置
 type CronConfigRunRequest struct {
+	Id       int                `json:"id"`                 // 任务编号
 	Name     string             `json:"name,omitempty"`     // 任务名称
 	Type     int                `json:"type"`               // 类型
 	Spec     string             `json:"spec"`               // 执行时间表达式

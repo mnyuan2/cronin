@@ -6,7 +6,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
-	"cron/internal/basic/errs"
+	"cron/internal/basic/tracing"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -15,6 +15,8 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"time"
 )
@@ -38,13 +40,13 @@ func (dm *TaskService) Init() (err error) {
 	for page := 1; total >= int64(pageSize*page); page++ {
 		list := []*models.CronConfig{}
 		w := db.NewWhere().Eq("status", enum.StatusActive)
-		total, err = cronDb.GetList(w, page, pageSize, &list)
+		total, err = cronDb.ListPage(w, page, pageSize, &list)
 		if err != nil {
 			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
 		}
 		for _, conf := range list {
 			// 启用成功，更新任务id；启动失败，置空任务id
-			if err := dm.Add(conf); err != nil {
+			if err := dm.AddConfig(conf); err != nil {
 				conf.EntryId = 0
 				conf.Status = models.ConfigStatusError
 				cronDb.ChangeStatus(conf, "初始化注册错误")
@@ -52,8 +54,25 @@ func (dm *TaskService) Init() (err error) {
 		}
 	}
 
+	pipeineData := data.NewCronPipelineData(context.Background())
+	for page := 1; total >= int64(pageSize*page); page++ {
+		list := []*models.CronPipeline{}
+		w := db.NewWhere().Eq("status", enum.StatusActive)
+		total, err = pipeineData.ListPage(w, page, pageSize, &list)
+		if err != nil {
+			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
+		}
+		for _, conf := range list {
+			if err := dm.AddPipeline(conf); err != nil {
+				conf.EntryId = 0
+				conf.Status = models.ConfigStatusError
+				pipeineData.ChangeStatus(conf, "初始化注册错误")
+			}
+		}
+	}
+
 	// 系统内置任务
-	dm.Add(dm.sysLogRetentionConf())
+	dm.AddConfig(dm.sysLogRetentionConf())
 
 	return nil
 }
@@ -68,18 +87,52 @@ func (dm *TaskService) sysRegisterMonitor() {
 }
 
 // 添加任务
-func (dm *TaskService) Add(conf *models.CronConfig) error {
+func (dm *TaskService) AddConfig(conf *models.CronConfig) error {
+	var id cron.EntryID
+	var err error
 	if conf == nil {
 		return errors.New("未指定任务")
 	}
-	j := NewCronJob(conf)
+	j := NewJobConfig(conf)
 	if conf.Type == models.TypeOnce {
-		return dm.addOnce(j)
+		id, err = dm.addOnce(conf.Spec, j)
+	} else {
+		id, err = dm.cron.AddJob(conf.Spec, j)
 	}
-	id, err := dm.cron.AddJob(conf.Spec, j)
 	if err != nil {
-		g := models.NewErrorCronLog(conf, "", errs.New(err, "任务启动失败"), time.Now())
-		data.NewCronLogData(context.Background()).Add(g)
+		_, span := tracing.Tracer(conf.Env+"-cronin", trace.WithInstrumentationAttributes(
+			attribute.String("driver", "mysql"),
+			attribute.String("env", conf.Env),
+		)).Start(context.Background(), "job-"+conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", conf.Id)))
+		defer span.End()
+		span.SetStatus(tracing.StatusError, "任务启动失败")
+		span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		return err
+	}
+	conf.EntryId = int(id)
+	return nil
+}
+
+func (dm *TaskService) AddPipeline(conf *models.CronPipeline) error {
+	var id cron.EntryID
+	var err error
+	if conf == nil {
+		return errors.New("未指定任务")
+	}
+	j := NewJobPipeline(conf)
+	if conf.Type == models.TypeOnce {
+		id, err = dm.addOnce(conf.Spec, j)
+	} else {
+		id, err = dm.cron.AddJob(conf.Spec, j)
+	}
+	if err != nil {
+		_, span := tracing.Tracer(conf.Env+"-cronin", trace.WithInstrumentationAttributes(
+			attribute.String("driver", "mysql"),
+			attribute.String("env", conf.Env),
+		)).Start(context.Background(), "job-pipeline", trace.WithAttributes(attribute.Int("ref_id", conf.Id)))
+		defer span.End()
+		span.SetStatus(tracing.StatusError, "任务启动失败")
+		span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
 		return err
 	}
 	conf.EntryId = int(id)
@@ -87,19 +140,25 @@ func (dm *TaskService) Add(conf *models.CronConfig) error {
 }
 
 // 添加单次任务
-func (dm *TaskService) addOnce(j *CronJob) error {
-	s, err := NewScheduleOnce(j.conf.Spec)
+func (dm *TaskService) addOnce(spec string, j cron.Job) (cron.EntryID, error) {
+	s, err := NewScheduleOnce(spec)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	id := dm.cron.Schedule(s, j)
-	j.conf.EntryId = int(id)
-	return nil
+	return dm.cron.Schedule(s, j), nil
 }
 
 // 删除任务
 func (dm *TaskService) Del(conf *models.CronConfig) {
 	if conf.EntryId == 0 {
+		return
+	}
+	dm.cron.Remove(cron.EntryID(conf.EntryId))
+}
+
+// 删除任务
+func (dm *TaskService) DelPipeline(conf *models.CronPipeline) {
+	if conf.EntryId == 0 { // 这里其实应该到任务队列取找执行id，mysql找是下册
 		return
 	}
 	dm.cron.Remove(cron.EntryID(conf.EntryId))

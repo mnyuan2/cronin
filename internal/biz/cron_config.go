@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
@@ -14,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"log"
 	"time"
 )
 
@@ -31,10 +33,10 @@ func NewCronConfigService(ctx context.Context, user *auth.UserToken) *CronConfig
 
 // 任务配置列表
 func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronConfigListReply, err error) {
-	if r.Type == 0 {
-		r.Type = models.TypeCycle
+	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption()).In("id", r.Ids)
+	if w.Len() == 0 {
+		return nil, errs.New(nil, "未指定查询条件")
 	}
-	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption())
 	// 构建查询条件
 	if r.Page <= 1 {
 		r.Page = 1
@@ -49,7 +51,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			Size: r.Size,
 		},
 	}
-	resp.Page.Total, err = data.NewCronConfigData(dm.ctx).GetList(w, r.Page, r.Size, &resp.List)
+	resp.Page.Total, err = data.NewCronConfigData(dm.ctx).ListPage(w, r.Page, r.Size, &resp.List)
 	topList := map[int]*data.SumConfTop{}
 	if len(resp.List) > 0 {
 		endTime := time.Now()
@@ -62,12 +64,25 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 	}
 
 	for _, item := range resp.List {
-		item.Command = &pb.CronConfigCommand{Http: &pb.CronHttp{Header: []*pb.KvItem{}}, Rpc: &pb.CronRpc{Actions: []string{}}, Sql: &pb.CronSql{}}
+		item.Command = &pb.CronConfigCommand{
+			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
+			Rpc:     &pb.CronRpc{Actions: []string{}},
+			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{}}},
+			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
+			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
+		}
 		item.MsgSet = []*pb.CronMsgSet{}
+		item.TypeName = models.ConfigTypeMap[item.Type]
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
-		jsoniter.Unmarshal(item.CommandStr, item.Command)
-		jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet)
+		if er := jsoniter.Unmarshal(item.CommandStr, item.Command); er != nil {
+			log.Println("	command 解析错误", item.Id, er.Error())
+		}
+		if item.MsgSetStr != nil {
+			if er := jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); er != nil {
+				log.Println("	msg_set 解析错误", item.Id, er.Error())
+			}
+		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
 			item.TopErrorNumber = top.ErrorNumber
@@ -87,7 +102,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 	list := cronRun.Entries()
 	resp = &pb.CronConfigRegisterListResponse{List: []*pb.CronConfigListItem{}}
 	for _, v := range list {
-		c, ok := v.Job.(*CronJob)
+		c, ok := v.Job.(*JobConfig)
 		if !ok {
 			resp.List = append(resp.List, &pb.CronConfigListItem{
 				Id:       int(v.ID),
@@ -140,21 +155,16 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		d.Env = dm.user.Env
 	}
 
-	d.Name = r.Name
-	d.Spec = r.Spec
-	d.Protocol = r.Protocol
-	d.Remark = r.Remark
-	d.Command, _ = jsoniter.Marshal(r.Command)
-	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
-	d.Type = r.Type
 	if r.Type == models.TypeCycle {
-		if _, err = secondParser.Parse(d.Spec); err != nil {
+		if _, err = secondParser.Parse(r.Spec); err != nil {
 			return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
 		}
 	} else if r.Type == models.TypeOnce {
-		if _, err = NewScheduleOnce(d.Spec); err != nil {
+		if _, err = NewScheduleOnce(r.Spec); err != nil {
 			return nil, err
 		}
+	} else if r.Type == models.TypeModule {
+		//
 	} else {
 		return nil, fmt.Errorf("类型输入有误")
 	}
@@ -169,14 +179,14 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 
 	} else if r.Protocol == models.ProtocolCmd {
-		if r.Command.Cmd == "" {
-			return nil, fmt.Errorf("请输入 cmd 命令类容")
+		if err := dtos.CheckCmd(r.Command.Cmd); err != nil {
+			return nil, err
 		}
 	} else if r.Protocol == models.ProtocolSql {
 		if err := dtos.CheckSql(r.Command.Sql); err != nil {
 			return nil, err
 		}
-		if one, _ := data.NewCronSettingData(dm.ctx).GetSqlSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
 			return nil, errors.New("sql 连接 配置有误，请确认")
 		}
 	}
@@ -186,6 +196,13 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 	}
 
+	d.Name = r.Name
+	d.Spec = r.Spec
+	d.Protocol = r.Protocol
+	d.Remark = r.Remark
+	d.Type = r.Type
+	d.Command, _ = jsoniter.Marshal(r.Command)
+	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	err = data.NewCronConfigData(dm.ctx).Set(d)
 	if err != nil {
 		return nil, err
@@ -206,15 +223,17 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 	if conf.Status == r.Status {
 		return nil, fmt.Errorf("状态相等")
 	}
-	if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
-		NewTaskService(config.MainConf()).Del(conf)
-		conf.EntryId = 0
-	} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
-		if err = NewTaskService(config.MainConf()).Add(conf); err != nil {
-			return nil, err
+	if conf.Type != models.TypeModule {
+		if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
+			NewTaskService(config.MainConf()).Del(conf)
+			conf.EntryId = 0
+		} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
+			if err = NewTaskService(config.MainConf()).AddConfig(conf); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("错误状态请求")
 		}
-	} else {
-		return nil, fmt.Errorf("错误状态请求")
 	}
 
 	conf.Status = r.Status
@@ -234,6 +253,8 @@ func (dm *CronConfigService) Del() {
 // 任务执行
 func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfigRunResponse, err error) {
 	conf := &models.CronConfig{
+		Id:       r.Id,
+		Env:      dm.user.Env,
 		Type:     r.Type,
 		Protocol: r.Protocol,
 	}
@@ -242,7 +263,7 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 		return nil, err
 	}
 
-	res, err := NewCronJob(conf).Exec(dm.ctx)
+	res, err := NewJobConfig(conf).Running(dm.ctx, "手动执行")
 	if err != nil {
 		return nil, err
 	}

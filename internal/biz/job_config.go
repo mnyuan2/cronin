@@ -29,7 +29,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -61,7 +60,7 @@ func (m *ScheduleOnce) Next(t time.Time) time.Time {
 	return m.execTime
 }
 
-type CronJob struct {
+type JobConfig struct {
 	conf         *models.CronConfig
 	commandParse *pb.CronConfigCommand
 	msgSetParse  *dtos.MsgSetParse
@@ -70,8 +69,8 @@ type CronJob struct {
 }
 
 // 任务执行器
-func NewCronJob(conf *models.CronConfig) *CronJob {
-	job := &CronJob{
+func NewJobConfig(conf *models.CronConfig) *JobConfig {
+	job := &JobConfig{
 		conf:         conf,
 		commandParse: &pb.CronConfigCommand{},
 		msgSetParse:  &dtos.MsgSetParse{MsgIds: []int{}, StatusIn: map[int]any{}, NotifyUserIds: []int{}, Set: []*pb.CronMsgSet{}},
@@ -81,12 +80,7 @@ func NewCronJob(conf *models.CronConfig) *CronJob {
 	_ = jsoniter.Unmarshal(conf.MsgSet, &job.msgSetParse.Set)
 
 	for _, s := range job.msgSetParse.Set {
-		if s.Status == 0 || s.Status == enum.StatusDisable {
-			job.msgSetParse.StatusIn[enum.StatusDisable] = struct{}{}
-		}
-		if s.Status == 0 || s.Status == enum.StatusActive {
-			job.msgSetParse.StatusIn[enum.StatusActive] = struct{}{}
-		}
+		job.msgSetParse.StatusIn[s.Status] = struct{}{}
 		job.msgSetParse.NotifyUserIds = append(job.msgSetParse.NotifyUserIds, s.NotifyUserIds...)
 		job.msgSetParse.MsgIds = append(job.msgSetParse.MsgIds, s.MsgId)
 	}
@@ -94,14 +88,13 @@ func NewCronJob(conf *models.CronConfig) *CronJob {
 	job.tracer = tracing.Tracer(job.conf.Env+"-cronin", trace.WithInstrumentationAttributes(
 		attribute.String("driver", "mysql"),
 		attribute.String("env", job.conf.Env),
-		attribute.Int64("nonce", int64(job.conf.Id)),
 	))
 
 	return job
 }
 
 // 执行任务
-func (job *CronJob) Run() {
+func (job *JobConfig) Run() {
 	var err errs.Errs
 	var res []byte
 	st := time.Now()
@@ -165,16 +158,57 @@ func (job *CronJob) Run() {
 	}
 }
 
-func (job *CronJob) Exec(ctx context.Context) (res []byte, err errs.Errs) {
+// 执行任务 未注册版本
+func (job *JobConfig) Running(ctx context.Context, remark string) (res []byte, err errs.Errs) {
+	st := time.Now()
+	ctx, span := job.tracer.Start(ctx, "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
+	defer func() {
+		if res != nil {
+			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
+		}
+		if err != nil {
+			span.SetStatus(tracing.StatusError, err.Desc())
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		} else {
+			span.SetStatus(tracing.StatusOk, "")
+		}
+		if er := util.PanicInfo(recover()); er != "" {
+			span.SetStatus(tracing.StatusError, "执行异常")
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
+		}
+		span.End()
+	}()
+	span.SetAttributes(
+		attribute.String("env", job.conf.Env),
+		attribute.String("config_name", job.conf.Name),
+		attribute.String("protocol_name", job.conf.GetProtocolName()),
+		attribute.String("component", "job"),
+		attribute.String("remark", remark),
+	)
+
+	res, err = job.Exec(ctx)
+	if err != nil {
+		job.ErrorCount++
+		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
+	} else {
+		job.ErrorCount = 0
+		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
+	}
+	return res, err
+}
+
+func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 	switch job.conf.Protocol {
 	case models.ProtocolHttp:
 		res, err = job.httpFunc(ctx, job.commandParse.Http)
 	case models.ProtocolRpc:
 		res, err = job.rpcFunc(ctx)
 	case models.ProtocolCmd:
-		res, err = job.cmdFunc(ctx)
+		res, err = job.cmdFunc(ctx, job.commandParse.Cmd)
 	case models.ProtocolSql:
 		err = job.sqlFunc(ctx)
+	case models.ProtocolJenkins:
+		err = job.jenkins(ctx, job.commandParse.Jenkins)
 	default:
 		err = errs.New(nil, fmt.Sprintf("未支持的protocol=%v", job.conf.Protocol))
 	}
@@ -182,7 +216,7 @@ func (job *CronJob) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // http 执行函数
-func (job *CronJob) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte, err errs.Errs) {
+func (job *JobConfig) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte, err errs.Errs) {
 	header := map[string]string{}
 	for _, head := range http.Header {
 		if head.Key == "" {
@@ -198,7 +232,7 @@ func (job *CronJob) httpFunc(ctx context.Context, http *pb.CronHttp) (res []byte
 }
 
 // rpc 执行函数
-func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err errs.Errs) {
+func (job *JobConfig) rpcFunc(ctx context.Context) (res []byte, err errs.Errs) {
 	switch job.commandParse.Rpc.Method {
 	case "GRPC":
 		return job.rpcGrpc(ctx, job.commandParse.Rpc)
@@ -211,69 +245,74 @@ func (job *CronJob) rpcFunc(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // rpc 执行函数
-func (job *CronJob) cmdFunc(ctx context.Context) (res []byte, err errs.Errs) {
-	if runtime.GOOS == "windows" {
-		_, span := job.tracer.Start(ctx, "cmd-cmd")
-		defer func() {
-			if res != nil {
-				span.AddEvent("", trace.WithAttributes(attribute.String("console", string(res))))
-			}
-			if err != nil {
-				span.SetStatus(tracing.StatusError, err.Desc())
-				span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
-			}
-			span.End()
-		}()
-		span.SetAttributes(attribute.String("component", "cmd"))
-		span.AddEvent("", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
+func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, err errs.Errs) {
+	ctx, span := job.tracer.Start(ctx, "cmd-"+r.Type)
+	defer func() {
+		if res != nil {
+			span.AddEvent("", trace.WithAttributes(attribute.String("console", string(res))))
+		}
+		if err != nil {
+			span.SetStatus(tracing.StatusError, err.Desc())
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		}
+		span.End()
+	}()
+	span.SetAttributes(attribute.String("component", r.Type))
 
-		data := strings.Split(job.commandParse.Cmd, " ")
-		if len(data) < 2 {
+	//确认数据来源
+	data := ""
+	if r.Origin == "git" {
+		files, err := job.getGitFile(ctx, r.Statement.Git)
+		if err != nil {
+			return nil, err
+		}
+		if len(files) < 1 { // 仅支持单文件
+			return nil, errs.New(nil, "未配置有效文件")
+		} else if len(files) > 1 {
+			return nil, errs.New(nil, "仅支持单文件")
+		}
+		data = string(files[0].Byte)
+	} else {
+		data = r.Statement.Local
+	}
+	span.AddEvent("", trace.WithAttributes(attribute.String("statement", data)))
+
+	switch r.Type {
+	case "cmd":
+		args := strings.Split(data, " ")
+		if len(args) < 2 {
 			return nil, errs.New(nil, "命令参数不合法，已跳过")
 		}
-
-		cmd := exec.Command(data[0], data[1:]...) // 合并 winds 命令
-		if res, er := cmd.Output(); err != nil {
-			return res, errs.New(er, "执行错误")
+		cmd := exec.Command(args[0], args[1:]...) // 合并 winds 命令
+		if re, er := cmd.Output(); err != nil {
+			return re, errs.New(er, "执行错误")
 		} else {
-			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(res))
-			return []byte(srcCoder), nil
+			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(re))
+			res = []byte(srcCoder)
 		}
 
-		// windows下安装了sh.exe 可以使用；就是git；但要添加环境变量 git/bin
-		//cmd := exec.Command("sh.exe","-c", job.commandParse.Cmd)
-		//if res, err = cmd.Output(); err != nil{
-		//	return nil, err
-		//}else {
-		//	return res, nil
-		//}
-
-	} else {
-		_, span := job.tracer.Start(ctx, "cmd-bash")
-		defer func() {
-			if res != nil {
-				span.AddEvent("", trace.WithAttributes(attribute.String("console", string(res))))
-			}
-			if err != nil {
-				span.SetStatus(tracing.StatusError, err.Desc())
-				span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
-			}
-			span.End()
-		}()
-		span.SetAttributes(attribute.String("component", "cmd"))
-		span.AddEvent("", trace.WithAttributes(attribute.String("statement", job.commandParse.Cmd)))
-
-		cmd := exec.Command("/bin/bash", "-c", job.commandParse.Cmd)
-		if res, er := cmd.Output(); er != nil {
-			return res, errs.New(err, "执行结果错误")
-		} else {
-			return res, nil
+	case "sh":
+		e := exec.Command("sh", "-c", data)
+		cmd, er := e.Output()
+		if er != nil {
+			return nil, errs.New(er, "执行结果错误")
 		}
+		srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(cmd))
+		res = []byte(srcCoder)
+
+	case "bash":
+		cmd := exec.Command("/bin/bash", "-c", data)
+		re, er := cmd.Output()
+		if er != nil {
+			return nil, errs.New(er, "执行结果错误")
+		}
+		res = re
 	}
+	return res, nil
 }
 
 // rpc 执行函数
-func (job *CronJob) sqlFunc(ctx context.Context) (err errs.Errs) {
+func (job *JobConfig) sqlFunc(ctx context.Context) (err errs.Errs) {
 	switch job.commandParse.Sql.Driver {
 	case models.SqlSourceMysql:
 		return job.sqlMysql(ctx, job.commandParse.Sql)
@@ -283,7 +322,7 @@ func (job *CronJob) sqlFunc(ctx context.Context) (err errs.Errs) {
 }
 
 // http请求
-func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string) (resp []byte, err errs.Errs) {
+func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string) (resp []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "http-request")
 	defer func() {
 		if err != nil {
@@ -299,8 +338,8 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 
 	h, _ := jsoniter.Marshal(header)
 	span.AddEvent("", trace.WithAttributes(
-		attribute.String("rul", url),
-		attribute.String("req_header", string(h)),
+		attribute.String("url", url),
+		attribute.String("request_header", string(h)),
 		attribute.String("request", string(body)),
 	))
 
@@ -339,14 +378,14 @@ func (job *CronJob) httpRequest(ctx context.Context, method, url string, body []
 
 	h, _ = jsoniter.Marshal(res.Header)
 	span.AddEvent("", trace.WithAttributes(
-		attribute.String("resp_header", string(h)),
+		attribute.String("response_header", string(h)),
 		attribute.String("response", string(resp)),
 	))
 	return resp, err
 }
 
 // grpc调用
-func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, err errs.Errs) {
+func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "rpc-grpc")
 	span.SetAttributes(
 		attribute.String("component", "grpc-client"),
@@ -424,7 +463,7 @@ func (job *CronJob) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, er
 }
 
 // 发送消息
-func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc string, body []byte, duration float64) {
+func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc string, body []byte, duration float64) {
 	if _, ok := job.msgSetParse.StatusIn[status]; !ok {
 		return
 	}
@@ -510,7 +549,7 @@ func (job *CronJob) messagePush(ctx context.Context, status int, statusDesc stri
 }
 
 // 消息发送
-func (job *CronJob) messagePushItem(ctx context.Context, templateByte []byte, args map[string]string) (res []byte, err errs.Errs) {
+func (job *JobConfig) messagePushItem(ctx context.Context, templateByte []byte, args map[string]string) (res []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "message-push-item")
 	defer span.End()
 	// 变量替换

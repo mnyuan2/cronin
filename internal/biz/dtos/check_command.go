@@ -1,6 +1,7 @@
 package dtos
 
 import (
+	"cron/internal/basic/enum"
 	"cron/internal/basic/grpcurl"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -63,11 +64,77 @@ func CheckSql(sql *pb.CronSql) error {
 	if sql.Source.Id == 0 {
 		return fmt.Errorf("请选择 sql 连接")
 	}
-	if len(sql.Statement) == 0 {
-		return errors.New("未设置 sql 执行语句")
+	for _, item := range sql.Statement {
+		if sql.Origin == enum.SqlStatementSourceLocal {
+			if item.Local == "" {
+				return errors.New("未设置 sql 执行语句")
+			}
+		} else if sql.Origin == enum.SqlStatementSourceGit {
+			if item.Git.LinkId == 0 {
+				return errors.New("未设置 sql 语句 连接")
+			}
+			if item.Git.Owner == "" {
+				return errors.New("未设置 sql 语句 仓库空间")
+			}
+			if item.Git.Project == "" {
+				return errors.New("未设置 sql 语句 项目名称")
+			}
+			if len(item.Git.Path) <= 1 {
+				return errors.New("未设置 sql 语句 文件路径")
+			}
+			for i, path := range item.Git.Path {
+				item.Git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
+			}
+		} else {
+			return errors.New("sql来源有误")
+		}
 	}
-	if _, ok := models.SqlErrActionMap[sql.ErrAction]; !ok {
+
+	name, ok := models.SqlErrActionMap[sql.ErrAction]
+	if !ok {
 		return errors.New("未设置 sql 错误行为")
 	}
+	sql.ErrActionName = name
+	if sql.ErrAction == models.SqlErrActionRollback && sql.Interval > 0 {
+		return errors.New("事务回滚 时禁用 执行间隔")
+	}
+	if sql.Interval < 0 {
+		sql.Interval = 0
+	}
+	return nil
+}
+
+func CheckCmd(cmd *pb.CronCmd) error {
+	if cmd.Type == "" {
+		return fmt.Errorf("未指定命令行类型")
+	}
+	if cmd.Origin == enum.SqlStatementSourceLocal {
+		if cmd.Statement.Local == "" {
+			return fmt.Errorf("请输入 cmd 命令类容")
+		}
+	} else if cmd.Origin == enum.SqlStatementSourceGit {
+		if cmd.Statement.Git.LinkId == 0 {
+			return errors.New("未设置 命令 连接")
+		}
+		if cmd.Statement.Git.Owner == "" {
+			return errors.New("未设置 命令 仓库空间")
+		}
+		if cmd.Statement.Git.Project == "" {
+			return errors.New("未设置 命令 项目名称")
+		}
+		pathLen := len(cmd.Statement.Git.Path)
+		if pathLen == 0 {
+			return errors.New("未设置 命令 文件路径")
+		} else if pathLen > 1 {
+			return errors.New("命令 文件路径 不支持多文件")
+		}
+
+		for i, path := range cmd.Statement.Git.Path {
+			cmd.Statement.Git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
+		}
+	} else {
+		return fmt.Errorf("未指定命令行来源")
+	}
+
 	return nil
 }

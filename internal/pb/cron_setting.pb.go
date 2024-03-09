@@ -1,6 +1,12 @@
 package pb
 
-// sql源
+type SettingSource struct {
+	Sql     *SettingSqlSource     `json:"sql"`
+	Jenkins *SettingJenkinsSource `json:"jenkins"`
+	Git     *SettingGitSource     `json:"git"`
+}
+
+// sql 源
 type SettingSqlSource struct {
 	Hostname string `json:"hostname"`
 	Port     string `json:"port"`
@@ -9,28 +15,48 @@ type SettingSqlSource struct {
 	Database string `json:"database"`
 }
 
+// jenkins 源
+type SettingJenkinsSource struct {
+	Hostname string `json:"hostname"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// git 源
+type SettingGitSource struct {
+	Type        string `json:"type"`
+	AccessToken string `json:"access_token"` // 用户授权码
+}
+
+func (m *SettingGitSource) GetAccessToken() string {
+	return m.AccessToken
+}
+
 // 任务列表
-type SettingSqlListRequest struct {
+type SettingListRequest struct {
+	Type int `form:"type"`
 	Page int `form:"page"`
 	Size int `form:"size"`
 }
-type SettingSqlListReply struct {
-	List []*SettingSqlListItem `json:"list"`
-	Page *Page                 `json:"page"`
+type SettingListReply struct {
+	List []*SettingListItem `json:"list"`
+	Page *Page              `json:"page"`
 }
-type SettingSqlListItem struct {
-	Id       int               `json:"id"`
-	Title    string            `json:"title"`
-	CreateDt string            `json:"create_dt"`
-	UpdateDt string            `json:"update_dt"`
-	Source   *SettingSqlSource `json:"source"`
+type SettingListItem struct {
+	Id       int            `json:"id"`
+	Title    string         `json:"title"`
+	CreateDt string         `json:"create_dt"`
+	UpdateDt string         `json:"update_dt"`
+	Type     int            `json:"type"`
+	Source   *SettingSource `json:"source"`
 }
 
 // 任务设置
 type SettingSqlSetRequest struct {
-	Id     int               `json:"id"`
-	Title  string            `json:"title"`
-	Source *SettingSqlSource `json:"source"`
+	Id     int            `json:"id"`
+	Title  string         `json:"title"`
+	Type   int            `json:"type"`
+	Source *SettingSource `json:"source"`
 }
 type SettingSqlSetReply struct {
 	Id int `json:"id"`

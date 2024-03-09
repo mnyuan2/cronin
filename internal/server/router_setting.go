@@ -8,7 +8,7 @@ import (
 
 // 设置 sql 连接源 列表
 func routerSqlList(ctx *gin.Context) {
-	r := &pb.SettingSqlListRequest{}
+	r := &pb.SettingListRequest{}
 	if err := ctx.BindQuery(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
@@ -56,7 +56,7 @@ func routerSqlChangeStatus(ctx *gin.Context) {
 
 // sql连接ping
 func routerSqlPing(ctx *gin.Context) {
-	r := &pb.SettingSqlPingRequest{}
+	r := &pb.SettingSqlSetRequest{}
 	if err := ctx.BindJSON(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
