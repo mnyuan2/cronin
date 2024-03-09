@@ -3,6 +3,7 @@ package server
 import (
 	"cron/internal/biz"
 	"cron/internal/pb"
+	"fmt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,11 +20,12 @@ func httpRegister(ctx *gin.Context) {
 
 // 任务列表
 func httpList(ctx *gin.Context) {
-	r := &pb.CronConfigListRequest{}
+	r := &pb.CronConfigListRequest{Ids: []int{}}
 	if err := ctx.BindQuery(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
+	fmt.Println(ctx.QueryArray("ids"))
 	user, err := GetUser(ctx)
 	if err != nil {
 		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()

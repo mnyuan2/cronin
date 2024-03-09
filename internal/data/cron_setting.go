@@ -66,10 +66,9 @@ func (m *CronSettingData) Del(scene, env string, id int) error {
 	return m.db.Where("scene=? and env=? and id=?", scene, env, id).Delete(one).Error
 }
 
-// 获得sql连接源
-func (m *CronSettingData) GetSqlSourceOne(env string, id int) (one *models.CronSetting, err error) {
+// 获得连接源
+func (m *CronSettingData) GetSourceOne(env string, id int) (one *models.CronSetting, err error) {
 	w := db.NewWhere().
-		Eq("scene", models.SceneSqlSource).
 		Eq("env", env, db.RequiredOption()).
 		Eq("id", id, db.RequiredOption()).
 		Eq("status", enum.StatusActive)

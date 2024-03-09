@@ -79,6 +79,47 @@ function durationTransform(duration, inFormat='us', outFormat='latest',lang='en'
 }
 
 /**
+ * 拖动封装
+ * ~~~
+ * 注意：使用时需要先引入 SortableJS
+ * ~~~
+ * @param box 拖动列表包装盒子元素
+ * @param list 数据列表；因为json是引用类型，所以内部改变会印象外面。
+ * @returns {*} 返回的对象要存储下来，不然会因为执行完销毁而失效。
+ * @constructor
+ */
+function MySortable(box, call){
+    return new Sortable(box, {
+        handle: ".drag",  // 可拖拽节点
+        ghostClass: 'item-drag-current',
+        onEnd: event => {
+            let nums = box.childNodes.length;
+            let newIndex = event.newIndex; // 新位置
+            let oldIndex = event.oldIndex; // 原(旧)位置
+            // let $label = box.children[newIndex]; // 新节点
+            // let $oldLabel = box.children[oldIndex]; // 原(旧)节点
+            console.log("拖拽", nums, "old：" + oldIndex, "new：" + newIndex)
+
+            let $label = box.children[newIndex]; // 新节点
+            let $oldLabel = box.children[oldIndex]; // 原(旧)节点
+            box.removeChild($label);
+            if (event.newIndex >= nums) {
+                box.insertBefore($label, $oldLabel.nextSibling);
+                return;
+            }
+            if (newIndex < oldIndex) {
+                box.insertBefore($label, $oldLabel);
+            } else {
+                box.insertBefore($label, $oldLabel.nextSibling);
+            }
+
+            call(oldIndex, newIndex)
+
+        },
+    });
+}
+
+/**
  * 一维array数组转树型多维结构
  * @param arrList 数组
  * @param id 主键
@@ -121,10 +162,13 @@ const Enum ={
     envKey: "env",
     systemInfoKey: "system_info",
     dicKey: "dic",
-    dicSqlSource: 1,
     dicEnv: 2,
     dicMsg: 3,
     dicUser: 4,
+    dicSqlSource: 11,
+    dicJenkinsSource: 12,
+    dicGitSource: 13,
+    dicCmdType: 1001,
 }
 
 /**
@@ -140,8 +184,9 @@ var api = {
      * @param path string 请求路径
      * @param param object 请求参数 将拼url参数
      * @param success func 响应结果
+     * @param setting object 请求设置
      */
-    innerGet: function (path,param, success) {
+    innerGet: function (path,param, success, setting) {
         let url =  this.baseUrl+path
         // if (param){
         //     url += "?"
@@ -152,11 +197,15 @@ var api = {
         //     }
         //     url = url.slice(0,-1)
         // }
+        let async = true
+        if (setting && typeof setting.async == "boolean"){
+            async = setting.async
+        }
 
         let header = {
             'env': this.getEnv().env
         }
-        this.ajax('get', url, param, header,success)
+        this.ajax('get', url, param, header,success, async)
     },
 
     /**
@@ -221,6 +270,24 @@ var api = {
             })
         }
         callback(reply)
+    },
+    /**
+     * 移除dic缓存
+     * @param types array 枚举key列表
+     */
+    dicDel: function (types) {
+        let list = JSON.parse(localStorage.getItem(Enum.dicKey)) ?? {}
+        let reply = {}
+        // 从存储查看要请求的枚举是否存在 存在从存储取出
+        types.forEach((type, index) => {
+            if (list[type]) {
+                delete list[type]
+            }else if (type == -1){
+                list = []
+            }
+        })
+
+        window.localStorage.setItem(Enum.dicKey, JSON.stringify(list))
     },
 
     // 系统信息

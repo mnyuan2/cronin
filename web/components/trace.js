@@ -64,10 +64,8 @@ var MyTrace = Vue.extend({
                                     <template slot-scope="scope">
                                         <!-- json格式化 -->
                                         <pre v-if="scope.row.value.type=='STRING' && isJSON(scope.row.value.value)" style="max-height: 350px;overflow: auto;line-height: 100%;">{{JSON.parse(scope.row.value.value)}}</pre>
-                                        <!-- 异常文本 换行格式化 -->
-                                        <pre v-else-if="scope.row.key=='error.panic'" style="max-height: 350px;overflow: auto;line-height: 120%;">{{scope.row.value.value}}</pre>
-                                        <!-- 默认展示 -->
-                                        <div v-else>{{scope.row.value.value}}</div>
+                                        <!-- 异常文本 换行格式化 v-else-if="scope.row.key=='error.panic' || scope.row.key=='sql' || scope.row.key=='statement'" -->
+                                        <pre v-else style="max-height: 350px;overflow: auto;line-height: 120%;">{{scope.row.value.value}}</pre>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -111,6 +109,9 @@ var MyTrace = Vue.extend({
     methods:{
         // 踪迹展示
         getTrace(traceId){
+            if (traceId == ""){
+                return
+            }
             api.innerGet("/log/traces", {trace_id: traceId}, (res)=>{
                 if (!res.status){
                     console.log("log/traces 错误", res)

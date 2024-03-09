@@ -34,6 +34,14 @@ type DicGetItem struct {
 	Extend string `json:"extend"`
 }
 
+//var enumSource = map[int][]*pb.DicGetItem{
+//	enum.DicCmdType: {
+//		{Key: "cmd", Name: "cmd"},
+//		{Key: "bash", Name: "bash"},
+//		{Key: "sh", Name: "sh"},
+//	},
+//}
+
 func NewDicService(ctx context.Context, user *auth.UserToken) *FoundationService {
 	return &FoundationService{
 		ctx:  ctx,
@@ -81,6 +89,12 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicSqlSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneSqlSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+	case enum.DicJenkinsSource:
+		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		w.Eq("scene", models.SceneJenkinsSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+	case enum.DicGitSource:
+		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		w.Eq("scene", models.SceneGitSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
 	case enum.DicEnv:
 		_sql = "SELECT id,name 'key', title name, content extend FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneEnv).Eq("status", enum.StatusActive)
@@ -122,8 +136,19 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 
 // 通过枚举获取
 func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
-	// 待完善
-	return nil, nil
+	items := []*pb.DicGetItem{}
+
+	switch t {
+	case enum.DicCmdType:
+		if runtime.GOOS == "windows" {
+			items = append(items, &pb.DicGetItem{Key: "cmd", Name: "cmd"})
+		} else {
+			items = append(items, &pb.DicGetItem{Key: "bash", Name: "bash"},
+				&pb.DicGetItem{Key: "sh", Name: "sh"})
+		}
+	}
+
+	return items, nil
 }
 
 func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.SystemInfoReply, err error) {

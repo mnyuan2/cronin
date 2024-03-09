@@ -58,7 +58,7 @@ func (dm *CronLogService) Trace(r *pb.CronLogTraceRequest) (resp *pb.CronLogTrac
 	}
 
 	w := db.NewWhere().In("env", []string{dm.user.Env, ""}).Eq("trace_id", r.TraceId)
-	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 1000)
+	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 10000)
 
 	// 树 或 列表；样例为树，那我也树吧。
 	resp = &pb.CronLogTraceResponse{

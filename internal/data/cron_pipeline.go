@@ -8,32 +8,25 @@ import (
 	"time"
 )
 
-type CronConfigData struct {
+type CronPipelineData struct {
 	db        *db.MyDB
 	tableName string
 }
 
-func NewCronConfigData(ctx context.Context) *CronConfigData {
-	return &CronConfigData{
+func NewCronPipelineData(ctx context.Context) *CronPipelineData {
+	return &CronPipelineData{
 		db:        db.New(ctx),
-		tableName: "cron_config",
+		tableName: "cron_pipeline",
 	}
 }
 
-func (m *CronConfigData) List(where *db.Where, size int) (list []*models.CronConfig, err error) {
-	w, args := where.Build()
-	list = []*models.CronConfig{}
-	err = m.db.Where(w, args...).Limit(size).Find(&list).Error
-	return list, err
-}
-
-func (m *CronConfigData) ListPage(where *db.Where, page, size int, list interface{}) (total int64, err error) {
+func (m *CronPipelineData) ListPage(where *db.Where, page, size int, list interface{}) (total int64, err error) {
 	str, args := where.Build()
 
 	return m.db.Paginate(list, page, size, m.tableName, "*", "update_dt desc", str, args...)
 }
 
-func (m *CronConfigData) Set(data *models.CronConfig) error {
+func (m *CronPipelineData) Set(data *models.CronPipeline) error {
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	if data.Id > 0 {
 		return m.db.Where("id=?", data.Id).Omit("status", "status_remark", "status_dt", "entry_id", "env").Updates(data).Error
@@ -43,14 +36,14 @@ func (m *CronConfigData) Set(data *models.CronConfig) error {
 	}
 }
 
-func (m *CronConfigData) ChangeStatus(data *models.CronConfig, remark string) error {
+func (m *CronPipelineData) ChangeStatus(data *models.CronPipeline, remark string) error {
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	data.StatusDt = data.UpdateDt
 	data.StatusRemark = remark
 	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id").Updates(data).Error
 }
 
-func (m *CronConfigData) GetOne(env string, Id int) (data *models.CronConfig, err error) {
-	data = &models.CronConfig{}
+func (m *CronPipelineData) GetOne(env string, Id int) (data *models.CronPipeline, err error) {
+	data = &models.CronPipeline{}
 	return data, m.db.Where("env=? and id=?", env, Id).Take(data).Error
 }

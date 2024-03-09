@@ -9,7 +9,8 @@ var MyHeader = Vue.extend({
                           active-text-color="#66b1ff">
                           <el-menu-item index="/" style="font-weight: 500;font-size: 110%;">cronin</el-menu-item>
                           <el-menu-item index="/config">任务</el-menu-item>
-                          <el-menu-item index="/sql_source">sql连接</el-menu-item>
+                          <el-menu-item index="/pipeline">流水线</el-menu-item>
+                          <el-menu-item index="/source">连接</el-menu-item>
                           <!--右导航-->
                           <el-menu-item-group class="group-right">
                               <el-menu-item>
@@ -32,6 +33,7 @@ var MyHeader = Vue.extend({
                                 <template slot="title">关于<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
                                 <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>
                                 <el-menu-item><a href="https://gitee.com/mnyuan/cronin/" target="_blank">Gitee <i class="el-icon-star-off" style="vertical-align: initial;font-size: 15px;"></i></a></el-menu-item>
+                                <el-menu-item><a href="https://gitee.com/mnyuan/cronin/issues/new" target="_blank">反馈</a></el-menu-item>
                                 <el-menu-item disabled>cronin {{sys_info.version}}</el-menu-item>
                               </el-submenu>  
                           </el-menu-item-group>

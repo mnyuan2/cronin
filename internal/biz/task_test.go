@@ -22,8 +22,18 @@ func TestInitTask(t *testing.T) {
 }
 
 func TestParseTime(t *testing.T) {
-	su, err := secondParser.Parse("2022-11-02 00:25:24")
-	fmt.Println(su, err)
+	ti := time.Now()
+	spec := "2022-11-02 00:25:24"
+	spec = "59 59 23 * * */7" // 每周 7 23:59:59
+	spec = "0 0 0 * * 1"      // 每周 1 0:0:0    这里有点奇怪为什么周7和周1的写法不一样！
+	su, err := secondParser.Parse(spec)
+	nti := su.Next(ti)
+	fmt.Println(su, "\n	", nti, "\n	", err)
+	for i := 0; i < 3; i++ {
+		nnti := su.Next(nti)
+		fmt.Println("	", nnti)
+		nti = nnti
+	}
 
 	d, err := time.ParseDuration("24h")
 	t1 := time.Now().Add(-d)

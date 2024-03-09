@@ -1,5 +1,7 @@
 package models
 
+import "cron/internal/basic/enum"
+
 type CronSetting struct {
 	Id       int    `json:"id" gorm:"primary_key;column:id;type:int(11);comment:主键;"`
 	Scene    string `json:"scene" gorm:"column:scene;type:varchar(255);index:env,priority:12;comment:使用场景;"`
@@ -18,9 +20,24 @@ type SettingSqlSource struct {
 }
 
 const (
-	SceneSqlSource = "sql_source" // sql数据源配置
-	SceneEnv       = "env"        // 程序环境
-	SceneMsg       = "msg"        // 消息推送
+	SceneSqlSource     = "sql_source"     // sql数据源配置
+	SceneJenkinsSource = "jenkins_source" // jenkins 连接配置
+	SceneGitSource     = "git_source"     // git
+	SceneEnv           = "env"            // 程序环境
+	SceneMsg           = "msg"            // 消息推送
 )
 
 const EnvDefault = "public" // 默认环境 是不可以删除的
+
+// dic 到 source key的转换
+var DicToSource = map[int]string{
+	enum.DicSqlSource:     SceneSqlSource,
+	enum.DicJenkinsSource: SceneJenkinsSource,
+	enum.DicGitSource:     SceneGitSource,
+}
+
+var SourceToDic = map[string]int{
+	SceneSqlSource:     enum.DicSqlSource,
+	SceneJenkinsSource: enum.DicJenkinsSource,
+	SceneGitSource:     enum.DicGitSource,
+}

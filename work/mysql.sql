@@ -35,6 +35,26 @@ CREATE TABLE `cron_config`  (
     INDEX `env` (`env`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 流水线表创建
+CREATE TABLE `cron_pipeline`  (
+    `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `env` varchar(32) NULL COMMENT '环境',
+    `entry_id` int(11) NULL DEFAULT 0 COMMENT '执行队列编号',
+    `type` tinyint(2) NULL DEFAULT 2 COMMENT '类型：1.周期任务、2.单次任务（默认）',
+    `name` varchar(255) NULL COMMENT '流水线名称',
+    `spec` varchar(32) NULL COMMENT '执行时间 表达式',
+    `config_ids` json NULL COMMENT '任务id集合',
+    `remark` varchar(255) NULL COMMENT '备注',
+    `status` tinyint(2) NULL DEFAULT 2 COMMENT '状态：1.停止、2.启用、3.完成、4.错误',
+    `status_remark` varchar(255) NULL COMMENT '状态变更描述',
+    `status_dt` datetime NULL COMMENT '状态变更时间',
+    `update_dt` datetime NULL COMMENT '更新时间',
+    `create_dt` datetime NULL COMMENT '创建时间',
+    `msg_set` json NULL COMMENT '消息配置详情',
+    PRIMARY KEY (`id`),
+    INDEX `env`(`env`)
+);
+
 -- 任务日志表创建
 CREATE TABLE `cron_log` (
     `id` INT ( 11 ) NOT NULL AUTO_INCREMENT COMMENT '主键',

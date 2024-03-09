@@ -76,7 +76,7 @@ var MyConfigLog = Vue.extend({
         },
         // 踪迹盒子
         traceBox(id){
-            if (id != undefined){
+            if (typeof id === "string" && id != ""){
                 this.trace.show = true;
                 this.trace.id = id;
             }else{

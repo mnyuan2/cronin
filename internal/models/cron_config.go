@@ -9,17 +9,19 @@ type CronProtocol int
 type CronStatus int
 
 const (
-	ProtocolHttp = 1 // http
-	ProtocolRpc  = 2 // rpc
-	ProtocolCmd  = 3 // 命令行 cmd
-	ProtocolSql  = 4 // sql 执行
+	ProtocolHttp    = 1 // http
+	ProtocolRpc     = 2 // rpc
+	ProtocolCmd     = 3 // 命令行 cmd
+	ProtocolSql     = 4 // sql 执行
+	ProtocolJenkins = 5 // jenkins 构建
 )
 
 var ProtocolMap = map[int]string{
-	ProtocolHttp: "http",
-	ProtocolRpc:  "rpc",
-	ProtocolCmd:  "cmd",
-	ProtocolSql:  "sql",
+	ProtocolHttp:    "http",
+	ProtocolRpc:     "rpc",
+	ProtocolCmd:     "cmd",
+	ProtocolSql:     "sql",
+	ProtocolJenkins: "jenkins",
 }
 
 const (
@@ -39,9 +41,17 @@ var ConfigStatusMap = map[int]string{
 }
 
 const (
-	TypeCycle = 1 // 周期
-	TypeOnce  = 2 // 单次
+	TypeCycle  = 1 // 周期
+	TypeOnce   = 2 // 单次
+	TypeModule = 5 // 模块
 )
+
+// 任务类型
+var ConfigTypeMap = map[int]string{
+	TypeCycle:  "周期",
+	TypeOnce:   "单次",
+	TypeModule: "模块",
+}
 
 func ProtocolHttpMethodMap() map[string]string {
 	return map[string]string{
@@ -66,7 +76,7 @@ type CronConfig struct {
 	Protocol     int    `json:"protocol" gorm:"column:protocol;type:tinyint(2);default:0;comment:协议：1.http、2.grpc、3.系统命令、4.sql执行;"`
 	Command      []byte `json:"command" gorm:"column:command;type:json;default:null;comment:命令内容;"`
 	Remark       string `json:"remark" gorm:"column:remark;type:varchar(255);comment:备注;"`
-	Status       int    `json:"status" gorm:"column:status;type:tinyint(2);default:1;comment:状态：1.停止、2.启用;、3.完成、4.错误"`
+	Status       int    `json:"status" gorm:"column:status;type:tinyint(2);default:1;comment:状态：1.停止、2.启用、3.完成、4.错误;"`
 	StatusRemark string `json:"status_remark" gorm:"column:status_remark;type:varchar(255);comment:状态变更描述;"`
 	StatusDt     string `json:"status_dt" gorm:"column:status_dt;type:datetime;default:null;comment:状态变更时间;"`
 	UpdateDt     string `json:"update_dt" gorm:"column:update_dt;type:datetime;default:null;comment:更新时间;"`
