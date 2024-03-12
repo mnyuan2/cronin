@@ -16,6 +16,7 @@ import (
 	"github.com/jhump/protoreflect/desc/protoparse"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
+	"golang.org/x/crypto/ssh"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
@@ -366,6 +367,43 @@ echo "任务执行完毕..."`
 		continue
 	}
 	fmt.Println("执行结果：", string(cmd))
+}
+
+// 在远程服务器上执行shell脚本
+func TestCronJob_Cmd4(t *testing.T) {
+	// SSH连接配置
+	config := &ssh.ClientConfig{
+		User: "root",
+		Auth: []ssh.AuthMethod{
+			ssh.Password("xxxxxx"),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	// 连接到远程服务器
+	conn, err := ssh.Dial("tcp", "127.0.0.1:22", config)
+	if err != nil {
+		log.Fatalf("拨号失败: %v", err)
+	}
+	defer conn.Close()
+
+	// 创建一个新的会话
+	session, err := conn.NewSession()
+	if err != nil {
+		log.Fatalf("创建会话失败: %v", err)
+	}
+	defer session.Close()
+
+	// 执行Shell脚本
+	output, err := session.CombinedOutput("/soft/scripts/menu_script/run.sh asd hjk 999")
+	if err != nil {
+		log.Fatalf("执行脚本失败: %v", err)
+	}
+
+	//session.CombinedOutput()
+
+	// 打印脚本输出
+	fmt.Println(string(output))
 }
 
 // 执行sql命令

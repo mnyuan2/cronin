@@ -364,7 +364,7 @@ var MyConfig = Vue.extend({
                 title: '添加',
                 index: -1, // 操作行号
                 source: '', // sql 来源
-                statement:[]
+                statement:{}
             }, // sql设置弹窗
             msgSet:{
                 show: false, // 是否显示
@@ -482,6 +482,7 @@ var MyConfig = Vue.extend({
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.source.id = Number(body.command.sql.source.id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
+            body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
 
             api.innerPost("/config/set", body, (res)=>{
                 if (!res.status){
@@ -758,43 +759,44 @@ var MyConfig = Vue.extend({
             }
 
             if (this.sqlSet.source == 'git'){
-                if (this.sqlSet.git_data.link_id == ""){
+                if (this.sqlSet.statement.git.link_id == ""){
                     return this.$message.error("请选择连接")
                 }
 
-                if (this.sqlSet.git_data.owner == ""){
+                if (this.sqlSet.statement.git.owner == ""){
                     return this.$message.error("仓库空间为必填")
                 }
-                if (this.sqlSet.git_data.project == ""){
+                if (this.sqlSet.statement.git.project == ""){
                     return this.$message.error("项目名称为必填")
                 }
-                if (this.sqlSet.git_data.path.length == 0){
+                if (this.sqlSet.statement.git.path.length == 0){
                     return this.$message.error("请输入文件的路径")
                 }
-                let data = JSON.parse(JSON.stringify(this.sqlSet.git_data));
-                data.link_id = Number(data.link_id)
-                if (data.ref == ""){
-                    data.ref = 'master'
+                let data = JSON.parse(JSON.stringify(this.sqlSet.statement));
+                data.git.link_id = Number(data.git.link_id)
+                data.type = this.sqlSet.source
+                if (data.git.ref == ""){
+                    data.git.ref = 'master'
                 }
-                data = this.sqlGitBuildDesc(data)
+                data.git = this.sqlGitBuildDesc(data.git)
                 if (this.sqlSet.index < 0){
-                    this.form.command.sql.statement_git.push(data)
+                    this.form.command.sql.statement.push(data)
                 }else{
-                    this.form.command.sql.statement_git[this.sqlSet.index] = data
+                    this.form.command.sql.statement[this.sqlSet.index] = data
                 }
                 console.log("git data",data)
 
             }else{
-                if (this.sqlSet.local_data == ""){
+                if (this.sqlSet.statement.local == ""){
                     return this.$message.error("sql内容不得为空");
                 }
                 // 支持批量添加
-                let temp = this.sqlSet.local_data.split(";")
+                let temp = this.sqlSet.statement.local.split(";")
                 let datas = []
                 for (let i in temp){
                     let val = temp[i].trim()
                     if (val != ""){
-                        datas.push(val)
+                        datas.push({"type":this.sqlSet.source, "git":{}, "local":val})
                     }
                 }
 
@@ -810,8 +812,7 @@ var MyConfig = Vue.extend({
             }
 
             this.sqlSet.show = false
-            this.sqlSet.local_data = ""
-            this.sqlSet.git_data = {}
+            // this.sqlSet.statement = {}
             this.sqlSet.index = -1
         },
         // 删除sql元素

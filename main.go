@@ -14,7 +14,7 @@ import (
 var (
 	//go:embed web
 	Resource        embed.FS
-	version         = "v0.0.0" // 版本号  构建时通过 -ldflags "-X main.version=0.3.4" 进行指定
+	version         = "v0.0.0" // 版本号  构建时通过 -ldflags "-X main.version=v0.0.0" 进行指定; 版本号位说明：1.不向下兼容的发布、2.向下兼容功能发布、3.bug修正且向下兼容发布
 	isBuildResource = "false"  // 是否打包静态资源 构建时通过 -ldflags "-X main.isBuildResource=true" 进行指定
 )
 

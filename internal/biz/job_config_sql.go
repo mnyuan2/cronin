@@ -41,21 +41,21 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 	if er != nil {
 		return errs.New(er, "连接配置异常")
 	}
-	s := &pb.CronSqlSource{}
+	s := &pb.SettingSource{}
 	if er = jsoniter.UnmarshalFromString(source.Content, s); er != nil {
 		return errs.New(er, "连接配置解析异常")
 	}
 
-	password, er := models.SqlSourceDecode(s.Password)
+	password, er := models.SqlSourceDecode(s.Sql.Password)
 	if er != nil {
 		return errs.New(er, "密码异常")
 	}
 	conf := &config.MysqlSource{
-		Hostname: s.Hostname,
-		Database: s.Database,
-		Username: s.Username,
+		Hostname: s.Sql.Hostname,
+		Database: s.Sql.Database,
+		Username: s.Sql.Username,
 		Password: password,
-		Port:     s.Port,
+		Port:     s.Sql.Port,
 	}
 	_db := db.Conn(conf).WithContext(ctx)
 

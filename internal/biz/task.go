@@ -39,7 +39,7 @@ func (dm *TaskService) Init() (err error) {
 	cronDb := data.NewCronConfigData(context.Background())
 	for page := 1; total >= int64(pageSize*page); page++ {
 		list := []*models.CronConfig{}
-		w := db.NewWhere().Eq("status", enum.StatusActive)
+		w := db.NewWhere().Eq("status", enum.StatusActive).In("type", []int{models.TypeCycle, models.TypeOnce})
 		total, err = cronDb.ListPage(w, page, pageSize, &list)
 		if err != nil {
 			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
