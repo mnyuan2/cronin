@@ -73,6 +73,7 @@ func (dm *SettingSqlService) List(r *pb.SettingListRequest) (resp *pb.SettingLis
 				Sql:     &pb.SettingSqlSource{},
 				Jenkins: &pb.SettingJenkinsSource{},
 				Git:     &pb.SettingGitSource{},
+				Host:    &pb.SettingHostSource{},
 			},
 		}
 		jsoniter.UnmarshalFromString(item.Content, data.Source)
@@ -124,6 +125,13 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 	case enum.DicGitSource:
 		if r.Source.Git.Type != "gitee" {
 			return nil, fmt.Errorf("git 类型错误 %s", r.Source.Git.Type)
+		}
+	case enum.DicHostSource:
+		if r.Source.Host.Ip == "" {
+			return nil, errs.New(nil, "ip地址必填")
+		}
+		if r.Source.Host.Port == "" {
+			return nil, errs.New(nil, "端口必填")
 		}
 	default:
 		return nil, errs.New(nil, "type参数错误")

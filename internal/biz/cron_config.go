@@ -67,7 +67,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		item.Command = &pb.CronConfigCommand{
 			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
 			Rpc:     &pb.CronRpc{Actions: []string{}},
-			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{}}},
+			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{}}, Host: &pb.SettingHostSource{}},
 			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
 		}
@@ -181,6 +181,11 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	} else if r.Protocol == models.ProtocolCmd {
 		if err := dtos.CheckCmd(r.Command.Cmd); err != nil {
 			return nil, err
+		}
+		if r.Command.Cmd.Host.Id > 0 {
+			if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Cmd.Host.Id); one.Id == 0 {
+				return nil, errors.New("sql 连接 配置有误，请确认")
+			}
 		}
 	} else if r.Protocol == models.ProtocolSql {
 		if err := dtos.CheckSql(r.Command.Sql); err != nil {

@@ -4,6 +4,7 @@ var MySource = Vue.extend({
             <el-menu-item index="11" :disabled="list.request">mysql</el-menu-item>
             <el-menu-item index="12" :disabled="list.request">jenkins</el-menu-item>
             <el-menu-item index="13" :disabled="list.request">git</el-menu-item>
+            <el-menu-item index="14" :disabled="list.request">主机</el-menu-item>
             <div style="float: right">
                 <el-button type="text" @click="initForm(true)">新增链接</el-button>
             </div>
@@ -67,6 +68,25 @@ var MySource = Vue.extend({
                         </el-form-item>
                         <el-form-item label="授权码">
                             <el-input v-model="form.data.source.git.access_token" placeholder="gitee.com / 个人设置 / 私密令牌 可进行获取"></el-input>
+                        </el-form-item>
+                    </el-tab-pane>
+                    <el-tab-pane label="主机" name="14">
+                        <el-form-item label="类型">
+                            <el-select v-model="form.data.source.host.type">
+                                <el-option label="linux" value="linux"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="ip地址">
+                            <el-input v-model="form.data.source.host.ip"></el-input>
+                        </el-form-item>
+                        <el-form-item label="端口">
+                            <el-input v-model="form.data.source.host.port"></el-input>
+                        </el-form-item>
+                        <el-form-item label="用户">
+                            <el-input v-model="form.data.source.host.user"></el-input>
+                        </el-form-item>
+                        <el-form-item label="密码">
+                            <el-input v-model="form.data.source.host.secret" show-password="true"></el-input>
                         </el-form-item>
                     </el-tab-pane>
                 </el-tabs>
@@ -200,6 +220,13 @@ var MySource = Vue.extend({
                         git:{
                             type: 'gitee',
                             access_token: ''
+                        },
+                        host:{
+                            type: 'linux',
+                            ip: "",
+                            port:"22",
+                            user:"",
+                            secret:""
                         }
                     }
                 }

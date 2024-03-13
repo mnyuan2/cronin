@@ -84,9 +84,10 @@ type CronConfigCommand struct {
 }
 
 type CronCmd struct {
-	Type      string         `json:"type"`
-	Origin    string         `json:"origin"` // 语句来源
-	Statement *CronStatement `json:"statement"`
+	Host      *SettingHostSource `json:"host"`
+	Type      string             `json:"type"`
+	Origin    string             `json:"origin"` // 语句来源
+	Statement *CronStatement     `json:"statement"`
 }
 
 type CronHttp struct {

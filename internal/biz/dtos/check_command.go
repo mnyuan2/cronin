@@ -108,6 +108,9 @@ func CheckCmd(cmd *pb.CronCmd) error {
 	if cmd.Type == "" {
 		return fmt.Errorf("未指定命令行类型")
 	}
+	if cmd.Host.Id != -1 && cmd.Host.Id <= 0 { // -1.本机
+		return fmt.Errorf("主机选择有误")
+	}
 	if cmd.Origin == enum.SqlStatementSourceLocal {
 		if cmd.Statement.Local == "" {
 			return fmt.Errorf("请输入 cmd 命令类容")

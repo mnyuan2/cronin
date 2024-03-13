@@ -4,6 +4,7 @@ type SettingSource struct {
 	Sql     *SettingSqlSource     `json:"sql"`
 	Jenkins *SettingJenkinsSource `json:"jenkins"`
 	Git     *SettingGitSource     `json:"git"`
+	Host    *SettingHostSource    `json:"host"`
 }
 
 // sql 源
@@ -30,6 +31,16 @@ type SettingGitSource struct {
 
 func (m *SettingGitSource) GetAccessToken() string {
 	return m.AccessToken
+}
+
+// 主机 源
+type SettingHostSource struct {
+	Id     int    `json:"id"`
+	Type   string `json:"type"`
+	Ip     string `json:"ip"`
+	Port   string `json:"port"`
+	User   string `json:"user"`
+	Secret string `json:"secret"`
 }
 
 // 任务列表

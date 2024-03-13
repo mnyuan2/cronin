@@ -84,7 +84,7 @@ func (dm *FoundationService) DicGets(r *pb.DicGetsRequest) (resp *pb.DicGetsRepl
 func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	_sql := ""
 	w := db.NewWhere()
-
+	items := []*pb.DicGetItem{}
 	switch t {
 	case enum.DicSqlSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
@@ -95,6 +95,14 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicGitSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneGitSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+	case enum.DicHostSource:
+		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		w.Eq("scene", models.SceneHostSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+		items = append(items, &pb.DicGetItem{
+			Id:     -1,
+			Name:   "本机",
+			Extend: &pb.DicExtendItem{},
+		})
 	case enum.DicEnv:
 		_sql = "SELECT id,name 'key', title name, content extend FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneEnv).Eq("status", enum.StatusActive)
@@ -105,7 +113,6 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 		_sql = "SELECT id, username name FROM `cron_user` ORDER BY sort asc,id desc"
 	}
 
-	items := []*pb.DicGetItem{}
 	if _sql != "" {
 		temp := []*DicGetItem{}
 		where, args := w.Build()

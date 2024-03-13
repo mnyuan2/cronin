@@ -22,6 +22,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/crypto/ssh"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -257,10 +258,12 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		}
 		span.End()
 	}()
-	span.SetAttributes(attribute.String("component", r.Type))
+	span.SetAttributes(
+		attribute.String("component", r.Type),
+		attribute.Int("host.id", r.Host.Id))
 
 	//确认数据来源
-	data := ""
+	statement := ""
 	if r.Origin == "git" {
 		files, err := job.getGitFile(ctx, r.Statement.Git)
 		if err != nil {
@@ -271,15 +274,60 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		} else if len(files) > 1 {
 			return nil, errs.New(nil, "仅支持单文件")
 		}
-		data = string(files[0].Byte)
+		statement = string(files[0].Byte)
 	} else {
-		data = r.Statement.Local
+		statement = r.Statement.Local
 	}
-	span.AddEvent("", trace.WithAttributes(attribute.String("statement", data)))
+	span.AddEvent("", trace.WithAttributes(attribute.String("statement", statement)))
 
+	// 远程执行
+	if r.Host.Id > 0 {
+		s := &pb.SettingSource{}
+		source, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.Host.Id)
+		if er != nil {
+			return nil, errs.New(er, "连接配置异常")
+		}
+		if er = jsoniter.UnmarshalFromString(source.Content, s); er != nil {
+			return nil, errs.New(er, "连接配置解析异常")
+		}
+		span.AddEvent("x",
+			trace.WithAttributes(attribute.String("host.name", source.Name)),
+			trace.WithAttributes(attribute.String("host.ip", s.Host.Ip)))
+
+		config := &ssh.ClientConfig{
+			User: s.Host.User,
+			Auth: []ssh.AuthMethod{
+				ssh.Password(s.Host.Secret),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		}
+		// 连接到远程服务器
+		conn, er := ssh.Dial("tcp", s.Host.Ip+":"+s.Host.Port, config)
+		if er != nil {
+			return nil, errs.New(er, "拨号失败")
+		}
+		defer conn.Close()
+
+		// 创建一个新的会话
+		session, er := conn.NewSession()
+		if er != nil {
+			return nil, errs.New(er, "创建会话失败")
+		}
+		defer session.Close()
+
+		// 执行Shell脚本
+		output, er := session.CombinedOutput(r.Type + " " + statement)
+		if er != nil {
+			return nil, errs.New(er, "执行脚本失败")
+		}
+		// 打印脚本输出
+		return output, nil
+	}
+
+	// 本地执行
 	switch r.Type {
 	case "cmd":
-		args := strings.Split(data, " ")
+		args := strings.Split(statement, " ")
 		if len(args) < 2 {
 			return nil, errs.New(nil, "命令参数不合法，已跳过")
 		}
@@ -292,7 +340,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		}
 
 	case "sh":
-		e := exec.Command("sh", "-c", data)
+		e := exec.Command("sh", "-c", statement)
 		cmd, er := e.Output()
 		if er != nil {
 			return nil, errs.New(er, "执行结果错误")
@@ -301,7 +349,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		res = []byte(srcCoder)
 
 	case "bash":
-		cmd := exec.Command("/bin/bash", "-c", data)
+		cmd := exec.Command("/bin/bash", "-c", statement)
 		re, er := cmd.Output()
 		if er != nil {
 			return nil, errs.New(er, "执行结果错误")

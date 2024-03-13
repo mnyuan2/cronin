@@ -118,12 +118,15 @@ var MyConfig = Vue.extend({
                                         </el-form-item>
                                     </el-tab-pane>
                                     <el-tab-pane label="cmd" name="3">
+                                        主机
+                                        <el-select v-model="form.command.cmd.host.id" size="mini" style="width:120px">
+                                            <el-option v-for="dic_v in dic_host_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                        </el-select>
                                         来源
                                         <el-select v-model="form.command.cmd.origin" size="mini" style="width:80px">
-                                            <el-option label="本地" value="local"></el-option>
+                                            <el-option label="当前" value="local"></el-option>
                                             <el-option label="git" value="git"></el-option>
                                         </el-select>
-                                        &nbsp;
                                         类型
                                         <el-select v-model="form.command.cmd.type" size="mini" clearable style="width:80px">
                                             <el-option v-for="dic_v in dic_cmd_type" :label="dic_v.name" :value="dic_v.key"></el-option>
@@ -335,6 +338,7 @@ var MyConfig = Vue.extend({
             dic_msg: [],
             dic_jenkins_source: [],
             dic_git_source: [],
+            dic_host_source: [],
             dic_cmd_type: [],
             sys_info:{},
             list: [],
@@ -573,6 +577,9 @@ var MyConfig = Vue.extend({
                         body: ''
                     },
                     cmd:{
+                        host:{
+                            id: -1
+                        },
                         origin: 'local', // git、local
                         type: "", // cmd、bash、sh ...
                         statement:{
@@ -640,6 +647,9 @@ var MyConfig = Vue.extend({
             }
             if (this.form.command.jenkins.params.length == 0){
                 this.form.command.jenkins.params = this.initFormData().command.jenkins.params
+            }
+            if (this.form.command.cmd.host.id == 0){
+                this.form.command.cmd.host.id = this.initFormData().command.cmd.host.id
             }
             for (let i in row.msg_set){
                 this.form.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
@@ -928,6 +938,7 @@ var MyConfig = Vue.extend({
                 Enum.dicSqlSource,
                 Enum.dicJenkinsSource,
                 Enum.dicGitSource,
+                Enum.dicHostSource,
                 Enum.dicCmdType,
                 Enum.dicUser,
                 Enum.dicMsg
@@ -936,6 +947,7 @@ var MyConfig = Vue.extend({
                 this.dic_sql_source = res[Enum.dicSqlSource]
                 this.dic_jenkins_source = res[Enum.dicJenkinsSource]
                 this.dic_git_source =res[Enum.dicGitSource]
+                this.dic_host_source =res[Enum.dicHostSource]
                 this.dic_user = res[Enum.dicUser]
                 this.dic_msg = res[Enum.dicMsg]
                 this.dic_cmd_type = res[Enum.dicCmdType]
@@ -969,6 +981,7 @@ var MyConfig = Vue.extend({
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.source.id = Number(body.command.sql.source.id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
+            body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
 
             api.innerPost("/config/run", body, (res)=>{
                 if (!res.status){

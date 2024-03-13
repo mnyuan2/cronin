@@ -7,6 +7,7 @@ const (
 	DicSqlSource     = 11   // sql 资源连接
 	DicJenkinsSource = 12   // jenkins 资源连接
 	DicGitSource     = 13   // git 连接
+	DicHostSource    = 14   // 主机 连接
 	DicCmdType       = 1001 // 命令行类型
 )
 
