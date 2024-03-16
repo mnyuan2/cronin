@@ -258,9 +258,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		}
 		span.End()
 	}()
-	span.SetAttributes(
-		attribute.String("component", r.Type),
-		attribute.Int("host.id", r.Host.Id))
+	span.SetAttributes(attribute.String("component", r.Type))
 
 	//确认数据来源
 	statement := ""
@@ -281,7 +279,8 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 	span.AddEvent("", trace.WithAttributes(attribute.String("statement", statement)))
 
 	// 远程执行
-	if r.Host.Id > 0 {
+	if r.Host != nil && r.Host.Id > 0 {
+		span.SetAttributes(attribute.Int("host.id", r.Host.Id))
 		s := &pb.SettingSource{}
 		source, er := data.NewCronSettingData(ctx).GetSourceOne(job.conf.Env, r.Host.Id)
 		if er != nil {
