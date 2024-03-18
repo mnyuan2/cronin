@@ -16,7 +16,7 @@
 <body>
     <div id="app">
         <el-container direction="vertical">
-            <my-header :dic_envs="dicMap[Enum.dicEnv]" :sys_info="sysInfo"></my-header>
+            <my-header :dic_envs="dic_env" :sys_info="sysInfo"></my-header>
             <router-view></router-view>
         </el-container>
     </div>
@@ -54,24 +54,21 @@
         router: router,
         data(){
             return {
-                dicMap:{},
+                dic_env:[],
                 sysInfo:{cmd_name:"",env:"",env_name:"", version:""},
+                env:"" // 手动指定的环境key
             };
+        },
+        beforeCreate(){
+
         },
         created(){
             let q = window.location.search
             let searchParams = new URLSearchParams(q)
-            let envKey = searchParams.get("env")
-            if (envKey != null && envKey !==""){
-                oldEnv = api.getEnv()
-                if (oldEnv.length>0 && oldEnv.env != envKey){
-                    api.dicDel([-1])
-                }
-                api.setEnv(envKey,envKey)
-            }
+            this.env = searchParams.get("env")
 
-            this.getSysInfo()
-            // this.getDic()
+            this.getSysInfo() // 同步
+            this.getDic() // 同步
         },
         watch:{},
         methods:{
@@ -95,21 +92,26 @@
                 }, true)
             },
             // 枚举
-            // getDic(){
-            //     api.dicList([Enum.dicSqlSource, Enum.dicEnv, Enum.dicUser, Enum.dicMsg], (list) =>{
-            //         this.dicMap = list
-            //         // 补充环境名称
-            //         if (this.sysInfo.env_name == "***"){
-            //             for (let i in list[Enum.dicEnv]){
-            //                 if (list[Enum.dicEnv][i].key == this.sysInfo.env){
-            //                     this.sysInfo.env_name = list[Enum.dicEnv][i].name
-            //                     api.setEnv(this.sysInfo.env, list[Enum.dicEnv][i].name)
-            //                     break
-            //                 }
-            //             }
-            //         }
-            //     },true)
-            // },
+            getDic(){
+                api.dicList([Enum.dicEnv], (list) =>{
+                    this.dic_env = list[Enum.dicEnv]
+                    // 补充环境名称
+                    if (this.env != ""){
+                        this.dic_env.forEach((item)=> {
+                            if (this.env == item.key){
+                                let oldEnv = api.getEnv()
+                                this.sysInfo.env = item.key
+                                this.sysInfo.env_name = item.name
+                                // 环境不同，历史缓存要清除
+                                if (oldEnv.env != item.key){
+                                    localStorage.clear()
+                                }
+                                api.setEnv(item.key, item.name)
+                            }
+                        })
+                    }
+                },true)
+            },
         }
     })
 </script>

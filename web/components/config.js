@@ -636,7 +636,7 @@ var MyConfig = Vue.extend({
                 this.form.command.sql.source.id = ""
             }
             for (let i in row.command.sql.statement){
-                this.form.command.sql.statement[i].git = this.sqlGitBuildDesc(row.command.sql.statement[i].git)
+                this.form.command.sql.statement[i].git = this.sqlGitBuildDesc(row.command.sql.statement[i].git??this.initFormData().command.cmd.statement.git)
             }
 
             if (this.form.command.http.header.length == 0){

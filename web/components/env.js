@@ -116,12 +116,13 @@ var MyEnv = Vue.extend({
 
         submitForm(){
             console.log("submit")
-            let body = this.form.data
+            let body = JSON.parse(JSON.stringify(this.form.data))
             this.$refs['form.data'].validate((valid) => {
                 if (!valid) {
                     console.log("submit", valid)
                     return false;
                 }
+                body.default = Number(body.default)
                 api.innerPost("/setting/env_set", body, (res) =>{
                     console.log("sql源设置响应",res)
                     if (!res.status){

@@ -132,7 +132,7 @@ var MyHeader = Vue.extend({
             this.envBoxShow = show == true;
             if (!this.envBoxShow){
                 api.dicList([Enum.dicEnv], (list) => {
-                    this.dic_envs = list
+                    this.dic_envs = list[Enum.dicEnv]
                 }, true)
             }
         },

@@ -234,7 +234,7 @@ var api = {
      * @param reload bool 是否强制重载
      * @returns {Promise<void>}
      */
-    dicList: async function (types, callback, reload= false) {
+    dicList: function (types, callback, reload= false) {
 
         let list = JSON.parse(localStorage.getItem(Enum.dicKey)) ?? {}
         let reply = {}
@@ -250,25 +250,22 @@ var api = {
 
         // 不存在存储的枚举继续查询
         if (queryInfo.length > 0) {
-            // 这里的请求必须等待结果
-            await new Promise((resolve, reject) => {
-                // 查询不存在缓存的部分调取一次请求，并缓存；如果都存在缓存中就无需再次发起请求。
-                this.innerGet("/foundation/dic_gets", {"types":queryInfo.join(',')}, res =>{
-                    if (res.status) {
-                        queryInfo.forEach(element => {
-                            if (res.data.maps[element]){
-                                reply[element] = res.data.maps[element].list
-                                list[element] = reply[element]
-                            }
-                        })
-                        window.localStorage.setItem(Enum.dicKey, JSON.stringify(list))
-                    } else {
-                        console.log("枚举错误",res)
-                        alert('枚举错误:' + res.message)
-                    }
-                    resolve()
-                })
-            })
+            // 查询不存在缓存的部分调取一次请求，并缓存；如果都存在缓存中就无需再次发起请求。
+            this.innerGet("/foundation/dic_gets", {"types":queryInfo.join(',')}, res =>{
+                if (res.status) {
+                    queryInfo.forEach(element => {
+                        if (res.data.maps[element]){
+                            reply[element] = res.data.maps[element].list
+                            list[element] = reply[element]
+                        }
+                    })
+                    window.localStorage.setItem(Enum.dicKey, JSON.stringify(list))
+                } else {
+                    console.log("枚举错误",res)
+                    alert('枚举错误:' + res.message)
+                }
+            }, {async:false})
+
         }
         callback(reply)
     },
@@ -328,7 +325,7 @@ var api = {
     },
 
     getEnv(){
-        if (this.env.length == 0 || !this.env.env){
+        if (!this.env.env){
             let envStr = localStorage.getItem(Enum.envKey)
             let env = JSON.parse(envStr)
             if (env == null || env.env == ""){
