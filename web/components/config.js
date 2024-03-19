@@ -375,7 +375,7 @@ var MyConfig = Vue.extend({
                 title: '添加',
                 index: -1, // 操作行号
                 data: {}, // 实际内容
-                statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}, {id:0,name:"完成"}],
+                statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}], // {id:0,name:"完成"} 有歧义，以后待定
             },
             form:{},
             hintSpec: "* * * * * *",
@@ -623,7 +623,7 @@ var MyConfig = Vue.extend({
         editShow(row){
             this.setConfigShow = true
             this.setConfigTitle = '编辑任务'
-            this.form = row
+            this.form = copyJSON(row)
 
             if (row.command.cmd.statement.git.path == null){
                 this.form.command.cmd.statement.git.path = this.initFormData().command.cmd.statement.git.path
@@ -782,7 +782,7 @@ var MyConfig = Vue.extend({
                 if (this.sqlSet.statement.git.path.length == 0){
                     return this.$message.error("请输入文件的路径")
                 }
-                let data = JSON.parse(JSON.stringify(this.sqlSet.statement));
+                let data = copyJSON(this.sqlSet.statement);
                 data.git.link_id = Number(data.git.link_id)
                 data.type = this.sqlSet.source
                 if (data.git.ref == ""){

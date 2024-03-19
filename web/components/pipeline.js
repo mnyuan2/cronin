@@ -330,7 +330,7 @@ var MyPipeline = Vue.extend({
             }
 
             // 主要是强制类型
-            let data = this.form.data
+            let data = copyJSON(this.form.data)
             let body = {
                 id: data.id,
                 name: data.name,
@@ -384,7 +384,7 @@ var MyPipeline = Vue.extend({
             }else if (typeof row == 'object'){ // 编辑显示
                 this.form.boxShow = true
                 this.form.boxTitle = '编辑流水线'
-
+                row = copyJSON(row)
                 for (let i in row.msg_set){
                     row.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
                 }
@@ -504,7 +504,7 @@ var MyPipeline = Vue.extend({
             this.msgSet.show = true
             this.msgSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
             this.msgSet.title = this.msgSet.index < 0? '添加' : '编辑';
-            this.msgSet.data = oldData
+            this.msgSet.data = copyJSON(oldData)
         },
         msgSetDel(index){
             if (index === "" || index == null || isNaN(index)){
@@ -579,7 +579,7 @@ var MyPipeline = Vue.extend({
 
         // 执行一下
         configRun(){
-            let data = this.form.data
+            let data = copyJSON(this.form.data)
             // 主要是强制类型
             let body = {
                 id: data.id,

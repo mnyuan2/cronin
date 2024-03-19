@@ -184,7 +184,7 @@ var MySource = Vue.extend({
         },
         // sql连接连接
         pingForm(){
-            let body = JSON.parse(JSON.stringify(this.form.data));
+            let body = copyJSON(this.form.data);
             body.type = Number(body.type)
             api.innerPost("/setting/source_ping", body, (res) =>{
                 if (!res.status){
@@ -234,7 +234,7 @@ var MySource = Vue.extend({
             if ( typeof data === 'object' && data["id"] != undefined && data["source"] != undefined
                 && data.id > 0 && typeof data.source === 'object'){
                 this.form.box.title = '编辑连接'
-                this.form.data = data
+                this.form.data = copyJSON(data)
                 console.log("编辑源",data)
             }
             this.form.data.type = this.form.data.type.toString()

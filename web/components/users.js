@@ -111,7 +111,7 @@ var MyUsers = Vue.extend({
             }
             if ( typeof data === 'object' && data["id"] != undefined &&  data.id > 0 ){
                 this.form.box.title = '编辑用户'
-                this.form.data = data
+                this.form.data = copyJSON(data)
                 this.form.data.sort = data.sort.toString()
             }
         },

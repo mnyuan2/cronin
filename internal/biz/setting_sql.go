@@ -9,6 +9,7 @@ import (
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/git/gitee"
+	"cron/internal/basic/host"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -209,6 +210,25 @@ func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingS
 		_, er := gitee.NewApiV5(r.Source.Git).User(gitee.NewHandler(dm.ctx))
 		if err != nil {
 			return nil, errs.New(er, "链接失败")
+		}
+	case enum.DicHostSource:
+		if r.Source.Host.Ip == "" {
+			return nil, errs.New(nil, "主机ip为必须")
+		}
+		if r.Source.Host.Port == "" {
+			return nil, errs.New(nil, "主机端口为必须")
+		}
+		res, er := host.NewHost(&host.Config{
+			Ip:     r.Source.Host.Ip,
+			Port:   r.Source.Host.Port,
+			User:   r.Source.Host.User,
+			Secret: r.Source.Host.Secret,
+		}).RemoteExec("echo ok")
+		if er != nil {
+			return nil, er
+		}
+		if strings.TrimSpace(string(res)) != "ok" {
+			return nil, errs.New(nil, string(res))
 		}
 	default:
 		return nil, errs.New(nil, "type参数错误")

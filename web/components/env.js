@@ -169,7 +169,7 @@ var MyEnv = Vue.extend({
                 name: "",
             }
             if ( typeof data === 'object' && data["id"] != undefined && data.id > 0){
-                let _data = JSON.parse(JSON.stringify(data))
+                let _data = copyJSON(data)
                 this.form.box.title = '编辑环境'
                 this.form.data = _data
                 console.log("编辑源",_data)

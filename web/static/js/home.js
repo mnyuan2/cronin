@@ -155,6 +155,15 @@ function isJSON(str) {
 }
 
 /**
+ * json深拷贝
+ * @param data
+ * @returns {any}
+ */
+function copyJSON(data) {
+    return JSON.parse(JSON.stringify(data))
+}
+
+/**
  * 业务枚举
  * @type {{dicEnv: number, dicSqlSource: number, envKey: string}}
  */

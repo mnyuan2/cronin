@@ -103,7 +103,7 @@ var MyMessageTemplate = Vue.extend({
             this.getList()
         },
         submitForm(){
-            let body = this.form.data
+            let body = copyJSON(this.form.data)
             if (body.title == ""){
                 return this.$message.warning("请输入模板名称");
             }
@@ -121,7 +121,7 @@ var MyMessageTemplate = Vue.extend({
         },
         // 执行一下
         runForm(){
-            let body = this.form.data
+            let body = copyJSON(this.form.data)
             if (body.template.http.url == ""){
                 return this.$message.warning("请输入推送地址");
             }

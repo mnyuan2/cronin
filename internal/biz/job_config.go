@@ -8,6 +8,7 @@ import (
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/grpcurl"
+	"cron/internal/basic/host"
 	"cron/internal/basic/tracing"
 	"cron/internal/basic/util"
 	"cron/internal/biz/dtos"
@@ -22,7 +23,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/crypto/ssh"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -293,34 +293,12 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 			trace.WithAttributes(attribute.String("host.name", source.Name)),
 			trace.WithAttributes(attribute.String("host.ip", s.Host.Ip)))
 
-		config := &ssh.ClientConfig{
-			User: s.Host.User,
-			Auth: []ssh.AuthMethod{
-				ssh.Password(s.Host.Secret),
-			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		}
-		// 连接到远程服务器
-		conn, er := ssh.Dial("tcp", s.Host.Ip+":"+s.Host.Port, config)
-		if er != nil {
-			return nil, errs.New(er, "拨号失败")
-		}
-		defer conn.Close()
-
-		// 创建一个新的会话
-		session, er := conn.NewSession()
-		if er != nil {
-			return nil, errs.New(er, "创建会话失败")
-		}
-		defer session.Close()
-
-		// 执行Shell脚本
-		output, er := session.CombinedOutput(r.Type + " " + statement)
-		if er != nil {
-			return nil, errs.New(er, "执行脚本失败")
-		}
-		// 打印脚本输出
-		return output, nil
+		return host.NewHost(&host.Config{
+			Ip:     s.Host.Ip,
+			Port:   s.Host.Port,
+			User:   s.Host.User,
+			Secret: s.Host.Secret,
+		}).RemoteExec(r.Type + " " + statement)
 	}
 
 	// 本地执行

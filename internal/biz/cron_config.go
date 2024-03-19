@@ -67,7 +67,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		item.Command = &pb.CronConfigCommand{
 			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
 			Rpc:     &pb.CronRpc{Actions: []string{}},
-			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{}}, Host: &pb.SettingHostSource{}},
+			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{Path: []string{}}}, Host: &pb.SettingHostSource{}},
 			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
 		}
