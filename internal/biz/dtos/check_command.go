@@ -105,7 +105,7 @@ func CheckSql(sql *pb.CronSql) error {
 }
 
 func CheckCmd(cmd *pb.CronCmd) error {
-	if cmd.Type == "" {
+	if cmd.Type == "" && cmd.Host.Id <= 0 { // 远程主机可以不用指定type
 		return fmt.Errorf("未指定命令行类型")
 	}
 	if cmd.Host.Id != -1 && cmd.Host.Id <= 0 { // -1.本机

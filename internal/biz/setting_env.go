@@ -107,7 +107,7 @@ func (dm *SettingEnvService) Set(r *pb.SettingEnvSetRequest) (resp *pb.SettingEn
 		if err != nil {
 			return nil, err
 		}
-		if r.Name != one.Title { // key 不可以更改，因为可能有关联数据
+		if r.Name != one.Name { // key 不可以更改，因为可能有关联数据
 			return nil, errors.New("key 不可以更改")
 		}
 	} else {
