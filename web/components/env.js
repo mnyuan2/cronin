@@ -115,8 +115,7 @@ var MyEnv = Vue.extend({
         },
 
         submitForm(){
-            console.log("submit")
-            let body = JSON.parse(JSON.stringify(this.form.data))
+            let body = copyJSON(this.form.data)
             this.$refs['form.data'].validate((valid) => {
                 if (!valid) {
                     console.log("submit", valid)

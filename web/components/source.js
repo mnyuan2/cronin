@@ -169,7 +169,7 @@ var MySource = Vue.extend({
         },
         // 提交表单
         submitForm(){
-            let body = this.form.data
+            let body = copyJSON(this.form.data)
             body.type = Number(body.type)
             api.innerPost("/setting/source_set", body, (res) =>{
                 console.log("源设置响应",res)

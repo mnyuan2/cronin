@@ -471,18 +471,9 @@ var MyConfig = Vue.extend({
             // else if (this.form.command == ''){
             //     return this.$message.error('请输入命令类容')
             // }
-
-            // 主要是强制类型
-            let body = {
-                id: this.form.id,
-                name: this.form.name,
-                type: Number(this.form.type),
-                spec: this.form.spec,
-                protocol: Number(this.form.protocol),
-                command: this.form.command,
-                remark: this.form.remark,
-                msg_set: this.form.msg_set,
-            }
+            let body = copyJSON(this.form)
+            body.type = Number(body.type)
+            body.protocol = Number(body.protocol)
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.source.id = Number(body.command.sql.source.id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
