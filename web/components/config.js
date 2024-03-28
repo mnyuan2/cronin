@@ -119,7 +119,7 @@ var MyConfig = Vue.extend({
                                     </el-tab-pane>
                                     <el-tab-pane label="cmd" name="3">
                                         主机
-                                        <el-select v-model="form.command.cmd.host.id" size="mini" style="width:120px">
+                                        <el-select v-model="form.command.cmd.host.id" size="mini" style="width:180px">
                                             <el-option v-for="dic_v in dic_host_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                                         </el-select>
                                         来源
@@ -345,12 +345,12 @@ var MyConfig = Vue.extend({
             listPage:{
                 total:0,
                 page: 1,
-                size: 20,
+                size: 10,
             },
             listParam:{
                 type: 1,
                 page: 1,
-                size: 20,
+                size: 15,
             },
             listRequest: false, // 请求中标志
             configLog:{
