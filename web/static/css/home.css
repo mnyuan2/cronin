@@ -125,6 +125,14 @@ i.el-alert__icon{
 .config-form-box .el-tabs{
     margin: 10px 0;
 }
+.config-form-box .el-tabs--border-card>.el-tabs__content{
+    padding-top: 0;
+    padding-bottom: 10px;
+}
+.config-form-box .el-tabs--border-card>.el-tabs__content .el-form-item{
+    margin: 6px 0;
+    overflow: hidden;
+}
 .http_header_box .el-input-group__prepend,
 .http_header_box .el-input-group__append,
 .http_url_box .el-input-group__prepend{

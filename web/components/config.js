@@ -98,22 +98,22 @@ var MyConfig = Vue.extend({
                                         </el-form-item>
                                     </el-tab-pane>
                                     <el-tab-pane label="rpc" name="2">
-                                        <el-form-item label="请求模式">
+                                        <el-form-item label="请求模式" size="mini">
                                             <el-radio v-model="form.command.rpc.method" label="GRPC">GRPC</el-radio>
                                         </el-form-item>
-                                        <el-form-item label="proto">
-                                            <el-input type="textarea" v-model="form.command.rpc.proto" rows="5" placeholder="请输入*.proto 文件内容"></el-input>
+                                        <el-form-item label="proto" size="mini" style="margin-top: -10px">
+                                            <el-input type="textarea" v-model="form.command.rpc.proto" rows="5" placeholder="请输入*.proto 文件内容" style=""></el-input>
                                         </el-form-item>
-                                        <el-form-item label="地址" label-width="42px" style="margin: 22px 0;">
+                                        <el-form-item label="地址" label-width="42px" size="mini">
                                             <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
                                         </el-form-item>
-                                        <el-form-item label="方法">
+                                        <el-form-item label="方法" size="mini">
                                             <el-select v-model="form.command.rpc.action" filterable clearable placeholder="填写proto信息后点击解析，可获得其方法进行选择" style="min-width: 400px">
                                                 <el-option v-for="item in form.command.rpc.actions" :key="item" :label="item" :value="item"></el-option>
                                             </el-select>
                                             <el-button @click="parseProto()">解析proto</el-button>
                                         </el-form-item>
-                                        <el-form-item label="请求参数">
+                                        <el-form-item label="请求参数" size="mini">
                                             <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
                                         </el-form-item>
                                     </el-tab-pane>
@@ -158,18 +158,18 @@ var MyConfig = Vue.extend({
                                         </el-card>
                                     </el-tab-pane>
                                     <el-tab-pane label="sql" name="4" label-position="left">
-                                        <el-form-item label="驱动">
+                                        <el-form-item label="驱动" size="mini">
                                             <el-select v-model="form.command.sql.driver" placeholder="驱动">
                                                 <el-option label="mysql" value="mysql"></el-option>
                                             </el-select>
                                         </el-form-item>
-                                        <el-form-item label="链接">
+                                        <el-form-item label="链接" size="mini">
                                             <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
                                                 <el-option v-for="(dic_v,dic_k) in dic_sql_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                                             </el-select>
                                             <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
                                         </el-form-item>
-                                        <el-form-item label="执行语句">
+                                        <el-form-item label="执行语句" size="mini">
                                             <div>
                                                 来源
                                                 <el-select v-model="form.command.sql.origin" size="mini" style="width:80px">
@@ -197,7 +197,7 @@ var MyConfig = Vue.extend({
                                                 </div>
                                             </div>
                                         </el-form-item>
-                                        <el-form-item label="错误行为">
+                                        <el-form-item label="错误行为" size="mini">
                                             <el-tooltip class="item" effect="dark" content="执行到错误停止，之前的成功语句保留" placement="top-start">
                                               <el-radio v-model="form.command.sql.err_action" label="1">终止任务</el-radio>
                                             </el-tooltip>
