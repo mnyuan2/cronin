@@ -22,6 +22,15 @@ import (
 	"time"
 )
 
+// 详情响应
+type JenkinsDetailResponse struct {
+	Class    string                   `json:"_class"`
+	Property []*JenkinsDetailProperty `json:"property"`
+}
+type JenkinsDetailProperty struct {
+	Class string `json:"_class"`
+}
+
 // 队列响应
 type JenkinsQueueResponse struct {
 	Why        *string                 `json:"why"`
@@ -75,8 +84,28 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		3.完成进行下一步
 	*/
 
+	// 确定构建方式
+	buildPath := "build"
+	if len(r.Params) > 0 {
+		buildPath = "buildWithParameters"
+	} else {
+		b, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/api/json?tree=property", r.Name), nil, "get-project")
+		if er != nil {
+			return errs.New(er, "项目信息有误")
+		}
+		detail := &JenkinsDetailResponse{}
+		if er := jsoniter.Unmarshal(b, detail); er != nil {
+			return errs.New(er, "详情解析错误")
+		}
+		for _, item := range detail.Property {
+			if item.Class == "hudson.model.ParametersDefinitionProperty" { // 设置了参数就必须要有参构建，否则会报错
+				buildPath = "buildWithParameters"
+			}
+		}
+	}
+
 	// 请求构建
-	queueId, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/buildWithParameters", r.Name), r.Params, "exec-build")
+	queueId, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/%s", r.Name, buildPath), r.Params, "exec-build")
 	if er != nil {
 		return errs.New(er, "构建失败")
 	}

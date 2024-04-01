@@ -6,6 +6,7 @@ import (
 	"cron/internal/models"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	jsoniter "github.com/json-iterator/go"
 	"log"
 	"strings"
 	"testing"
@@ -99,4 +100,25 @@ func TestJenkins2(t *testing.T) {
 	queue := strings.Split(strings.Trim(table["URI"], "/"), "/")
 	fmt.Println(queue, queue[len(queue)-1])
 
+}
+
+func TestJenkinsDetail(t *testing.T) {
+	str := `{
+    "_class": "org.jenkinsci.plugins.workflow.job.WorkflowJob",
+    "property": [
+        {
+            "_class": "com.gitee.jenkins.connection.GiteeConnectionProperty"
+        },
+        {
+            "_class": "hudson.model.ParametersDefinitionProperty"
+        }
+    ]
+}`
+
+	detail := &JenkinsDetailResponse{}
+	if er := jsoniter.Unmarshal([]byte(str), detail); er != nil {
+		t.Fatal(er)
+	}
+
+	fmt.Println(detail)
 }
