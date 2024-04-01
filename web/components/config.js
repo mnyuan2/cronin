@@ -53,17 +53,17 @@ var MyConfig = Vue.extend({
                     <!-- 任务设置表单 -->
                     <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false" class="config-form-box">
                         <el-form :model="form">
-                            <el-form-item label="活动名称*" label-width="76px">
+                            <el-form-item label="名称*" label-width="43px">
                                 <el-input v-model="form.name"></el-input>
                             </el-form-item>
-                            <el-form-item label="类型*" label-width="76px">
+                            <el-form-item label="类型*" label-width="43px">
                                 <el-radio v-model="form.type" label="1">周期</el-radio>
                                 <el-radio v-model="form.type" label="2">单次</el-radio>
                                 <el-radio v-model="form.type" label="5">组件</el-radio>
                             </el-form-item>
             
             
-                            <el-form-item label="时间*" label-width="76px" v-if="form.type != 5">
+                            <el-form-item label="时间*" label-width="43px" v-if="form.type != 5">
                                 <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
                                 <el-date-picker 
                                     style="width: 100%"
