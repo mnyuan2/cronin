@@ -141,3 +141,19 @@ func CheckCmd(cmd *pb.CronCmd) error {
 
 	return nil
 }
+
+func CheckJenkins(jks *pb.CronJenkins) error {
+	if jks.Source == nil || jks.Source.Id == 0 {
+		return fmt.Errorf("未选择链接")
+	}
+	if jks.Name == "" {
+		return fmt.Errorf("项目名称不得为空")
+	}
+	pl := len(jks.Params)
+	for i, param := range jks.Params {
+		if param.Key == "" && i < (pl-1) {
+			return fmt.Errorf("参数 %v 名称不得为空", i+1)
+		}
+	}
+	return nil
+}

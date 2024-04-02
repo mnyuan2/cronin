@@ -25,7 +25,7 @@ var ProtocolMap = map[int]string{
 }
 
 const (
-	ConfigStatusDisable = 1 // 停用
+	ConfigStatusDisable = 1 // 草稿
 	ConfigStatusActive  = 2 // 激活
 	ConfigStatusFinish  = 3 // 完成
 	ConfigStatusError   = 4 // 错误
@@ -34,7 +34,7 @@ const (
 
 // 通用状态
 var ConfigStatusMap = map[int]string{
-	ConfigStatusDisable: "停用",
+	ConfigStatusDisable: "草稿",
 	ConfigStatusActive:  "激活",
 	ConfigStatusError:   "错误",
 	ConfigStatusFinish:  "完成",

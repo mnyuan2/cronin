@@ -86,7 +86,7 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 
 	// 确定构建方式
 	buildPath := "build"
-	if len(r.Params) > 0 {
+	if len(r.Params) > 0 && r.Params[0].Key != "" {
 		buildPath = "buildWithParameters"
 	} else {
 		b, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/api/json?tree=property", r.Name), nil, "get-project")
@@ -110,10 +110,10 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		return errs.New(er, "构建失败")
 	}
 
-	// 查询队列获取任务id；最大尝试次数20
+	// 查询队列获取任务id；最大尝试次数10
 	queueData := &JenkinsQueueResponse{Executable: &JenkinsQueueExecutable{}}
-	for index := 0; index < 20; index++ {
-		time.Sleep(time.Second * 5)
+	for index := 0; index < 10; index++ {
+		time.Sleep(time.Second * 10)
 		queueRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/queue/item/%v/api/json", string(queueId)), nil, "get-queue")
 		if er != nil {
 			return errs.New(er, "队列信息请求错误")

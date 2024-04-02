@@ -183,7 +183,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, err
 		}
 		if r.Command.Cmd.Host.Id > 0 {
-			if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Cmd.Host.Id); one.Id == 0 {
+			if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Cmd.Host.Id); one.Id == 0 || one.Scene != models.SceneHostSource {
 				return nil, errors.New("sql 连接 配置有误，请确认")
 			}
 		}
@@ -191,14 +191,24 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if err := dtos.CheckSql(r.Command.Sql); err != nil {
 			return nil, err
 		}
-		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 || one.Scene != models.SceneSqlSource {
 			return nil, errors.New("sql 连接 配置有误，请确认")
+		}
+	} else if r.Protocol == models.ProtocolJenkins {
+		if err := dtos.CheckJenkins(r.Command.Jenkins); err != nil {
+			return nil, err
+		}
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Jenkins.Source.Id); one.Id == 0 || one.Scene != models.SceneJenkinsSource {
+			return nil, errors.New("jenkins 连接 配置有误，请确认")
 		}
 	}
 	for i, msg := range r.MsgSet {
 		if msg.MsgId == 0 {
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
 		}
+	}
+	if d.Status == models.ConfigStatusError {
+		d.Status = models.ConfigStatusDisable
 	}
 
 	d.Name = r.Name
