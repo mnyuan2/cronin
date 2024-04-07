@@ -208,6 +208,9 @@ var MyConfig = Vue.extend({
                                               <el-radio v-model="form.command.sql.err_action" label="3">事务回滚</el-radio>
                                             </el-tooltip>
                                         </el-form-item>
+                                        <el-form-item label="执行间隔" size="mini" v-if="form.command.sql.err_action !=3" label-width="69px">
+                                            <el-input type="number" v-model="form.command.sql.interval" placeholder="s秒"></el-input>
+                                        </el-form-item>
                                     </el-tab-pane>
                                     
                                     <el-tab-pane label="jenkins" name="5">
@@ -440,6 +443,7 @@ var MyConfig = Vue.extend({
                     }
                     if (res.data.list[i].command.sql){
                         res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
+                        res.data.list[i].command.sql.interval = res.data.list[i].command.sql.interval.toString()
                     }
                     res.data.list[i].status = res.data.list[i].status.toString()
                     res.data.list[i].topRatio = 100 - ratio * 100
@@ -473,8 +477,10 @@ var MyConfig = Vue.extend({
             // }
             let body = copyJSON(this.form)
             body.type = Number(body.type)
+            body.status = Number(body.status)
             body.protocol = Number(body.protocol)
             body.command.sql.err_action = Number(body.command.sql.err_action)
+            body.command.sql.interval = Number(body.command.sql.interval)
             body.command.sql.source.id = Number(body.command.sql.source.id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
@@ -970,6 +976,7 @@ var MyConfig = Vue.extend({
                 remark: this.form.remark,
             }
             body.command.sql.err_action = Number(body.command.sql.err_action)
+            body.command.sql.interval = Number(body.command.sql.interval)
             body.command.sql.source.id = Number(body.command.sql.source.id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)

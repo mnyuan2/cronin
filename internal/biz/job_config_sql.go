@@ -113,6 +113,7 @@ func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []*pb.
 	var tx *gorm.DB
 	if r.ErrAction == models.SqlErrActionRollback {
 		tx = _db.Begin()
+		r.Interval = 0
 	} else {
 		tx = _db
 	}
