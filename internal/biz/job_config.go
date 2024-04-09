@@ -481,7 +481,7 @@ func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, 
 		attribute.String("method", h.Method),
 		attribute.String("request_header", string(h.GetSendHeadersMarshal())),
 		attribute.String("response_header", string(h.GetReceiveHeadersMarshal())),
-		attribute.String("request", string(h.ReqMessages)),
+		attribute.String("request", r.Body),
 		attribute.String("response", h.RespMessages)),
 	)
 	return []byte(h.RespMessages), err
