@@ -22,3 +22,13 @@ var StatusMap = map[int]string{
 	StatusDisable: "停用",
 	StatusActive:  "激活",
 }
+
+const (
+	BoolYes = 1 // 是
+	BoolNot = 2 // 否
+)
+
+var BoolMap = map[int]string{
+	BoolYes: "是",
+	BoolNot: "否",
+}

@@ -69,6 +69,7 @@ func CheckSql(sql *pb.CronSql) error {
 			if item.Local == "" {
 				return errors.New("未设置 sql 执行语句")
 			}
+			item.IsBatch = enum.BoolYes
 		} else if sql.Origin == enum.SqlStatementSourceGit {
 			if item.Git.LinkId == 0 {
 				return errors.New("未设置 sql 语句 连接")
@@ -87,6 +88,9 @@ func CheckSql(sql *pb.CronSql) error {
 			}
 		} else {
 			return errors.New("sql来源有误")
+		}
+		if _, ok := enum.BoolMap[item.IsBatch]; !ok {
+			return errors.New("请确认是否批量解析")
 		}
 	}
 
