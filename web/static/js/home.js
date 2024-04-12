@@ -179,6 +179,7 @@ const Enum ={
     dicGitSource: 13,
     dicHostSource: 14,
     dicCmdType: 1001,
+    dicGitEvent: 1002,
 }
 
 /**

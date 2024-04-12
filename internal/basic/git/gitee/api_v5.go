@@ -106,3 +106,17 @@ func (m *ApiV5) User(handler *Handler) (res []byte, err error) {
 	}
 	return b, nil
 }
+
+// 创建pr
+//
+//	https://gitee.com/api/v5/swagger#/postV5ReposOwnerRepoPulls
+func (m *ApiV5) PullsCreate(handler Handler, request *PullsCreateRequest) (res []byte, err error) {
+	return nil, err
+}
+
+// PullsMerge pr合并
+//
+//	https://gitee.com/api/v5/swagger#/putV5ReposOwnerRepoPullsNumberMerge
+func (m *ApiV5) PullsMerge(handler Handler, request *PullsMergeRequest) (res []byte, err error) {
+	return nil, err
+}

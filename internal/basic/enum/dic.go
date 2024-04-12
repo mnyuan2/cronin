@@ -9,6 +9,7 @@ const (
 	DicGitSource     = 13   // git 连接
 	DicHostSource    = 14   // 主机 连接
 	DicCmdType       = 1001 // 命令行类型
+	DicGitEvent      = 1002 // git 事件
 )
 
 const (

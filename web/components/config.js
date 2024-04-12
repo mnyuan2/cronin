@@ -218,7 +218,6 @@ var MyConfig = Vue.extend({
                                             <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
                                                 <el-option v-for="(dic_v,dic_k) in dic_jenkins_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                                             </el-select>
-                                            <el-button type="text" style="margin-left: 20px" @click="sourceBox(true)">设置链接</el-button>
                                         </el-form-item>
                                         <el-form-item label="项目">
                                             <el-input v-model="form.command.jenkins.name" placeholder="jenkins job name"></el-input>
@@ -228,6 +227,29 @@ var MyConfig = Vue.extend({
                                                 <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput"></el-input>
                                                 <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i)"></el-button>
                                             </el-input>
+                                        </el-form-item>
+                                    </el-tab-pane>
+                                    <el-tab-pane label="git" name="6">
+                                        <el-form-item label="链接">
+                                            <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
+                                                <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                            </el-select>
+                                        </el-form-item>
+                                        <el-form-item label="事件">
+                                            <div>
+                                                <el-button type="text" @click="gitSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
+                                            </div>
+                                            <div style="overflow-y: auto;max-height: 420px;">
+                                                <el-alert v-show="form.command.git.events.length==0" title="未添加事件，请添加。" type="info"></el-alert>
+                                                <!--git 事件展示-->
+                                                <div v-for="(event,git_index) in form.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+<!--                                                    <el-row v-html="event.descrition"></el-row>-->
+                                                    <pre style="margin: 0;padding-left: 30px;"><code class="">{{event}}</code></pre>
+                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(git_index)"></i>
+                                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(git_index,event)"></i>
+                                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
+                                                </div>
+                                            </div>
                                         </el-form-item>
                                     </el-tab-pane>
                                 </el-tabs>
@@ -268,7 +290,7 @@ var MyConfig = Vue.extend({
                             </el-table-column>
                         </el-table>
                     </el-drawer>
-                    <!-- sql设置弹窗 -->
+                    <!-- sql 设置弹窗 -->
                     <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
                         <el-form :model="sqlSet.statement.git" v-if="sqlSet.source=='git'" label-width="70px" size="small">
                             <el-form-item label="连接">
@@ -307,6 +329,66 @@ var MyConfig = Vue.extend({
                         <span slot="footer" class="dialog-footer">
                             <el-button @click="sqlSet.show = false">取 消</el-button>
                             <el-button type="primary" @click="sqlSetConfirm()">确 定</el-button>
+                        </span>
+                    </el-dialog>
+                    <!-- git 设置弹窗 -->
+                    <el-dialog :title="'git设置-'+sqlSet.title" :visible.sync="gitSet.show" :show-close="false" :close-on-click-modal="false">
+                        <el-form :model="gitSet.event" label-width="74px" size="small">
+                            <el-form-item label="事件">
+                                <el-select v-model="gitSet.event_id" placement="请选择事件类型">
+                                    <el-option v-for="(dic_v,dic_k) in dic_git_event" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-divider><i class="el-icon-setting"></i></el-divider>
+                            
+                            <div v-if="gitSet.event_id==1"> pr创建 开发中 ...
+                                
+                            </div>
+                            
+                            <div v-if="gitSet.event_id==2"> <!-- pr合并 -->
+                                <el-form-item label="仓库空间*">
+                                    <el-input v-model="gitSet.event.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
+                                </el-form-item>
+                                <el-form-item label="项目名称*">
+                                    <el-input v-model="gitSet.event.repo" placeholder="仓库路径"></el-input>
+                                </el-form-item>
+                                <el-form-item label="PR编号*">
+                                    <el-input type="number" v-model="gitSet.event.number" placeholder="本仓库PR的序数"></el-input>
+                                </el-form-item>
+                                <el-form-item label="标题">
+                                    <el-input v-model="gitSet.event.title" placeholder="PR的标题"></el-input>
+                                </el-form-item>
+                                <el-form-item label="描述">
+                                    <el-input type="textarea" v-model="gitSet.event.description" placeholder="合并描述"></el-input>
+                                </el-form-item>
+                                <el-form-item label="合并方式">
+                                    <el-select v-model="gitSet.event.merge_method">
+                                        <el-option label="合并分支" value="merge">
+                                            <span style="float: left">合并分支</span>
+                                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">源分支所有的提交都会合并到目标分支，并产生一个新的提交</span>
+                                        </el-option>
+                                        <el-option label="扁平化分支" value="squash">
+                                            <span style="float: left">扁平化分支</span>
+                                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">源分支中的多个提交会打包成一个提交合并到目标分支</span>
+                                        </el-option>
+                                        <el-option label="变基并合并" value="rebase">
+                                            <span style="float: left">变基并合并</span>
+                                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">来自源分支的 2 个提交将被重新定位并提交到目标分支。</span>
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="合并选项">
+                                    <el-checkbox v-model="gitSet.event.prune_source_branch">合并后删除提交分支</el-checkbox>
+                                </el-form-item>
+                            </div>
+                            <div v-if="gitSet.event_id==3">
+                                待开发...
+                            </div>
+                        </el-form>
+                       
+                        <span slot="footer" class="dialog-footer">
+                            <el-button @click="gitSet.show = false">取 消</el-button>
+                            <el-button type="primary" @click="gitSetConfirm()">确 定</el-button>
                         </span>
                     </el-dialog>
             
@@ -349,6 +431,7 @@ var MyConfig = Vue.extend({
             dic_msg: [],
             dic_jenkins_source: [],
             dic_git_source: [],
+            dic_git_event:[],
             dic_host_source: [],
             dic_cmd_type: [],
             sys_info:{},
@@ -374,13 +457,20 @@ var MyConfig = Vue.extend({
             setConfigShow: false, // 新增弹窗
             setConfigTitle: '',
             sqlSourceBoxShow: false,
-            sqlSet: {
+            sqlSet: {  // sql 设置弹窗
                 show: false, // 是否显示
                 title: '添加',
                 index: -1, // 操作行号
                 source: '', // sql 来源
                 statement:{}
-            }, // sql设置弹窗
+            },
+            gitSet:{    // git 设置弹窗
+                show: false, // 是否显示
+                title: '添加',
+                index: -1, // 操作行号
+                event_id: '',// 事件编号
+                event:{}
+            },
             msgSet:{
                 show: false, // 是否显示
                 title: '添加',
@@ -425,6 +515,29 @@ var MyConfig = Vue.extend({
                     }else{
                         this.pickerOptions.selectableRange = "00:00:00 - 23:59:59"
                     }
+                }
+            }
+        },
+        "gitSet.event_id":{
+            handler(v) {
+                switch (v) {
+                    case 1:
+                        this.gitSet.event = {}
+                        break
+                    case 2:
+                        this.gitSet.event = {
+                            "event_id": v,
+                            "owner": "", // 空间
+                            "repo": "", // 仓库
+                            "number":"",
+                            "title": "",
+                            "description": "",
+                            "merge_method": "merge",
+                            "prune_source_branch": false,
+                        }
+                        break
+                    default:
+                        this.gitSet.event = {}
                 }
             }
         }
@@ -618,6 +731,10 @@ var MyConfig = Vue.extend({
                         },
                         name: "",
                         params: [{"key":"","value":""}]
+                    },
+                    git:{
+                        link_id: "",
+                        events: [],
                     }
                 },
                 msg_set: []
@@ -771,7 +888,7 @@ var MyConfig = Vue.extend({
 
             this.sqlSet.title = this.sqlSet.index < 0? '添加' : '编辑';
         },
-        // sql设置确定
+        // sql 设置确定
         sqlSetConfirm(){
             if (typeof this.sqlSet.index !== 'number'){
                 console.log('sqlSetShow', this.sqlSet)
@@ -848,6 +965,57 @@ var MyConfig = Vue.extend({
                 this.form.command.sql.statement.splice(index,1)
             })
         },
+        // git 设置弹窗
+        gitSetShow(index, oldData){
+            if (index === "" || index == null || isNaN(index)){
+                return this.$message.error("索引位标志异常"+index);
+            }
+            if (oldData == undefined){
+                oldData = {}
+            }
+
+            this.gitSet.show = true
+            this.gitSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
+            this.sqlSet.event = oldData
+            this.gitSet.title = this.gitSet.index < 0? '添加' : '编辑';
+        },
+        // git 设置确定
+        gitSetConfirm(){
+            console.log("git 提交",this.gitSet)
+            if (typeof this.gitSet.index !== 'number'){
+                console.log('gitSetShow', this.sqlSet)
+                return this.$message.error("索引位标志异常");
+            }
+
+            if (this.gitSet.event_id == 1){
+                // 待完善...
+            }else if (this.gitSet.event_id == 2){
+                if (this.gitSet.event.owner == ""){
+                    return this.$message.error("仓库空间为必填")
+                }
+                if (this.gitSet.event.repo == ""){
+                    return this.$message.error("项目名称为必填")
+                }
+                if (this.gitSet.event.number == ""){
+                    return this.$message.error("仓库PR的序数为必填")
+                }
+                if (this.gitSet.event.merge_method == ""){
+                    return this.$message.error("合并方式不得为空")
+                }
+            }else{
+                return this.$message.error("未选择有效事件");
+            }
+
+            let data = copyJSON(this.gitSet.event)
+            if (this.gitSet.index < 0){
+                this.form.command.git.events.push(data)
+            }else{
+                this.form.command.git.events[this.gitSet.index] = data
+            }
+            this.gitSet.show = false
+            this.gitSet.index = -1
+        },
+
         // 推送弹窗
         msgBoxShow(index, oldData){
             if (index === "" || index == null || isNaN(index)){
@@ -953,6 +1121,7 @@ var MyConfig = Vue.extend({
                 Enum.dicSqlSource,
                 Enum.dicJenkinsSource,
                 Enum.dicGitSource,
+                Enum.dicGitEvent,
                 Enum.dicHostSource,
                 Enum.dicCmdType,
                 Enum.dicUser,
@@ -962,6 +1131,7 @@ var MyConfig = Vue.extend({
                 this.dic_sql_source = res[Enum.dicSqlSource]
                 this.dic_jenkins_source = res[Enum.dicJenkinsSource]
                 this.dic_git_source =res[Enum.dicGitSource]
+                this.dic_git_event = res[Enum.dicGitEvent]
                 this.dic_host_source =res[Enum.dicHostSource]
                 this.dic_user = res[Enum.dicUser]
                 this.dic_msg = res[Enum.dicMsg]

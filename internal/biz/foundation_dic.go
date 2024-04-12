@@ -153,6 +153,11 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			items = append(items, &pb.DicGetItem{Key: "bash", Name: "bash"},
 				&pb.DicGetItem{Key: "sh", Name: "sh"})
 		}
+	case enum.DicGitEvent:
+		items = []*pb.DicGetItem{
+			{Id: enum.GitEventPullsCreate, Name: "pr创建"},
+			{Id: enum.GitEventPullsMerge, Name: "pr合并"},
+		}
 	}
 
 	return items, nil
