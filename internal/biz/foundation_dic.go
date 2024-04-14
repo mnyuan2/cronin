@@ -155,9 +155,10 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 		}
 	case enum.DicGitEvent:
 		items = []*pb.DicGetItem{
-			{Id: enum.GitEventPullsCreate, Name: "pr创建"},
-			{Id: enum.GitEventPullsMerge, Name: "pr合并"},
+			{Id: enum.GitEventPullsCreate, Name: enum.GitEventMap[enum.GitEventPullsCreate]},
+			{Id: enum.GitEventPullsMerge, Name: enum.GitEventMap[enum.GitEventPullsMerge]},
 		}
+
 	}
 
 	return items, nil

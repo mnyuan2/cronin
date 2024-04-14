@@ -76,3 +76,15 @@ func (m *Handler) ResponseHeaderBytes() []byte {
 	b, _ := jsoniter.Marshal(m.ResponseHeader)
 	return b
 }
+
+// 返回字符串表示
+func (m *Handler) String() string {
+	s, _ := jsoniter.MarshalToString(map[string]any{
+		"general":        m.General,
+		"request_header": m.RequestHeader,
+		"RequestBody":    m.RequestBody,
+		"ResponseHeader": m.ResponseHeader,
+		"ResponseBody":   string(m.ResponseBody),
+	})
+	return s
+}

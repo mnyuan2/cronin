@@ -21,6 +21,26 @@ type Git struct {
 	Ref     string   `json:"ref"`     // 分支、tag或commit。默认: 仓库的默认分支(通常是master)
 }
 
+type GitEvent struct {
+	Id      int              `json:"id"`       // 事件id
+	PRMerge *GitEventPRMerge `json:"pr_merge"` // pr合并内容
+}
+
+type GitEventPRMerge struct {
+	Owner string `json:"owner"` // 空间地址
+	Repo  string `json:"repo"`  // 项目名称（仓库路径）
+	// 第几个PR，即本仓库PR的序数
+	Number int32
+	// 可选。合并PR的方法，merge（合并所有提交）、squash（扁平化分支合并）和rebase（变基并合并）。默认为merge。
+	MergeMethod string
+	// 可选。合并PR后是否删除源分支，默认false（不删除）
+	PruneSourceBranch bool
+	// 可选。合并标题，默认为PR的标题
+	Title string
+	// 可选。合并描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
+	Description string
+}
+
 // 任务列表
 type CronConfigListRequest struct {
 	Ids  []int `form:"ids[]"`
@@ -82,6 +102,7 @@ type CronConfigCommand struct {
 	Cmd     *CronCmd     `json:"cmd"`
 	Sql     *CronSql     `json:"sql"`
 	Jenkins *CronJenkins `json:"jenkins"`
+	Git     *CronGit     `json:"git"`
 }
 
 type CronCmd struct {
@@ -137,6 +158,11 @@ type CronJenkins struct {
 	Source *CronJenkinsSource `json:"source"` // 具体链接配置
 	Name   string             `json:"name"`   // 项目名称
 	Params []*KvItem          `json:"params"` // 参数
+}
+
+type CronGit struct {
+	LinkId int         `json:"link_id"`
+	Events []*GitEvent `json:"events"`
 }
 
 // 已注册列表

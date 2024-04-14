@@ -341,11 +341,14 @@ var MyConfig = Vue.extend({
                             </el-form-item>
                             <el-divider><i class="el-icon-setting"></i></el-divider>
                             
-                            <div v-if="gitSet.event_id==1"> pr创建 开发中 ...
+                            <div v-if="gitSet.event_id==2"> pr创建 开发中 ...
                                 
                             </div>
                             
-                            <div v-if="gitSet.event_id==2"> <!-- pr合并 -->
+                            <div v-if="gitSet.event_id==9"> <!-- pr合并 -->
+                                <el-form-item>
+                                    <el-alert title="合并pr前请确认已完成了审查与测试确认！" type="warning" show-icon :closable="false"></el-alert>
+                                </el-form-item>
                                 <el-form-item label="仓库空间*">
                                     <el-input v-model="gitSet.event.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
                                 </el-form-item>
@@ -521,10 +524,10 @@ var MyConfig = Vue.extend({
         "gitSet.event_id":{
             handler(v) {
                 switch (v) {
-                    case 1:
+                    case 2:
                         this.gitSet.event = {}
                         break
-                    case 2:
+                    case 9:
                         this.gitSet.event = {
                             "event_id": v,
                             "owner": "", // 空间
@@ -676,7 +679,7 @@ var MyConfig = Vue.extend({
         },
         initFormData(){
             return  {
-                type: '1',
+                type: this.listParam.type.toString(),
                 protocol: '3',
                 command:{
                     http:{
@@ -987,9 +990,9 @@ var MyConfig = Vue.extend({
                 return this.$message.error("索引位标志异常");
             }
 
-            if (this.gitSet.event_id == 1){
+            if (this.gitSet.event_id == 2){
                 // 待完善...
-            }else if (this.gitSet.event_id == 2){
+            }else if (this.gitSet.event_id == 9){
                 if (this.gitSet.event.owner == ""){
                     return this.$message.error("仓库空间为必填")
                 }
@@ -1012,6 +1015,7 @@ var MyConfig = Vue.extend({
             }else{
                 this.form.command.git.events[this.gitSet.index] = data
             }
+            this.gitSet.event_id = ''
             this.gitSet.show = false
             this.gitSet.index = -1
         },
