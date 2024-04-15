@@ -161,3 +161,29 @@ func CheckJenkins(jks *pb.CronJenkins) error {
 	}
 	return nil
 }
+
+func CheckGit(c *pb.CronGit) error {
+	if c.LinkId <= 0 {
+		return fmt.Errorf("未指定有效连接")
+	}
+	for i, e := range c.Events {
+		switch e.Id {
+		case enum.GitEventPullsMerge:
+			if e.PRMerge.Owner == "" {
+				return errors.New("git 仓库空间 未设置")
+			}
+			if e.PRMerge.Repo == "" {
+				return errors.New("git 项目名称 未设置")
+			}
+			if e.PRMerge.Number == 0 {
+				return errors.New("git 仓库PR的序数为必填")
+			}
+			if e.PRMerge.MergeMethod == "" {
+				return errors.New("git 合并方式不得为空")
+			}
+		default:
+			return fmt.Errorf("未支持的事件 %v-%v", i, e.Id)
+		}
+	}
+	return nil
+}

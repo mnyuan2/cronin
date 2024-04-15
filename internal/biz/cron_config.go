@@ -201,6 +201,13 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Jenkins.Source.Id); one.Id == 0 || one.Scene != models.SceneJenkinsSource {
 			return nil, errors.New("jenkins 连接 配置有误，请确认")
 		}
+	} else if r.Protocol == models.ProtocolGit {
+		if err := dtos.CheckGit(r.Command.Git); err != nil {
+			return nil, err
+		}
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Git.LinkId); one.Id == 0 || one.Scene != models.SceneGitSource {
+			return nil, errors.New("git 连接 配置有误，请确认")
+		}
 	}
 	for i, msg := range r.MsgSet {
 		if msg.MsgId == 0 {

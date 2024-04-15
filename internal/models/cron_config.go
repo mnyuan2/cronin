@@ -14,6 +14,7 @@ const (
 	ProtocolCmd     = 3 // 命令行 cmd
 	ProtocolSql     = 4 // sql 执行
 	ProtocolJenkins = 5 // jenkins 构建
+	ProtocolGit     = 6 // git api 任务
 )
 
 var ProtocolMap = map[int]string{
@@ -22,6 +23,7 @@ var ProtocolMap = map[int]string{
 	ProtocolCmd:     "cmd",
 	ProtocolSql:     "sql",
 	ProtocolJenkins: "jenkins",
+	ProtocolGit:     "git",
 }
 
 const (

@@ -70,8 +70,8 @@ type PullsMergeRequest struct {
 	MergeMethod string
 	// 可选。合并PR后是否删除源分支，默认false（不删除）
 	PruneSourceBranch bool
-	// 可选。合并标题，默认为PR的标题
+	// 可选。合并 commit 标题，默认为PR的标题
 	Title string
-	// 可选。合并描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
+	// 可选。合并 commit 描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
 	Description string
 }

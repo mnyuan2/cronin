@@ -210,6 +210,8 @@ func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 		err = job.sqlFunc(ctx)
 	case models.ProtocolJenkins:
 		err = job.jenkins(ctx, job.commandParse.Jenkins)
+	case models.ProtocolGit:
+		res, err = job.gitFunc(ctx, job.commandParse.Git)
 	default:
 		err = errs.New(nil, fmt.Sprintf("未支持的protocol=%v", job.conf.Protocol))
 	}
