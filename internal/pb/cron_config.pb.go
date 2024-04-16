@@ -1,5 +1,10 @@
 package pb
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 type KvItem struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
@@ -118,4 +123,30 @@ type CronConfigRunRequest struct {
 }
 type CronConfigRunResponse struct {
 	Result string `json:"result"`
+}
+
+// UnmarshalJSON 转换前端status字符串到int
+func (c *CronConfigSetRequest) UnmarshalJSON(data []byte) error {
+	// 定义一个临时结构体用于解析 JSON
+	type Alias CronConfigSetRequest
+	aux := &struct {
+		Status string `json:"status"`
+		*Alias
+	}{
+		Alias: (*Alias)(c),
+	}
+
+	// 解析 JSON 数据到临时结构体
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// 将字符串转换为 int
+	status, err := strconv.Atoi(aux.Status)
+	if err != nil {
+		return err
+	}
+	c.Status = status
+
+	return nil
 }
