@@ -623,6 +623,7 @@ var MyConfig = Vue.extend({
             body.command.sql.source.id = Number(body.command.sql.source.id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
+            body.command.git.link_id = Number(body.command.git.link_id)
 
             api.innerPost("/config/set", body, (res)=>{
                 if (!res.status){
@@ -793,6 +794,9 @@ var MyConfig = Vue.extend({
             if (this.form.command.git){
                 for (let i in this.form.command.git.events){
                     this.form.command.git.events[i] = this.gitBuildDesc(this.form.command.git.events[i])
+                }
+                if (this.form.command.git.link_id == 0){
+                    this.form.command.git.link_id = ''
                 }
             }
             for (let i in row.msg_set){
