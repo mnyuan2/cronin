@@ -117,6 +117,7 @@ func (m *ApiV5) PullsCreate(handler *Handler, r *PullsCreateRequest) (res []byte
 		"access_token": m.conf.GetAccessToken(),
 		"head":         r.Head,
 		"base":         r.Base,
+		"title":        r.Title,
 		"body":         r.Body,
 	})
 
@@ -147,7 +148,9 @@ func (m *ApiV5) PullsCreate(handler *Handler, r *PullsCreateRequest) (res []byte
 	if resp.StatusCode != http.StatusCreated {
 		out := map[string]any{}
 		_ = jsoniter.Unmarshal(respByte, &out)
-		if message, ok := out["message"]; ok {
+		if message, ok := out["messages"]; ok {
+			return nil, errors.New(message.([]any)[0].(string))
+		} else if message, ok := out["message"]; ok {
 			return nil, errors.New(message.(string))
 		}
 	}
@@ -281,5 +284,5 @@ func (m *ApiV5) PullsMerge(handler *Handler, r *PullsMergeRequest) (res []byte, 
 			return nil, errors.New(message.(string))
 		}
 	}
-	return respByte, errors.New("请求异常")
+	return respByte, nil
 }

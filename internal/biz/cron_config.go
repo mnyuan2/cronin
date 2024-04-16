@@ -70,6 +70,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{Path: []string{}}}, Host: &pb.SettingHostSource{}},
 			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
+			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
 		}
 		item.MsgSet = []*pb.CronMsgSet{}
 		item.TypeName = models.ConfigTypeMap[item.Type]
@@ -151,7 +152,6 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
 	} else {
-		d.Status = enum.StatusDisable
 		d.Env = dm.user.Env
 	}
 
@@ -214,10 +214,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
 		}
 	}
-	if d.Status == models.ConfigStatusError {
-		d.Status = models.ConfigStatusDisable
-	}
 
+	d.Status = enum.StatusDisable // 编辑后，单子都是草稿
 	d.Name = r.Name
 	d.Spec = r.Spec
 	d.Protocol = r.Protocol

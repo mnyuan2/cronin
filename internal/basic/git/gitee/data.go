@@ -6,10 +6,7 @@ type BaseRequest struct {
 }
 
 type PullsCreateRequest struct {
-	// 仓库所属空间地址(企业、组织或个人的地址path)
-	Owner string
-	// 仓库路径(path)
-	Repo string
+	BaseRequest
 	// 必填。Pull Request 标题
 	Title string
 	// 必填。Pull Request 提交的源分支。格式：branch 或者：username:branch

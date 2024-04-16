@@ -166,6 +166,9 @@ func CheckGit(c *pb.CronGit) error {
 	if c.LinkId <= 0 {
 		return fmt.Errorf("未指定有效连接")
 	}
+	if len(c.Events) == 0 {
+		return fmt.Errorf("未指定事件")
+	}
 	for i, e := range c.Events {
 		switch e.Id {
 		case enum.GitEventPullsMerge:

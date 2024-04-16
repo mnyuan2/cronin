@@ -141,9 +141,12 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 		service:   t.service,
 		operation: spanName,
 		env:       t.env,
-		startTime: time.Now(),
+		startTime: conf.Timestamp(),
 		tags:      []attribute.KeyValue{},
 		logs:      []*MysqlSpanLog{},
+	}
+	if span.startTime.IsZero() {
+		span.startTime = time.Now()
 	}
 	span.tags = append(span.tags, conf.Attributes()...)
 	for _, tag := range span.tags {

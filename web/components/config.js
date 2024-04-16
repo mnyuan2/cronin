@@ -231,7 +231,7 @@ var MyConfig = Vue.extend({
                                     </el-tab-pane>
                                     <el-tab-pane label="git" name="6">
                                         <el-form-item label="链接">
-                                            <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
+                                            <el-select v-model="form.command.git.link_id" placement="请选择链接">
                                                 <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                                             </el-select>
                                         </el-form-item>
@@ -243,9 +243,9 @@ var MyConfig = Vue.extend({
                                                 <el-alert v-show="form.command.git.events.length==0" title="未添加事件，请添加。" type="info"></el-alert>
                                                 <!--git 事件展示-->
                                                 <div v-for="(event,git_index) in form.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                                    <el-row v-html="event.summary"></el-row>
-                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(git_index)"></i>
-                                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(git_index,event)"></i>
+                                                    <el-row v-html="event.summary" style="min-height: 45px;"></el-row>
+                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="gitSetDel(git_index)"></i>
+                                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="gitSetShow(git_index,event)"></i>
                                                     <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
                                                 </div>
                                             </div>
@@ -334,37 +334,37 @@ var MyConfig = Vue.extend({
                     <el-dialog :title="'git设置-'+sqlSet.title" :visible.sync="gitSet.show" :show-close="false" :close-on-click-modal="false">
                         <el-form :model="gitSet.event" label-width="90px" size="small">
                             <el-form-item label="事件">
-                                <el-select v-model="gitSet.id" placement="请选择事件类型">
+                                <el-select v-model="gitSet.data.id" placement="请选择事件类型">
                                     <el-option v-for="(dic_v,dic_k) in dic_git_event" :label="dic_v.name" :value="dic_v.id"></el-option>
                                 </el-select>
                             </el-form-item>
                             <el-divider><i class="el-icon-setting"></i></el-divider>
                             
-                            <div v-if="gitSet.id==2"> pr创建 开发中 ...
+                            <div v-if="gitSet.data.id==2"> pr创建 开发中 ...
                                 
                             </div>
                             
-                            <div v-if="gitSet.id==9"> <!-- pr合并 -->
+                            <div v-if="gitSet.data.id==9"> <!-- pr合并 -->
                                 <el-form-item>
                                     <el-alert title="合并pr前请确认已完成了审查与测试确认！" type="warning" show-icon :closable="false"></el-alert>
                                 </el-form-item>
                                 <el-form-item label="仓库空间*">
-                                    <el-input v-model="gitSet.event.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
+                                    <el-input v-model="gitSet.data.pr_merge.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
                                 </el-form-item>
                                 <el-form-item label="项目名称*">
-                                    <el-input v-model="gitSet.event.repo" placeholder="仓库路径"></el-input>
+                                    <el-input v-model="gitSet.data.pr_merge.repo" placeholder="仓库路径"></el-input>
                                 </el-form-item>
                                 <el-form-item label="PR 编号*">
-                                    <el-input type="number" v-model="gitSet.event.number" placeholder="本仓库PR的序数"></el-input>
+                                    <el-input type="number" v-model="gitSet.data.pr_merge.number" placeholder="本仓库PR的序数"></el-input>
                                 </el-form-item>
                                 <el-form-item label="commit 标题">
-                                    <el-input v-model="gitSet.event.title" placeholder="PR的标题"></el-input>
+                                    <el-input v-model="gitSet.data.pr_merge.title" placeholder="合并 commit 标题，默认为 !{pr_id} {pr_title}"></el-input>
                                 </el-form-item>
                                 <el-form-item label="commit 描述">
-                                    <el-input type="textarea" v-model="gitSet.event.description" placeholder="合并描述，默认为 Merge pull request !{pr_id} from {author}/{source_branch}"></el-input>
+                                    <el-input type="textarea" v-model="gitSet.data.pr_merge.description" placeholder="合并 commit 描述，默认为 Merge pull request !{pr_id} from {author}/{source_branch}"></el-input>
                                 </el-form-item>
                                 <el-form-item label="合并方式">
-                                    <el-select v-model="gitSet.event.merge_method">
+                                    <el-select v-model="gitSet.data.pr_merge.merge_method">
                                         <el-option label="合并分支" value="merge">
                                             <span style="float: left">合并分支</span>
                                             <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">源分支所有的提交都会合并到目标分支，并产生一个新的提交</span>
@@ -380,7 +380,7 @@ var MyConfig = Vue.extend({
                                     </el-select>
                                 </el-form-item>
                                 <el-form-item label="合并选项">
-                                    <el-checkbox v-model="gitSet.event.prune_source_branch">合并后删除提交分支</el-checkbox>
+                                    <el-checkbox v-model="gitSet.data.pr_merge.prune_source_branch">合并后删除提交分支</el-checkbox>
                                 </el-form-item>
                             </div>
                             <div v-if="gitSet.id==3">
@@ -529,7 +529,10 @@ var MyConfig = Vue.extend({
         },
         "gitSet.data.id":{
             handler(v) {
-                console.log("gitSet.data.id 改变", v)
+                console.log("gitSet.data.id 改变", v, this.gitSet.index)
+                if (this.gitSet.index !== -1){
+                    return
+                }
                 switch (v) {
                     case 2:
                         this.gitSet.data = {
@@ -543,7 +546,7 @@ var MyConfig = Vue.extend({
                             pr_merge: {
                                 owner: "", // 空间
                                 repo: "", // 仓库
-                                number:"",
+                                number: null,
                                 title: "",
                                 description: "",
                                 merge_method: "merge",
@@ -990,14 +993,15 @@ var MyConfig = Vue.extend({
             if (index === "" || index == null || isNaN(index)){
                 return this.$message.error("索引位标志异常"+index);
             }
-            if (oldData == undefined){
-                oldData = {id:''}
+            let data = {id:''}
+            if (oldData != undefined){
+                data = copyJSON(oldData)
             }
 
             this.gitSet.show = true
             this.gitSet.title = this.gitSet.index < 0? '添加' : '编辑';
             this.gitSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
-            this.sqlSet.data = oldData
+            this.gitSet.data = data
         },
         // git 设置确定
         gitSetConfirm(){
@@ -1016,12 +1020,13 @@ var MyConfig = Vue.extend({
                 if (this.gitSet.data.pr_merge.repo == ""){
                     return this.$message.error("项目名称为必填")
                 }
-                if (this.gitSet.data.pr_merge.number == ""){
-                    return this.$message.error("仓库PR的序数为必填")
+                if (!this.gitSet.data.pr_merge.number){
+                    return this.$message.error("仓库PR编号为必填")
                 }
                 if (this.gitSet.data.pr_merge.merge_method == ""){
                     return this.$message.error("合并方式不得为空")
                 }
+                this.gitSet.data.pr_merge.number = Number(this.gitSet.data.pr_merge.number)
             }else{
                 return this.$message.error("未选择有效事件");
             }
@@ -1035,6 +1040,18 @@ var MyConfig = Vue.extend({
             this.gitSet.id = ''
             this.gitSet.show = false
             this.gitSet.index = -1
+        },
+        // git 删除元素
+        gitSetDel(index){
+            if (index === "" || index == null || isNaN(index)){
+                console.log('gitSetDel', index)
+                return this.$message.error("索引位标志异常");
+            }
+            this.$confirm('此操作将删除sql执行语句，是否继续？','提示',{
+                type:'warning',
+            }).then(()=>{
+                this.form.command.git.events.splice(index,1)
+            })
         },
 
         // 推送弹窗
@@ -1130,10 +1147,11 @@ var MyConfig = Vue.extend({
             let right = '</span>'
             switch (data.id){
                 case 2:
+                    data.summary = '完善中...'
                     break
                 case 9:
-                    data.summary = `访问 ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right} pr ${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${left}${data.pr_merge.prune_source_branch===true?'删除提交分支':''}${right}\n`+
-                        `<b>${data.pr_merge.title}</b> ${data.pr_merge.description}`
+                    data.summary = `<b>pr合并</b> ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right} pr ${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${data.pr_merge.prune_source_branch===true?left+'删除提交分支'+right:''}`+
+                        `<br><i style="margin-left: 3em;"></i><b>${data.pr_merge.title}</b> ${data.pr_merge.description}`
                     break
                 default:
                     data.summary = '未支持的事件类型'
