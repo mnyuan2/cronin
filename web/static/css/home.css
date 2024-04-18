@@ -151,9 +151,13 @@ i.el-alert__icon{
     border: 0;
     padding: 0 13px;
 }
-.http_header_box .el-input-group__append{
-    padding: 0 5px;
-    overflow: hidden;
+/*.http_header_box .el-input-group__append{*/
+/*    padding: 0 5px;*/
+/*    overflow: hidden;*/
+/*}*/
+.http_header_box.el-form-item--mini .el-input-group__prepend input{
+    line-height: 26px;
+    height: 26px;
 }
 .el-dropdown-link{
     cursor: pointer;

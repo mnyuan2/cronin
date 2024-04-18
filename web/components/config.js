@@ -53,17 +53,15 @@ var MyConfig = Vue.extend({
                     <!-- 任务设置表单 -->
                     <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false" class="config-form-box">
                         <el-form :model="form">
-                            <el-form-item label="名称*" label-width="46px">
+                            <el-form-item label="名称*" label-width="50px">
                                 <el-input v-model="form.name"></el-input>
                             </el-form-item>
-                            <el-form-item label="类型*" label-width="46px">
+                            <el-form-item label="类型*" label-width="50px">
                                 <el-radio v-model="form.type" label="1">周期</el-radio>
                                 <el-radio v-model="form.type" label="2">单次</el-radio>
                                 <el-radio v-model="form.type" label="5">组件</el-radio>
                             </el-form-item>
-            
-            
-                            <el-form-item label="时间*" label-width="46px" v-if="form.type != 5">
+                            <el-form-item label="时间*" label-width="50px" v-if="form.type != 5">
                                 <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
                                 <el-date-picker 
                                     style="width: 100%"
@@ -75,6 +73,19 @@ var MyConfig = Vue.extend({
                                     :picker-options="pickerOptions">
                                 </el-date-picker>
                             </el-form-item>
+                            <el-form-item prop="plate" label-width="50px" size="mini" class="http_header_box">
+                                <span slot="label" style="white-space: nowrap;">
+                                    参数
+                                    <el-tooltip effect="dark" content="点击查看变量参数使用详解" placement="top-start">
+                                        <i class="el-icon-info" style="cursor: pointer"></i>
+                                    </el-tooltip>
+                                </span>
+                                <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.value" placeholder="参数说明">
+                                    <el-input v-model="p_v.key" slot="prepend" placeholder="参数 key" @input="e=>inputChangeArrayPush(e,p_i,form.var_fields)"></el-input>
+                                    <el-button slot="append" icon="el-icon-delete" @click="arrayDelete(p_i, form.var_fields)"></el-button>
+                                </el-input>
+                            </el-form-item>
+                            
                             <el-form-item>
                                 <el-tabs type="border-card" v-model="form.protocol">
                                     <el-tab-pane label="http" name="1">
@@ -697,6 +708,7 @@ var MyConfig = Vue.extend({
             return  {
                 type: this.listParam.type.toString(),
                 protocol: '3',
+                var_fields: [{}],
                 command:{
                     http:{
                         method: 'GET',
@@ -765,6 +777,9 @@ var MyConfig = Vue.extend({
             this.setConfigTitle = '编辑任务'
             this.form = copyJSON(row)
 
+            if (this.form.var_fields == null || this.form.var_fields.length == 0){
+                this.form.var_fields = [{}]
+            }
             if (row.command.cmd.statement.git.path == null){
                 this.form.command.cmd.statement.git.path = this.initFormData().command.cmd.statement.git.path
             }

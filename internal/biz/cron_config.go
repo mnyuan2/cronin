@@ -84,6 +84,9 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 				log.Println("	msg_set 解析错误", item.Id, er.Error())
 			}
 		}
+		if item.VarFieldsStr != nil {
+			_ = jsoniter.Unmarshal(item.VarFieldsStr, &item.VarFields)
+		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
 			item.TopErrorNumber = top.ErrorNumber
@@ -209,6 +212,12 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, errors.New("git 连接 配置有误，请确认")
 		}
 	}
+	pl := len(r.VarFields)
+	for i, param := range r.VarFields {
+		if param.Key == "" && i < (pl-1) {
+			return nil, fmt.Errorf("变量参数 %v 名称不得为空", i+1)
+		}
+	}
 	for i, msg := range r.MsgSet {
 		if msg.MsgId == 0 {
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
@@ -221,6 +230,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
 	d.Type = r.Type
+	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	err = data.NewCronConfigData(dm.ctx).Set(d)

@@ -164,6 +164,41 @@ function copyJSON(data) {
 }
 
 /**
+ * 监听输入变化数组追加行
+ * ~~~
+ * 元素最后一行非空追加行
+ * ~~~
+ * @param e 变化值
+ * @param index 变化行号
+ * @param arr 原数据
+ */
+function inputChangeArrayPush(e, index, arr){
+    // console.log(e, index, arr,"-->", arr.length)
+    if (e == ""){
+        return
+    }
+    if (arr.length-1 <= index){
+        arr.push({}) // 追加空元素
+    }
+}
+
+/**
+ * 删除数组元素
+ * ~~~
+ * 删除元素行，最后一行不可删除
+ * ~~~
+ * @param index 删除行号
+ * @param arr 原数据
+ * @constructor
+ */
+function arrayDelete(index, arr){
+    if ((index+1) >= arr.length){
+        return
+    }
+    arr.splice(index,1)
+}
+
+/**
  * 业务枚举
  * @type {{dicEnv: number, dicSqlSource: number, envKey: string}}
  */

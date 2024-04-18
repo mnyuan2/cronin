@@ -69,23 +69,26 @@ type CronConfigListItem struct {
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
+	VarFields      []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
 	Command        *CronConfigCommand `json:"command" gorm:"-"`
 	MsgSet         []*CronMsgSet      `json:"msg_set" gorm:"-"`
+	VarFieldsStr   []byte             `json:"-" gorm:"column:var_fields;"`
 	CommandStr     []byte             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
 	MsgSetStr      []byte             `json:"-" gorm:"column:msg_set;"`
 }
 
 // 任务设置
 type CronConfigSetRequest struct {
-	Id       int                `json:"id,omitempty"`       // 主键
-	Name     string             `json:"name,omitempty"`     // 任务名称
-	Type     int                `json:"type"`               // 类型
-	Spec     string             `json:"spec"`               // 执行时间表达式
-	Protocol int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
-	Command  *CronConfigCommand `json:"command,omitempty"`  // 命令
-	Status   int                `json:"status"`             // 状态
-	Remark   string             `json:"remark"`             // 备注
-	MsgSet   []*CronMsgSet      `json:"msg_set"`            // 消息设置
+	Id        int                `json:"id,omitempty"`       // 主键
+	Name      string             `json:"name,omitempty"`     // 任务名称
+	Type      int                `json:"type"`               // 类型
+	Spec      string             `json:"spec"`               // 执行时间表达式
+	Protocol  int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	VarFields []*KvItem          `json:"var_fields"`         // 定义变量参数
+	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status    int                `json:"status"`             // 状态
+	Remark    string             `json:"remark"`             // 备注
+	MsgSet    []*CronMsgSet      `json:"msg_set"`            // 消息设置
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`

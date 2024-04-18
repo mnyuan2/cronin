@@ -71,6 +71,15 @@ var MyPipeline = Vue.extend({
                                     :picker-options="form.pickerOptions">
                                 </el-date-picker>
                             </el-form-item>
+                            <el-form-item prop="plate" label-width="76px">
+                                <span slot="label" style="white-space: nowrap;">
+                                    参数实现
+                                    <el-tooltip effect="dark" content="点击查看变量参数使用详解" placement="top-start">
+                                        <i class="el-icon-info" style="cursor: pointer"></i>
+                                    </el-tooltip>
+                                </span>
+                                <el-input type="textarea" v-model="form.var_params" placeholder="变量参数实现 json 格式"></el-input>
+                            </el-form-item>
                             
                             <el-form-item label="任务" label-width="76px">
                                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
@@ -81,6 +90,10 @@ var MyPipeline = Vue.extend({
                                         <el-tag>{{conf.name}}</el-tag>-
                                         <el-tag type="info">{{conf.protocol_name}}</el-tag>
                                         <el-tag>{{conf.status_name}}</el-tag>
+                                        <el-divider direction="vertical"></el-divider>
+                                            <el-tooltip v-for="(var_p,var_i) in conf.var_params" effect="dark" :content="var_p.value" placement="top-start">
+                                                <code v-if="var_p.key != ''" style="padding: 0 4px;margin-right: 4px;cursor:pointer;color: #445368;background: #f9fdff;"><{{var_p.key}}></code>
+                                            </el-tooltip>
                                         <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
                                     </div>
                                 </div>
@@ -611,6 +624,7 @@ var MyPipeline = Vue.extend({
             }else if (e == 'close'){ // 关闭
                 this.config.boxShow = false
             }else if (e == 'confirm'){ // 提交
+                console.log("选中元素",this.$refs.selection.selected)
                 this.config.running = true
                 this.form.data.configs.push(...this.$refs.selection.selected)
                 this.config.boxShow = false
