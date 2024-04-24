@@ -16,6 +16,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -216,6 +217,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	for i, param := range r.VarFields {
 		if param.Key == "" && i < (pl-1) {
 			return nil, fmt.Errorf("变量参数 %v 名称不得为空", i+1)
+		} else if strings.Contains(param.Key, ".") {
+			return nil, fmt.Errorf("参数key %v 不得包含.点符合", i+1)
 		}
 	}
 	for i, msg := range r.MsgSet {
@@ -293,7 +296,7 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 		return nil, err
 	}
 
-	res, err := NewJobConfig(conf).Running(dm.ctx, "手动执行")
+	res, err := NewJobConfig(conf).Running(dm.ctx, "手动执行", map[string]any{})
 	if err != nil {
 		return nil, err
 	}

@@ -91,9 +91,9 @@ var MyPipeline = Vue.extend({
                                         <el-tag type="info">{{conf.protocol_name}}</el-tag>
                                         <el-tag>{{conf.status_name}}</el-tag>
                                         <el-divider direction="vertical"></el-divider>
-                                            <el-tooltip v-for="(var_p,var_i) in conf.var_params" effect="dark" :content="var_p.value" placement="top-start">
-                                                <code v-if="var_p.key != ''" style="padding: 0 4px;margin-right: 4px;cursor:pointer;color: #445368;background: #f9fdff;"><{{var_p.key}}></code>
-                                            </el-tooltip>
+                                        (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.value" placement="top-start">
+                                            <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}</code>
+                                        </el-tooltip>)
                                         <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
                                     </div>
                                 </div>
@@ -349,6 +349,7 @@ var MyPipeline = Vue.extend({
                 name: data.name,
                 type: Number(data.type),
                 spec: data.spec,
+                var_params: data.var_params,
                 config_ids: [],
                 configs:data.configs,
                 remark: data.remark,

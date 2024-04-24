@@ -24,11 +24,9 @@ import (
 	"log"
 	"net/rpc"
 	"os/exec"
-	"reflect"
 	"runtime"
 	"strings"
 	"testing"
-	"text/template"
 	"time"
 )
 
@@ -533,52 +531,4 @@ func TestTemplate(t *testing.T) {
 		t.Fatal(err, "解析错误")
 	}
 	fmt.Println(temp)
-}
-
-func TestTemplateV2(t *testing.T) {
-	input := `切片: [[.name]] --> [[string .name]] 
-数组：[[.c]] --> [[string .c]] --> [[.c.cc]]
-常量：age:[[.age]] | sex:[[.sex]]  [[.b]] [[b]]`
-	paramStr := `{"sex": "男", "age": 180, "name": ["title2", "title1", 25], "c":{"cc":"CC"}}`
-
-	// 定义一个 map 用于存储解析后的数据
-	data := map[string]any{}
-	if err := json.Unmarshal([]byte(paramStr), &data); err != nil {
-		fmt.Println("解析JSON失败:", err)
-		return
-	}
-	// 自定义模板函数
-	f := template.FuncMap{
-		// 任何数据转义为字符串
-		"string": func(val any) string {
-			v := reflect.ValueOf(val)
-			switch v.Kind() {
-			case reflect.Map, reflect.Slice:
-				value, _ := json.Marshal(val)
-				return string(value)
-			default:
-				return fmt.Sprintf("%v", val)
-			}
-		},
-	}
-	// 创建模板
-	_tmpl, err := template.New("tmpl").
-		Funcs(f).
-		Delims("[[", "]]").
-		Parse(input)
-	if err != nil {
-		fmt.Println("解析模板失败:", err)
-		return
-	}
-
-	// 应用模板到数据
-	buf := bytes.NewBuffer([]byte{})
-	err = _tmpl.Execute(buf, data)
-	if err != nil {
-		fmt.Println("模板执行失败:", err)
-		return
-	}
-	// 获取替换后的字符串
-	result := buf.String()
-	fmt.Println(result)
 }

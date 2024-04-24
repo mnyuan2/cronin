@@ -89,7 +89,7 @@ var MyConfig = Vue.extend({
                             <el-form-item>
                                 <el-tabs type="border-card" v-model="form.protocol">
                                     <el-tab-pane label="http" name="1">
-                                        <el-form-item label="请求地址" class="http_url_box">
+                                        <el-form-item label="请求地址" class="http_url_box" size="mini">
                                             <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
                                                 <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
                                                     <el-option label="GET" value="GET"></el-option>
@@ -98,13 +98,13 @@ var MyConfig = Vue.extend({
                                             </el-input>
                                         </el-form-item>
             
-                                        <el-form-item label="请求Header" class="http_header_box">
+                                        <el-form-item label="请求Header" class="http_header_box" size="mini">
                                             <el-input v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
                                                 <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
                                                 <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
                                             </el-input>
                                         </el-form-item>
-                                        <el-form-item label="请求Body参数">
+                                        <el-form-item label="请求Body参数" size="mini">
                                             <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                                         </el-form-item>
                                     </el-tab-pane>
