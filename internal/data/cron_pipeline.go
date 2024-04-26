@@ -43,6 +43,10 @@ func (m *CronPipelineData) ChangeStatus(data *models.CronPipeline, remark string
 	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id").Updates(data).Error
 }
 
+func (m *CronPipelineData) SetEntryId(data *models.CronPipeline) error {
+	return m.db.Where("id=?", data.Id).Select("entry_id").Updates(data).Error
+}
+
 func (m *CronPipelineData) GetOne(env string, Id int) (data *models.CronPipeline, err error) {
 	data = &models.CronPipeline{}
 	return data, m.db.Where("env=? and id=?", env, Id).Take(data).Error

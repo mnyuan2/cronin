@@ -50,6 +50,10 @@ func (m *CronConfigData) ChangeStatus(data *models.CronConfig, remark string) er
 	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id").Updates(data).Error
 }
 
+func (m *CronConfigData) SetEntryId(data *models.CronConfig) error {
+	return m.db.Where("id=?", data.Id).Select("entry_id").Updates(data).Error
+}
+
 func (m *CronConfigData) GetOne(env string, Id int) (data *models.CronConfig, err error) {
 	data = &models.CronConfig{}
 	return data, m.db.Where("env=? and id=?", env, Id).Take(data).Error
