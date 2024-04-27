@@ -109,16 +109,22 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 	for _, v := range list {
 		c, ok := v.Job.(*JobConfig)
 		if !ok {
-			resp.List = append(resp.List, &pb.CronConfigListItem{
-				Id:       int(v.ID),
-				Name:     "未识别注册任务",
-				UpdateDt: v.Next.Format(time.DateTime),
-			})
-			continue
+			c2, ok := v.Job.(*JobPipeline)
+			if !ok {
+				resp.List = append(resp.List, &pb.CronConfigListItem{
+					Id:       0,
+					EntryId:  int(v.ID),
+					Name:     "未识别注册任务",
+					UpdateDt: v.Next.Format(time.DateTime),
+				})
+				continue
+			}
+			c = c2.GetConf()
 		}
 		if c.conf.Id > 0 && dm.user.Env != c.conf.Env {
 			continue
 		}
+		c.Parse(nil)
 		conf := c.conf
 		next := ""
 		if s, err := secondParser.Parse(conf.Spec); err == nil {
@@ -126,6 +132,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 		}
 		resp.List = append(resp.List, &pb.CronConfigListItem{
 			Id:           conf.Id,
+			EntryId:      int(v.ID),
 			Name:         conf.Name,
 			Spec:         conf.Spec,
 			Protocol:     conf.Protocol,

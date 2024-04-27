@@ -289,7 +289,11 @@ var MyConfig = Vue.extend({
                     <!-- 注册任务列表弹窗 -->
                     <el-drawer title="已注册任务" :visible.sync="registerListShow" direction="rtl" size="40%" wrapperClosable="false">
                         <el-table :data="registerList">
-                            <el-table-column property="id" label="编号"></el-table-column>
+                            <el-table-column property="id" label="编号">
+                                <template slot-scope="scope">
+                                    {{scope.row.id}}/{{scope.row.entry_id}}
+                                </template>
+                            </el-table-column>
                             <el-table-column property="spec" label="执行时间"></el-table-column>
                             <el-table-column property="update_dt" label="下一次执行"></el-table-column>
                             <el-table-column property="name" label="任务名称"></el-table-column>

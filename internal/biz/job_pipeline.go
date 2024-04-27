@@ -35,14 +35,14 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 	}
 	job.conf = NewJobConfig(&models.CronConfig{
 		Env:          conf.Env,
-		EntryId:      0,
+		EntryId:      conf.EntryId,
 		Type:         0,
 		Name:         conf.Name,
-		Spec:         "",
+		Spec:         conf.Spec,
 		Protocol:     0,
 		Command:      nil,
 		Remark:       "",
-		Status:       0,
+		Status:       conf.Status,
 		StatusRemark: "",
 		StatusDt:     "",
 		UpdateDt:     "",
@@ -175,4 +175,8 @@ func (job *JobPipeline) Run() {
 	// 结束语
 	job.conf.messagePush(ctx, enum.StatusActive, "完成", nil, time.Since(st).Seconds())
 
+}
+
+func (job *JobPipeline) GetConf() *JobConfig {
+	return job.conf
 }
