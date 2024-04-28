@@ -74,11 +74,11 @@ var MyPipeline = Vue.extend({
                             <el-form-item prop="plate" label-width="76px">
                                 <span slot="label" style="white-space: nowrap;">
                                     参数实现
-                                    <el-tooltip effect="dark" content="点击查看变量参数使用详解" placement="top-start">
-                                        <i class="el-icon-info" style="cursor: pointer"></i>
+                                    <el-tooltip effect="dark" content="实现的参数会传入设置过参数的任务中，点击查看更多" placement="top-start">
+                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                                     </el-tooltip>
                                 </span>
-                                <el-input type="textarea" v-model="form.var_params" placeholder="变量参数实现 json 格式"></el-input>
+                                <el-input type="textarea" v-model="form.data.var_params" placeholder="变量参数实现 json 格式"></el-input>
                             </el-form-item>
                             
                             <el-form-item label="任务" label-width="76px">
@@ -139,7 +139,7 @@ var MyPipeline = Vue.extend({
                     </el-drawer>
                     <!-- 任务日志弹窗 -->
                     <el-drawer :title="log.title" :visible.sync="log.show" direction="rtl" size="40%" wrapperClosable="false" > <!-- :before-close="configLogBox(0)"-->
-                        <my-config-log :config_id="log.id"></my-config-log>
+                        <my-config-log :tags="log.tags"></my-config-log>
                     </el-drawer>
                     <!-- 注册任务列表弹窗 -->
                     <el-drawer title="已注册任务" :visible.sync="register.boxShow" direction="rtl" size="40%" wrapperClosable="false">
@@ -251,7 +251,8 @@ var MyPipeline = Vue.extend({
             log:{
                 show: false,
                 id: 0,
-                title:""
+                title:"",
+                tags:{}
             },
 
         }
@@ -492,8 +493,10 @@ var MyPipeline = Vue.extend({
             if (id == 0){
                 this.log.show = false;
                 this.log.id = 0;
+                this.log.tags = {}
             }else{
                 this.log.id = id
+                this.log.tags = {ref_id:id, component:"pipeline"}
                 this.log.title = title+' 日志'
                 this.log.show = true
             }

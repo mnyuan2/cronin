@@ -67,6 +67,7 @@ type JobConfig struct {
 	msgSetParse  *dtos.MsgSetParse
 	ErrorCount   int // 连续错误
 	tracer       trace.Tracer
+	varParams    map[string]any
 }
 
 // 任务执行器
@@ -86,7 +87,7 @@ func NewJobConfig(conf *models.CronConfig) *JobConfig {
 
 // 解析
 func (job *JobConfig) Parse(params map[string]any) errs.Errs {
-	varParams := map[string]any{}
+	job.varParams = map[string]any{}
 	if len(job.conf.VarFields) > 5 {
 		//根据定义初始化参数，没有传入默认为空字符串
 		temp := []*pb.KvItem{}
@@ -97,17 +98,17 @@ func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 			if item.Key == "" {
 				continue
 			}
-			varParams[item.Key] = ""
+			job.varParams[item.Key] = ""
 		}
 	}
 
 	for k, v := range params {
-		if _, ok := varParams[k]; ok {
-			varParams[k] = v
+		if _, ok := job.varParams[k]; ok {
+			job.varParams[k] = v
 		}
 	}
 	// 进行模板替换
-	cmd, err := conv.DefaultStringTemplate().SetParam(varParams).Execute(job.conf.Command)
+	cmd, err := conv.DefaultStringTemplate().SetParam(job.varParams).Execute(job.conf.Command)
 	if err != nil {
 		return errs.New(err, "模板错误")
 	}
@@ -220,6 +221,8 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 			span.SetStatus(tracing.StatusError, "执行异常")
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
 		}
+		p, _ := jsoniter.Marshal(job.varParams)
+		span.AddEvent("", trace.WithAttributes(attribute.Stringer("var_params", bytes.NewBuffer(p))))
 		span.End()
 	}()
 	span.SetAttributes(
@@ -231,6 +234,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	)
 
 	if err = job.Parse(params); err != nil {
+		span.AddEvent("", trace.WithAttributes(attribute.Stringer("config", bytes.NewBuffer(job.conf.Command))))
 		return
 	}
 

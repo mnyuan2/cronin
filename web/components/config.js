@@ -36,7 +36,7 @@ var MyConfig = Vue.extend({
                                 <el-button type="text" @click="editShow(row)">编辑</el-button>
                                 <el-button type="text" @click="changeStatus(row, 2)" v-if="row.status!=2">激活</el-button>
                                 <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2">停用</el-button>
-                                <el-button type="text" @click="configLogBox(row.id, row.name)">日志</el-button>
+                                <el-button type="text" @click="configLogBox(row)">日志</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -76,8 +76,8 @@ var MyConfig = Vue.extend({
                             <el-form-item prop="plate" label-width="50px" size="mini" class="http_header_box">
                                 <span slot="label" style="white-space: nowrap;">
                                     参数
-                                    <el-tooltip effect="dark" content="点击查看变量参数使用详解" placement="top-start">
-                                        <i class="el-icon-info" style="cursor: pointer"></i>
+                                    <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
+                                    <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                                     </el-tooltip>
                                 </span>
                                 <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.value" placeholder="参数说明">
@@ -284,7 +284,7 @@ var MyConfig = Vue.extend({
                     </el-dialog>
                     <!-- 任务日志弹窗 -->
                     <el-drawer :title="configLog.title" :visible.sync="configLog.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
-                        <my-config-log :config_id="configLog.id"></my-config-log>
+                        <my-config-log :tags="configLog.tags"></my-config-log>
                     </el-drawer>
                     <!-- 注册任务列表弹窗 -->
                     <el-drawer title="已注册任务" :visible.sync="registerListShow" direction="rtl" size="40%" wrapperClosable="false">
@@ -299,7 +299,7 @@ var MyConfig = Vue.extend({
                             <el-table-column property="name" label="任务名称"></el-table-column>
                             <el-table-column property="" label="">
                                 <template slot-scope="scope">
-                                    <el-button type="text" @click="configLogBox(scope.row.id, scope.row.name)">日志</el-button>
+                                    <el-button type="text" @click="configLogBox(scope.row)">日志</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -894,14 +894,21 @@ var MyConfig = Vue.extend({
                 this.getDicSqlSource() // 关闭弹窗要重载枚举
             }
         },
-        configLogBox(id, title){
-            this.configLog.id = id
-            this.configLog.title = title+' 日志'
+        configLogBox(item){
+            let tags = {ref_id:item.id, component:"job"}
+            if (item.protocol == 99){
+                tags.component = 'pipeline'
+            }
+            this.configLog.id = item.id
+            this.configLog.tags = tags
+            this.configLog.title = item.name+' 日志'
             this.configLog.show = true
         },
         configLogBoxClose(done){
             this.configLog.show = false;
             this.configLog.id = 0;
+            this.configLog.title = ' 日志'
+            this.configLog.tags = {}
         },
         // sql设置弹窗
         sqlSetShow(index, oldData){
@@ -1240,12 +1247,15 @@ var MyConfig = Vue.extend({
                 protocol: Number(this.form.protocol),
                 command: this.form.command,
                 remark: this.form.remark,
+                var_fields: this.form.var_fields,
+                msg_set: this.form.msg_set,
             }
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.interval = Number(body.command.sql.interval)
             body.command.sql.source.id = Number(body.command.sql.source.id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
+            body.command.git.link_id = Number(body.command.git.link_id)
 
             api.innerPost("/config/run", body, (res)=>{
                 if (!res.status){

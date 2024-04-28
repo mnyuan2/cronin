@@ -27,15 +27,30 @@ func DefaultStringTemplate() *StringTemplate {
 		leftDelim:  "[[",
 		rightDelim: "]]",
 		funcs: map[string]any{
-			// 任何数据转义为字符串
-			"string": func(val any) string {
+			// json 编码
+			"jsonString": func(val any) any {
 				v := reflect.ValueOf(val)
 				switch v.Kind() {
 				case reflect.Map, reflect.Slice:
 					value, _ := json.Marshal(val)
 					return string(value)
 				default:
-					return fmt.Sprintf("%v", val)
+					return val
+				}
+			},
+			// json 编码2次
+			"jsonString2": func(val any) any {
+				v := reflect.ValueOf(val)
+				switch v.Kind() {
+				case reflect.Map, reflect.Slice:
+					value, _ := json.Marshal(val)
+					value = bytes.ReplaceAll(value, []byte(`"`), []byte(`\"`))
+					return string(value)
+				case reflect.String:
+					value := bytes.ReplaceAll([]byte(val.(string)), []byte(`"`), []byte(`\"`))
+					return value
+				default:
+					return val
 				}
 			},
 		},
@@ -85,8 +100,7 @@ func (t *StringTemplate) Execute(text []byte) (newStr []byte, err error) {
 
 	// 应用模板到数据
 	buf := bytes.NewBuffer([]byte{})
-	err = _tmpl.Execute(buf, t.params)
-	if err != nil {
+	if err = _tmpl.Execute(buf, t.params); err != nil {
 		return nil, fmt.Errorf("模板执行失败,%w", err)
 	}
 	// 获取替换后的字符串

@@ -176,14 +176,16 @@ type CronConfigRegisterListResponse struct {
 
 // 任务设置
 type CronConfigRunRequest struct {
-	Id       int                `json:"id"`                 // 任务编号
-	Name     string             `json:"name,omitempty"`     // 任务名称
-	Type     int                `json:"type"`               // 类型
-	Spec     string             `json:"spec"`               // 执行时间表达式
-	Protocol int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
-	Command  *CronConfigCommand `json:"command,omitempty"`  // 命令
-	Status   int                `json:"status"`             // 状态
-	Remark   string             `json:"remark"`
+	Id        int                `json:"id"`                 // 任务编号
+	Name      string             `json:"name,omitempty"`     // 任务名称
+	Type      int                `json:"type"`               // 类型
+	Spec      string             `json:"spec"`               // 执行时间表达式
+	Protocol  int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status    int                `json:"status"`             // 状态
+	Remark    string             `json:"remark"`
+	VarFields []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
+	MsgSet    []*CronMsgSet      `json:"msg_set"`             // 消息设置
 }
 type CronConfigRunResponse struct {
 	Result string `json:"result"`

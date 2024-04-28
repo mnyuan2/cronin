@@ -34,6 +34,7 @@
 <script src="/components/env.js?v=[[.version]]"></script>
 <script src="/components/message_template.js?v=[[.version]]"></script>
 <script src="/components/users.js?v=[[.version]]"></script>
+<script src="/components/var_params.js?v=[[.version]]"></script>
 <script>
     // 路由
     const router = new VueRouter({
@@ -46,6 +47,7 @@
             {path: '/users', component: MyUsers},
             {path: '/logs', component: MyConfigLog},
             {path: '/trace', component: MyTrace},
+            {path: '/var_params', component: MyVarParams},
         ]
     })
     // vue

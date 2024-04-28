@@ -1,12 +1,10 @@
 package biz
 
 import (
-	"bytes"
 	"context"
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
 	"cron/internal/models"
-	"cron/internal/pb"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -486,49 +484,37 @@ func str2gbk(text []byte) []byte {
 	return []byte(srcCoder)
 }
 
-func TestTemplate(t *testing.T) {
-	var err error
-	str := []byte(`{"http":{"method":"POST","url":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx","body":"{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[log.create_dt]]\\n任务 [[config.name]]执行[[log.status_name]]了 \\n耗时[[log.duration]]秒\\n响应：[[log.body]]\",\n        \"mentioned_mobile_list\": [[user.mobile]]\n    }\n}","header":[{"key":"","value":""}]}}`)
+// 配置解析
+func TestConfigParse(t *testing.T) {
+	param := `{"a":"A","b":{"b1":"B1","B2":22},"c":3}`
 
-	// 提取模板变量
-	// 重组临时变量，默认置空，有效的写入新值
-	// 方案1 解析前监测双引号等关键、方案2让低层兼容
-	args := map[string]string{
-		"env":                  "测试环境",
-		"config.name":          "xx任务",
-		"config.protocol_name": "sql脚本",
-		"log.status_name":      "成功",
-		"log.status_desc":      "success",
-		"log.body": strings.ReplaceAll(`Get "http://baidu.com": EOF
-`, `"`, `\\\"`),
-		"log.duration":  "3.2s",
-		"log.create_dt": "2023-01-01 11:12:59",
-		"user.username": "",
-		"user.mobile":   "",
+	varParams := map[string]any{}
+	if param != "" {
+		if er := jsoniter.UnmarshalFromString(param, &varParams); er != nil {
+			t.Fatal(er)
+		}
 	}
 
-	mobles := []string{"01987654321", "12345678910"}
-	args["user.mobile"], err = jsoniter.MarshalToString(mobles)
+	err := NewJobConfig(&models.CronConfig{
+		Id:           0,
+		Env:          "",
+		EntryId:      0,
+		Type:         0,
+		Name:         "",
+		Spec:         "",
+		Protocol:     0,
+		Command:      []byte(`{"cmd": {"host": {"id": -1, "ip": "", "port": "", "type": "", "user": "", "secret": ""}, "type": "bash", "origin": "local", "statement": {"git": {"ref": "", "path": [""], "owner": "", "link_id": 0, "project": ""}, "type": "", "local": "echo [[.a]] '\\n' [[.b]] [[jsonString2 .b]] [[.b.b1]]", "is_batch": 0}}, "git": {"events": [], "link_id": 0}, "rpc": {"addr": "", "body": "", "proto": "", "action": "", "header": [], "method": "GRPC", "actions": []}, "sql": {"driver": "mysql", "origin": "local", "source": {"id": 0, "port": "", "title": "", "database": "", "hostname": "", "password": "", "username": ""}, "interval": 0, "statement": [], "err_action": 1, "err_action_name": ""}, "http": {"url": "", "body": "", "header": [{"key": "", "value": ""}], "method": "GET"}, "jenkins": {"name": "", "params": [{"key": "", "value": ""}], "source": {"id": 0}}}`),
+		Remark:       "",
+		Status:       0,
+		StatusRemark: "",
+		StatusDt:     "",
+		UpdateDt:     "",
+		CreateDt:     "",
+		MsgSet:       nil,
+		VarFields:    []byte(`[{"key": "a", "value": "常规参数"}, {"key": "b", "value": "对象,内部至少包含b1"}, {"key": "", "value": ""}]`),
+	}).Parse(varParams)
+
 	if err != nil {
-		t.Fatal("数据转义错误", err.Error())
+		t.Fatal(err)
 	}
-	args["user.mobile"] = strings.ReplaceAll(args["user.mobile"], `"`, `\"`)
-
-	username := []string{"大王", "二王"}
-	args["user.username"], err = jsoniter.MarshalToString(username)
-	if err != nil {
-		t.Fatal("数据转义错误", err.Error())
-	}
-	args["user.username"] = strings.ReplaceAll(args["user.username"], `"`, `\"`)
-
-	// 变量替换
-	for k, v := range args {
-		str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)
-	}
-	//fmt.Println(string(str))
-	temp := &pb.SettingMessageTemplate{Http: &pb.CronHttp{Header: []*pb.KvItem{}}}
-	if err := jsoniter.Unmarshal(str, temp); err != nil {
-		t.Fatal(err, "解析错误")
-	}
-	fmt.Println(temp)
 }

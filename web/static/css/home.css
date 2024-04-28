@@ -10,6 +10,17 @@ body{
     padding: 0;
     border: 0;
 }
+h3,h2{
+    font-size: 120%;
+    font-weight: 400;
+    color: #1f2f3d;
+}
+p{
+    font-size: 14px;
+    color: #444950;
+    line-height: 1.5em;
+    margin-top: 0;
+}
 .el-menu--horizontal>.el-menu-item,
 .el-submenu{
     height: 46px;
@@ -110,6 +121,9 @@ i.el-alert__icon{
 .is-light{
     background-color: #fef0f0 !important;
     color: #f56c6c;
+}
+.is-light.el-alert--info {
+    background-color: #f4f4f5 !important;
 }
 
 /*任务表单弹窗*/

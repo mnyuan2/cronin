@@ -39,7 +39,7 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 		Type:         0,
 		Name:         conf.Name,
 		Spec:         conf.Spec,
-		Protocol:     0,
+		Protocol:     99,
 		Command:      nil,
 		Remark:       "",
 		Status:       conf.Status,
@@ -157,9 +157,11 @@ func (job *JobPipeline) Run() {
 
 	// 参数解析
 	varParams := map[string]any{}
-	if er := jsoniter.UnmarshalFromString(job.pipeline.VarParams, varParams); err != nil {
-		err = errs.New(er, "参数解析失败")
-		return
+	if job.pipeline.VarParams != "" {
+		if er := jsoniter.UnmarshalFromString(job.pipeline.VarParams, &varParams); err != nil {
+			err = errs.New(er, "参数解析失败")
+			return
+		}
 	}
 
 	for _, j := range jobs {

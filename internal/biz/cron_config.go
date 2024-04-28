@@ -234,7 +234,11 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 	}
 
-	d.Status = enum.StatusDisable // 编辑后，单子都是草稿
+	if d.Status != enum.StatusDisable { // 编辑后，单子都是草稿
+		d.Status = enum.StatusDisable
+		d.StatusRemark = "编辑"
+		d.StatusDt = time.Now().Format(time.DateTime)
+	}
 	d.Name = r.Name
 	d.Spec = r.Spec
 	d.Protocol = r.Protocol
@@ -302,7 +306,16 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 	if err != nil {
 		return nil, err
 	}
-
+	if r.MsgSet != nil {
+		if conf.MsgSet, err = jsoniter.Marshal(r.VarFields); err != nil {
+			return nil, errs.New(err, "消息设置序列化错误")
+		}
+	}
+	if r.VarFields != nil {
+		if conf.VarFields, err = jsoniter.Marshal(r.VarFields); err != nil {
+			return nil, errs.New(err, "字段设置序列化错误")
+		}
+	}
 	res, err := NewJobConfig(conf).Running(dm.ctx, "手动执行", map[string]any{})
 	if err != nil {
 		return nil, err
