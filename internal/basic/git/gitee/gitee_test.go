@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var conf = &git.Config{AccessToken: "f5c13d72c3f68dd6c92bb82641c8a7c9"}
+var conf = &git.Config{AccessToken: "e6a28b06d79d492f9809069d5550b436"}
 
 func TestUrl(t *testing.T) {
 	api := NewApiV5(conf)
