@@ -69,6 +69,7 @@ func CheckSql(sql *pb.CronSql) error {
 			if item.Local == "" {
 				return errors.New("未设置 sql 执行语句")
 			}
+			item.IsBatch = enum.BoolYes
 		} else if sql.Origin == enum.SqlStatementSourceGit {
 			if item.Git.LinkId == 0 {
 				return errors.New("未设置 sql 语句 连接")
@@ -87,6 +88,9 @@ func CheckSql(sql *pb.CronSql) error {
 			}
 		} else {
 			return errors.New("sql来源有误")
+		}
+		if _, ok := enum.BoolMap[item.IsBatch]; !ok {
+			return errors.New("请确认是否批量解析")
 		}
 	}
 
@@ -139,5 +143,50 @@ func CheckCmd(cmd *pb.CronCmd) error {
 		return fmt.Errorf("未指定命令行来源")
 	}
 
+	return nil
+}
+
+func CheckJenkins(jks *pb.CronJenkins) error {
+	if jks.Source == nil || jks.Source.Id == 0 {
+		return fmt.Errorf("未选择链接")
+	}
+	if jks.Name == "" {
+		return fmt.Errorf("项目名称不得为空")
+	}
+	pl := len(jks.Params)
+	for i, param := range jks.Params {
+		if param.Key == "" && i < (pl-1) {
+			return fmt.Errorf("参数 %v 名称不得为空", i+1)
+		}
+	}
+	return nil
+}
+
+func CheckGit(c *pb.CronGit) error {
+	if c.LinkId <= 0 {
+		return fmt.Errorf("未指定有效连接")
+	}
+	if len(c.Events) == 0 {
+		return fmt.Errorf("未指定事件")
+	}
+	for i, e := range c.Events {
+		switch e.Id {
+		case enum.GitEventPullsMerge:
+			if e.PRMerge.Owner == "" {
+				return errors.New("git 仓库空间 未设置")
+			}
+			if e.PRMerge.Repo == "" {
+				return errors.New("git 项目名称 未设置")
+			}
+			if e.PRMerge.Number == 0 {
+				return errors.New("git 仓库PR的序数为必填")
+			}
+			if e.PRMerge.MergeMethod == "" {
+				return errors.New("git 合并方式不得为空")
+			}
+		default:
+			return fmt.Errorf("未支持的事件 %v-%v", i, e.Id)
+		}
+	}
 	return nil
 }

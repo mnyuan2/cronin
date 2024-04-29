@@ -23,7 +23,7 @@ import (
 type JobPipeline struct {
 	pipeline    *models.CronPipeline
 	confs       []*pb.CronConfigListItem // 配置任务集合
-	conf        *JobConfig
+	conf        *JobConfig               // 流水线解析后的本身配置
 	msgSetParse *dtos.MsgSetParse
 	tracer      trace.Tracer
 }
@@ -35,14 +35,14 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 	}
 	job.conf = NewJobConfig(&models.CronConfig{
 		Env:          conf.Env,
-		EntryId:      0,
+		EntryId:      conf.EntryId,
 		Type:         0,
 		Name:         conf.Name,
-		Spec:         "",
-		Protocol:     0,
+		Spec:         conf.Spec,
+		Protocol:     99,
 		Command:      nil,
 		Remark:       "",
-		Status:       0,
+		Status:       conf.Status,
 		StatusRemark: "",
 		StatusDt:     "",
 		UpdateDt:     "",
@@ -53,6 +53,7 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 		log.Println("流水线配置解析错误", err.Error())
 		// ...
 	}
+	job.conf.Parse(nil)
 
 	// 日志
 	job.tracer = tracing.Tracer(job.pipeline.Env+"-cronin", trace.WithInstrumentationAttributes(
@@ -154,8 +155,17 @@ func (job *JobPipeline) Run() {
 		jobs = append(jobs, NewJobConfig(temp))
 	}
 
+	// 参数解析
+	varParams := map[string]any{}
+	if job.pipeline.VarParams != "" {
+		if er := jsoniter.UnmarshalFromString(job.pipeline.VarParams, &varParams); err != nil {
+			err = errs.New(er, "参数解析失败")
+			return
+		}
+	}
+
 	for _, j := range jobs {
-		_, er := j.Running(ctx, "流水线执行")
+		_, er := j.Running(ctx, "流水线执行", varParams)
 		if er != nil {
 			job.conf.messagePush(ctx, enum.StatusDisable, er.Desc()+" 流水线"+job.pipeline.ConfigErrActionName(), []byte(err.Error()), time.Since(st).Seconds())
 			// 这里要确认一下是否继续执行下去。
@@ -167,4 +177,8 @@ func (job *JobPipeline) Run() {
 	// 结束语
 	job.conf.messagePush(ctx, enum.StatusActive, "完成", nil, time.Since(st).Seconds())
 
+}
+
+func (job *JobPipeline) GetConf() *JobConfig {
+	return job.conf
 }

@@ -4,11 +4,13 @@ import (
 	"context"
 	jsoniter "github.com/json-iterator/go"
 	"net/http"
+	"time"
 )
 
 // 处理结果
 type Handler struct {
 	ctx            context.Context
+	startTime      time.Time
 	General        *General
 	RequestHeader  http.Header
 	RequestBody    []byte
@@ -24,8 +26,9 @@ type General struct {
 
 func NewHandler(ctx context.Context) *Handler {
 	return &Handler{
-		ctx:     ctx,
-		General: &General{},
+		ctx:       ctx,
+		General:   &General{},
+		startTime: time.Now(),
 	}
 }
 
@@ -75,4 +78,20 @@ func (m *Handler) ResponseHeaderBytes() []byte {
 	}
 	b, _ := jsoniter.Marshal(m.ResponseHeader)
 	return b
+}
+
+func (m *Handler) StartTime() time.Time {
+	return m.startTime
+}
+
+// 返回字符串表示
+func (m *Handler) String() string {
+	s, _ := jsoniter.MarshalToString(map[string]any{
+		"general":        m.General,
+		"request_header": m.RequestHeader,
+		"RequestBody":    string(m.RequestBody),
+		"ResponseHeader": m.ResponseHeader,
+		"ResponseBody":   string(m.ResponseBody),
+	})
+	return s
 }

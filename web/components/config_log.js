@@ -34,11 +34,11 @@ var MyConfigLog = Vue.extend({
 </div>`,
     name: "MyConfigLog",
     props: {
-        config_id:Number,
+        tags:Object
     },
     data(){
         return {
-            config_id:0,
+            tags:{},
             list:[],// 日志列表，没有分页；
             trace:{
                 id: "",
@@ -51,11 +51,11 @@ var MyConfigLog = Vue.extend({
     // 模块初始化
     mounted(){},
     watch:{
-        config_id:{
+        tags:{
             immediate: true, // 解决首次负值不触发的情况
             handler: function (newVal,oldVal){
-                console.log("config_log config_id",newVal, oldVal)
-                if (newVal != 0){
+                console.log("config_log tags",newVal, oldVal)
+                if (newVal != {}){
                     this.logByConfig(newVal)
                 }
             },
@@ -65,8 +65,9 @@ var MyConfigLog = Vue.extend({
     // 具体方法
     methods:{
         // 配置日志
-        logByConfig(id){
-            api.innerGet("/log/list", {tags: JSON.stringify({ref_id: id}), limit:15}, (res)=>{
+        logByConfig(tags){
+            let body = {tags: JSON.stringify(tags), limit:15}
+            api.innerGet("/log/list", body, (res)=>{
                 if (!res.status){
                     console.log("log/list 错误", res)
                     return this.$message.error(res.message);

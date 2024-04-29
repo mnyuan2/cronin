@@ -73,3 +73,11 @@ func TestDemo2(t *testing.T) {
 	s, err = gen.ParseID("3030303030303031")
 	fmt.Printf("%s, %v\n", s, err)
 }
+
+func TestOption(t *testing.T) {
+	conf := trace.NewSpanStartConfig(trace.WithTimestamp(time.Now()))
+	fmt.Println(conf.Timestamp(), conf.Timestamp().IsZero())
+
+	conf2 := trace.NewSpanStartConfig()
+	fmt.Println(conf2.Timestamp(), conf2.Timestamp().IsZero())
+}

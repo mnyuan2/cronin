@@ -101,9 +101,17 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 		d.Env = dm.user.Env
 	}
 
+	if r.VarParams != "" {
+		prams := map[string]any{}
+		if err = jsoniter.UnmarshalFromString(r.VarParams, &prams); err != nil {
+			return nil, fmt.Errorf("变量参数序列化错误，%w", err)
+		}
+	}
+
 	d.Name = r.Name
 	d.Spec = r.Spec
 	d.Remark = r.Remark
+	d.VarParams = r.VarParams
 	d.ConfigIds, _ = jsoniter.Marshal(r.ConfigIds)
 	d.Configs, _ = jsoniter.Marshal(r.Configs)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)

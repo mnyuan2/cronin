@@ -17,6 +17,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"log"
 	"net/http"
 	"time"
 )
@@ -50,6 +51,8 @@ func (dm *TaskService) Init() (err error) {
 				conf.EntryId = 0
 				conf.Status = models.ConfigStatusError
 				cronDb.ChangeStatus(conf, "初始化注册错误")
+			} else {
+				cronDb.SetEntryId(conf)
 			}
 		}
 	}
@@ -67,6 +70,8 @@ func (dm *TaskService) Init() (err error) {
 				conf.EntryId = 0
 				conf.Status = models.ConfigStatusError
 				pipeineData.ChangeStatus(conf, "初始化注册错误")
+			} else {
+				pipeineData.SetEntryId(conf)
 			}
 		}
 	}
@@ -99,6 +104,7 @@ func (dm *TaskService) AddConfig(conf *models.CronConfig) error {
 	} else {
 		id, err = dm.cron.AddJob(conf.Spec, j)
 	}
+	log.Printf("添加任务 %v -> %v", conf.Id, id)
 	if err != nil {
 		_, span := tracing.Tracer(conf.Env+"-cronin", trace.WithInstrumentationAttributes(
 			attribute.String("driver", "mysql"),
@@ -150,6 +156,7 @@ func (dm *TaskService) addOnce(spec string, j cron.Job) (cron.EntryID, error) {
 
 // 删除任务
 func (dm *TaskService) Del(conf *models.CronConfig) {
+	log.Printf("移除任务 %v -> %v", conf.Id, conf.EntryId)
 	if conf.EntryId == 0 {
 		return
 	}

@@ -81,7 +81,14 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 				return err
 			}
 			for _, file := range files {
-				list := bytes.Split(file.Byte, []byte(";"))
+				list := [][]byte{}
+				if item.IsBatch == enum.BoolYes {
+					list = bytes.Split(file.Byte, []byte(";"))
+				} else if item.IsBatch == enum.BoolNot {
+					list = [][]byte{0: file.Byte}
+				} else {
+					return errs.New(nil, "git 批量解析标识未填写，请重新编辑后提交")
+				}
 				for _, item := range list {
 					s := bytes.TrimSpace(item)
 					if s != nil {
@@ -113,6 +120,7 @@ func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []*pb.
 	var tx *gorm.DB
 	if r.ErrAction == models.SqlErrActionRollback {
 		tx = _db.Begin()
+		r.Interval = 0
 	} else {
 		tx = _db
 	}

@@ -29,6 +29,7 @@ type CronPipeline struct {
 	Type                int    `json:"type" gorm:"column:type;type:tinyint(2);default:1;comment:类型：1.周期任务（默认）、2.单次任务;"`
 	Name                string `json:"name" gorm:"column:name;type:varchar(255);default:'';comment:任务名称;"`
 	Spec                string `json:"spec" gorm:"column:spec;type:varchar(32);default:'';comment:执行时间 表达式;"`
+	VarParams           string `json:"var_params" gorm:"column:var_params;type:varchar(5000);comment:变量参数;"`
 	ConfigIds           []byte `json:"config_ids" gorm:"column:config_ids;type:json;default:null;comment:任务id集合;"`
 	Configs             []byte `json:"configs" gorm:"column:configs;type:json;default:null;comment:任务集合;"` // 存储快照用于展示，执行时要取最新的任务信息
 	ConfigDisableAction int    `json:"config_disable_action" gorm:"column:config_disable_action;type:tinyint(2);default:1;comment:任务停用行为：1.整体停止、2.忽略跳过、3.执行;"`

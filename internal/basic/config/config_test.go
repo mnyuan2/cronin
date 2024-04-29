@@ -39,3 +39,13 @@ func TestHttpConfs_GetConf(t *testing.T) {
 
 	fmt.Printf("%#v\n", conf)
 }
+
+func TestYaml(t *testing.T) {
+	var dbConf DataBaseConf
+
+	if err := NewYamlParse().Parse("configs/database.yaml", &dbConf); err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(dbConf)
+}

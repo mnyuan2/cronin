@@ -11,7 +11,7 @@ import (
 
 // Init http 初始化
 func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
 
 	if isBuildResource {
 		// 二进制版本,打包使用（优点，静态资源将被打包至二进制文件）
@@ -32,7 +32,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 		r.Static("/components", "web/components")
 	}
 
-	r.Use(UseAuth(nil))
+	r.Use(gin.Recovery(), UseAuth(nil))
 	// api
 	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/foundation/system_info", routerSystemInfo)

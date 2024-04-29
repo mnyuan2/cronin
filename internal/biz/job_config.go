@@ -67,24 +67,15 @@ type JobConfig struct {
 	msgSetParse  *dtos.MsgSetParse
 	ErrorCount   int // 连续错误
 	tracer       trace.Tracer
+	varParams    map[string]any
 }
 
 // 任务执行器
 func NewJobConfig(conf *models.CronConfig) *JobConfig {
 	job := &JobConfig{
-		conf:         conf,
-		commandParse: &pb.CronConfigCommand{},
-		msgSetParse:  &dtos.MsgSetParse{MsgIds: []int{}, StatusIn: map[int]any{}, NotifyUserIds: []int{}, Set: []*pb.CronMsgSet{}},
+		conf: conf,
 	}
 
-	_ = jsoniter.Unmarshal(conf.Command, job.commandParse)
-	_ = jsoniter.Unmarshal(conf.MsgSet, &job.msgSetParse.Set)
-
-	for _, s := range job.msgSetParse.Set {
-		job.msgSetParse.StatusIn[s.Status] = struct{}{}
-		job.msgSetParse.NotifyUserIds = append(job.msgSetParse.NotifyUserIds, s.NotifyUserIds...)
-		job.msgSetParse.MsgIds = append(job.msgSetParse.MsgIds, s.MsgId)
-	}
 	// 日志
 	job.tracer = tracing.Tracer(job.conf.Env+"-cronin", trace.WithInstrumentationAttributes(
 		attribute.String("driver", "mysql"),
@@ -92,6 +83,55 @@ func NewJobConfig(conf *models.CronConfig) *JobConfig {
 	))
 
 	return job
+}
+
+// 解析
+func (job *JobConfig) Parse(params map[string]any) errs.Errs {
+	job.varParams = map[string]any{}
+	if len(job.conf.VarFields) > 5 {
+		//根据定义初始化参数，没有传入默认为空字符串
+		temp := []*pb.KvItem{}
+		if err := jsoniter.Unmarshal(job.conf.VarFields, &temp); err != nil {
+			return errs.New(err, "变量参数字段解析错误")
+		}
+		for _, item := range temp {
+			if item.Key == "" {
+				continue
+			}
+			job.varParams[item.Key] = ""
+		}
+	}
+
+	for k, v := range params {
+		if _, ok := job.varParams[k]; ok {
+			job.varParams[k] = v
+		}
+	}
+	// 进行模板替换
+	cmd, err := conv.DefaultStringTemplate().SetParam(job.varParams).Execute(job.conf.Command)
+	if err != nil {
+		return errs.New(err, "模板错误")
+	}
+
+	job.commandParse = &pb.CronConfigCommand{}
+	job.msgSetParse = &dtos.MsgSetParse{MsgIds: []int{}, StatusIn: map[int]any{}, NotifyUserIds: []int{}, Set: []*pb.CronMsgSet{}}
+	if cmd != nil {
+		if err := jsoniter.Unmarshal(cmd, job.commandParse); err != nil {
+			return errs.New(err, "配置解析错误")
+		}
+	}
+	if job.conf.MsgSet != nil {
+		if err := jsoniter.Unmarshal(job.conf.MsgSet, &job.msgSetParse.Set); err != nil {
+			return errs.New(err, "消息设置解析错误")
+		}
+	}
+
+	for _, s := range job.msgSetParse.Set {
+		job.msgSetParse.StatusIn[s.Status] = struct{}{}
+		job.msgSetParse.NotifyUserIds = append(job.msgSetParse.NotifyUserIds, s.NotifyUserIds...)
+		job.msgSetParse.MsgIds = append(job.msgSetParse.MsgIds, s.MsgId)
+	}
+	return nil
 }
 
 // 执行任务
@@ -132,6 +172,10 @@ func (job *JobConfig) Run() {
 		}
 	}
 
+	if err = job.Parse(nil); err != nil {
+		return
+	}
+
 	res, err = job.Exec(ctx)
 	if err != nil {
 		job.ErrorCount++
@@ -160,7 +204,7 @@ func (job *JobConfig) Run() {
 }
 
 // 执行任务 未注册版本
-func (job *JobConfig) Running(ctx context.Context, remark string) (res []byte, err errs.Errs) {
+func (job *JobConfig) Running(ctx context.Context, remark string, params map[string]any) (res []byte, err errs.Errs) {
 	st := time.Now()
 	ctx, span := job.tracer.Start(ctx, "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
@@ -177,6 +221,8 @@ func (job *JobConfig) Running(ctx context.Context, remark string) (res []byte, e
 			span.SetStatus(tracing.StatusError, "执行异常")
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
 		}
+		p, _ := jsoniter.Marshal(job.varParams)
+		span.AddEvent("", trace.WithAttributes(attribute.Stringer("var_params", bytes.NewBuffer(p))))
 		span.End()
 	}()
 	span.SetAttributes(
@@ -186,6 +232,11 @@ func (job *JobConfig) Running(ctx context.Context, remark string) (res []byte, e
 		attribute.String("component", "job"),
 		attribute.String("remark", remark),
 	)
+
+	if err = job.Parse(params); err != nil {
+		span.AddEvent("", trace.WithAttributes(attribute.Stringer("config", bytes.NewBuffer(job.conf.Command))))
+		return
+	}
 
 	res, err = job.Exec(ctx)
 	if err != nil {
@@ -210,6 +261,8 @@ func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 		err = job.sqlFunc(ctx)
 	case models.ProtocolJenkins:
 		err = job.jenkins(ctx, job.commandParse.Jenkins)
+	case models.ProtocolGit:
+		res, err = job.gitFunc(ctx, job.commandParse.Git)
 	default:
 		err = errs.New(nil, fmt.Sprintf("未支持的protocol=%v", job.conf.Protocol))
 	}
@@ -481,7 +534,7 @@ func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, 
 		attribute.String("method", h.Method),
 		attribute.String("request_header", string(h.GetSendHeadersMarshal())),
 		attribute.String("response_header", string(h.GetReceiveHeadersMarshal())),
-		attribute.String("request", string(h.ReqMessages)),
+		attribute.String("request", r.Body),
 		attribute.String("response", h.RespMessages)),
 	)
 	return []byte(h.RespMessages), err
