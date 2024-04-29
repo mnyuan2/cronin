@@ -140,7 +140,7 @@ var MyTrace = Vue.extend({
                         span.bar.log.push({show:false})
                     })
 
-                    span.bar.style = 'background: #37be5f; left: '+span.bar.left+'%; width: '+span.bar.width+'%;'
+                    span.bar.style = 'background: #37be5f; left: '+(span.bar.left> 99.9? 99.9 : span.bar.left)+'%; width: '+(span.bar.width<0.1? '1px': span.bar.width+'%')+';'
                 }
 
                 let trace = arrayToTree(list, 'span_id', 'parent_span_id', 'children')

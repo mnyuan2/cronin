@@ -9,6 +9,7 @@ const (
 	DicGitSource     = 13   // git 连接
 	DicHostSource    = 14   // 主机 连接
 	DicCmdType       = 1001 // 命令行类型
+	DicGitEvent      = 1002 // git 事件
 )
 
 const (
@@ -21,4 +22,14 @@ const (
 var StatusMap = map[int]string{
 	StatusDisable: "停用",
 	StatusActive:  "激活",
+}
+
+const (
+	BoolYes = 1 // 是
+	BoolNot = 2 // 否
+)
+
+var BoolMap = map[int]string{
+	BoolYes: "是",
+	BoolNot: "否",
 }

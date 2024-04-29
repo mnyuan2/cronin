@@ -37,7 +37,7 @@ func (h *MyEventHandler) OnSendHeaders(md metadata.MD) {
 
 // GetSendHeadersMarshal 获取发送的header
 func (h *MyEventHandler) GetSendHeadersMarshal() []byte {
-	b, _ := jsoniter.Marshal(h.ReqMessages)
+	b, _ := jsoniter.Marshal(h.ReqHeaders)
 	return b
 }
 

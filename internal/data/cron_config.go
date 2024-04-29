@@ -36,7 +36,7 @@ func (m *CronConfigData) ListPage(where *db.Where, page, size int, list interfac
 func (m *CronConfigData) Set(data *models.CronConfig) error {
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	if data.Id > 0 {
-		return m.db.Where("id=?", data.Id).Omit("status", "status_remark", "status_dt", "entry_id", "env").Updates(data).Error
+		return m.db.Where("id=?", data.Id).Omit("entry_id", "env").Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
 		return m.db.Omit("status_dt").Create(data).Error
@@ -48,6 +48,10 @@ func (m *CronConfigData) ChangeStatus(data *models.CronConfig, remark string) er
 	data.StatusDt = data.UpdateDt
 	data.StatusRemark = remark
 	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id").Updates(data).Error
+}
+
+func (m *CronConfigData) SetEntryId(data *models.CronConfig) error {
+	return m.db.Where("id=?", data.Id).Select("entry_id").Updates(data).Error
 }
 
 func (m *CronConfigData) GetOne(env string, Id int) (data *models.CronConfig, err error) {

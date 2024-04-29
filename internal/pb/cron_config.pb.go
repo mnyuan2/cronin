@@ -7,9 +7,10 @@ type KvItem struct {
 
 // 任务语句
 type CronStatement struct {
-	Type  string `json:"type"`
-	Local string `json:"local"` // 本地输入
-	Git   *Git   `json:"git"`   // git输入
+	Type    string `json:"type"`
+	Local   string `json:"local"`    // 本地输入
+	Git     *Git   `json:"git"`      // git输入
+	IsBatch int    `json:"is_batch"` // 是否批量解析
 }
 
 type Git struct {
@@ -18,6 +19,26 @@ type Git struct {
 	Project string   `json:"project"` // 仓库项目
 	Path    []string `json:"path"`    // 文件的路径
 	Ref     string   `json:"ref"`     // 分支、tag或commit。默认: 仓库的默认分支(通常是master)
+}
+
+type GitEvent struct {
+	Id      int              `json:"id"`       // 事件id
+	PRMerge *GitEventPRMerge `json:"pr_merge"` // pr合并内容
+}
+
+type GitEventPRMerge struct {
+	Owner string `json:"owner"` // 空间地址
+	Repo  string `json:"repo"`  // 项目名称（仓库路径）
+	// 第几个PR，即本仓库PR的序数
+	Number int32 `json:"number"`
+	// 可选。合并PR的方法，merge（合并所有提交）、squash（扁平化分支合并）和rebase（变基并合并）。默认为merge。
+	MergeMethod string `json:"merge_method"`
+	// 可选。合并PR后是否删除源分支，默认false（不删除）
+	PruneSourceBranch bool `json:"prune_source_branch"`
+	// 可选。合并标题，默认为PR的标题
+	Title string `json:"title"`
+	// 可选。合并描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
+	Description string `json:"description"`
 }
 
 // 任务列表
@@ -48,23 +69,26 @@ type CronConfigListItem struct {
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
+	VarFields      []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
 	Command        *CronConfigCommand `json:"command" gorm:"-"`
 	MsgSet         []*CronMsgSet      `json:"msg_set" gorm:"-"`
+	VarFieldsStr   []byte             `json:"-" gorm:"column:var_fields;"`
 	CommandStr     []byte             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
 	MsgSetStr      []byte             `json:"-" gorm:"column:msg_set;"`
 }
 
 // 任务设置
 type CronConfigSetRequest struct {
-	Id       int                `json:"id,omitempty"`       // 主键
-	Name     string             `json:"name,omitempty"`     // 任务名称
-	Type     int                `json:"type"`               // 类型
-	Spec     string             `json:"spec"`               // 执行时间表达式
-	Protocol int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
-	Command  *CronConfigCommand `json:"command,omitempty"`  // 命令
-	Status   int                `json:"status"`             // 状态
-	Remark   string             `json:"remark"`             // 备注
-	MsgSet   []*CronMsgSet      `json:"msg_set"`            // 消息设置
+	Id        int                `json:"id,omitempty"`       // 主键
+	Name      string             `json:"name,omitempty"`     // 任务名称
+	Type      int                `json:"type"`               // 类型
+	Spec      string             `json:"spec"`               // 执行时间表达式
+	Protocol  int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	VarFields []*KvItem          `json:"var_fields"`         // 定义变量参数
+	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status    int                `json:"status"`             // 状态
+	Remark    string             `json:"remark"`             // 备注
+	MsgSet    []*CronMsgSet      `json:"msg_set"`            // 消息设置
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`
@@ -81,6 +105,7 @@ type CronConfigCommand struct {
 	Cmd     *CronCmd     `json:"cmd"`
 	Sql     *CronSql     `json:"sql"`
 	Jenkins *CronJenkins `json:"jenkins"`
+	Git     *CronGit     `json:"git"`
 }
 
 type CronCmd struct {
@@ -138,6 +163,11 @@ type CronJenkins struct {
 	Params []*KvItem          `json:"params"` // 参数
 }
 
+type CronGit struct {
+	LinkId int         `json:"link_id"`
+	Events []*GitEvent `json:"events"`
+}
+
 // 已注册列表
 type CronConfigRegisterListRequest struct{}
 type CronConfigRegisterListResponse struct {
@@ -146,14 +176,16 @@ type CronConfigRegisterListResponse struct {
 
 // 任务设置
 type CronConfigRunRequest struct {
-	Id       int                `json:"id"`                 // 任务编号
-	Name     string             `json:"name,omitempty"`     // 任务名称
-	Type     int                `json:"type"`               // 类型
-	Spec     string             `json:"spec"`               // 执行时间表达式
-	Protocol int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
-	Command  *CronConfigCommand `json:"command,omitempty"`  // 命令
-	Status   int                `json:"status"`             // 状态
-	Remark   string             `json:"remark"`
+	Id        int                `json:"id"`                 // 任务编号
+	Name      string             `json:"name,omitempty"`     // 任务名称
+	Type      int                `json:"type"`               // 类型
+	Spec      string             `json:"spec"`               // 执行时间表达式
+	Protocol  int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status    int                `json:"status"`             // 状态
+	Remark    string             `json:"remark"`
+	VarFields []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
+	MsgSet    []*CronMsgSet      `json:"msg_set"`             // 消息设置
 }
 type CronConfigRunResponse struct {
 	Result string `json:"result"`

@@ -2,6 +2,7 @@ package biz
 
 import (
 	"bytes"
+	"cron/internal/basic/enum"
 	"cron/internal/pb"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -196,7 +197,12 @@ func TestSqlParse(t *testing.T) {
 	sql := `select 1; 
 select 2; select 3;`
 
-	list := bytes.Split([]byte(sql), []byte(";"))
+	list := [][]byte{}
+	if 1 == enum.BoolYes {
+		list = bytes.Split([]byte(sql), []byte(";"))
+	} else {
+		list = [][]byte{[]byte(sql)}
+	}
 	for i, item := range list {
 		s := bytes.TrimSpace(item)
 		if s != nil {

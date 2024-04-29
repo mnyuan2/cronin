@@ -27,6 +27,7 @@ type CronPipelineListItem struct {
 	TopNumber               int                   `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber          int                   `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt                string                `json:"update_dt"`
+	VarParams               string                `json:"var_params"`
 	ConfigIds               []int                 `json:"config_ids" gorm:"-"`
 	Configs                 []*CronConfigListItem `json:"configs" gorm:"-"`
 	MsgSet                  []*CronMsgSet         `json:"msg_set" gorm:"-"`
@@ -47,6 +48,7 @@ type CronPipelineSetRequest struct {
 	ConfigErrAction     int                   `json:"config_err_action"`     //
 	Status              int                   `json:"status"`                // 状态
 	Remark              string                `json:"remark"`                // 备注
+	VarParams           string                `json:"var_params"`            // 变量参数
 	MsgSet              []*CronMsgSet         `json:"msg_set"`               // 消息设置
 }
 type CronPipelineSetReply struct {

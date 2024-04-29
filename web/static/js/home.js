@@ -64,14 +64,14 @@ function durationTransform(duration, inFormat='us', outFormat='latest',lang='en'
             return duration*1000+langue['us'][lang]
         }else if (dur.asMilliseconds() < 1000){
             return dur.asMilliseconds()+langue['ms'][lang]
-        } else if (dur.seconds() < 60){
-            return Math.round(dur.asMilliseconds())/1000+langue['s'][lang]
-        }else if (dur.minutes() < 60){
-            return dur.seconds() / 60 + langue['m'][lang]
-        }else if (dur.hours() < 24){
-            return dur.minutes() / 60 + langue['h'][lang]
+        } else if (dur.asSeconds() < 60){
+            return dur.asSeconds().toFixed(3)+langue['s'][lang]
+        }else if (dur.asMinutes() < 60){
+            return dur.asMinutes().toFixed(2) + langue['m'][lang]
+        }else if (dur.asHours() < 24){
+            return dur.asHours().toFixed(2) + langue['h'][lang]
         }else{
-            return dur.hours() / 24 + langue['d'][lang]
+            return (dur.asHours() / 24).toFixed(2) + langue['d'][lang]
         }
     }
     // 跟过功能根据需求实现
@@ -164,6 +164,41 @@ function copyJSON(data) {
 }
 
 /**
+ * 监听输入变化数组追加行
+ * ~~~
+ * 元素最后一行非空追加行
+ * ~~~
+ * @param e 变化值
+ * @param index 变化行号
+ * @param arr 原数据
+ */
+function inputChangeArrayPush(e, index, arr){
+    // console.log(e, index, arr,"-->", arr.length)
+    if (e == ""){
+        return
+    }
+    if (arr.length-1 <= index){
+        arr.push({}) // 追加空元素
+    }
+}
+
+/**
+ * 删除数组元素
+ * ~~~
+ * 删除元素行，最后一行不可删除
+ * ~~~
+ * @param index 删除行号
+ * @param arr 原数据
+ * @constructor
+ */
+function arrayDelete(index, arr){
+    if ((index+1) >= arr.length){
+        return
+    }
+    arr.splice(index,1)
+}
+
+/**
  * 业务枚举
  * @type {{dicEnv: number, dicSqlSource: number, envKey: string}}
  */
@@ -179,6 +214,7 @@ const Enum ={
     dicGitSource: 13,
     dicHostSource: 14,
     dicCmdType: 1001,
+    dicGitEvent: 1002,
 }
 
 /**

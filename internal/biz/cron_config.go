@@ -16,6 +16,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -70,6 +71,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{Path: []string{}}}, Host: &pb.SettingHostSource{}},
 			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
+			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
 		}
 		item.MsgSet = []*pb.CronMsgSet{}
 		item.TypeName = models.ConfigTypeMap[item.Type]
@@ -82,6 +84,9 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			if er := jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); er != nil {
 				log.Println("	msg_set 解析错误", item.Id, er.Error())
 			}
+		}
+		if item.VarFieldsStr != nil {
+			_ = jsoniter.Unmarshal(item.VarFieldsStr, &item.VarFields)
 		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
@@ -104,16 +109,22 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 	for _, v := range list {
 		c, ok := v.Job.(*JobConfig)
 		if !ok {
-			resp.List = append(resp.List, &pb.CronConfigListItem{
-				Id:       int(v.ID),
-				Name:     "未识别注册任务",
-				UpdateDt: v.Next.Format(time.DateTime),
-			})
-			continue
+			c2, ok := v.Job.(*JobPipeline)
+			if !ok {
+				resp.List = append(resp.List, &pb.CronConfigListItem{
+					Id:       0,
+					EntryId:  int(v.ID),
+					Name:     "未识别注册任务",
+					UpdateDt: v.Next.Format(time.DateTime),
+				})
+				continue
+			}
+			c = c2.GetConf()
 		}
 		if c.conf.Id > 0 && dm.user.Env != c.conf.Env {
 			continue
 		}
+		c.Parse(nil)
 		conf := c.conf
 		next := ""
 		if s, err := secondParser.Parse(conf.Spec); err == nil {
@@ -121,6 +132,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 		}
 		resp.List = append(resp.List, &pb.CronConfigListItem{
 			Id:           conf.Id,
+			EntryId:      int(v.ID),
 			Name:         conf.Name,
 			Spec:         conf.Spec,
 			Protocol:     conf.Protocol,
@@ -151,7 +163,6 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
 	} else {
-		d.Status = enum.StatusDisable
 		d.Env = dm.user.Env
 	}
 
@@ -183,7 +194,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, err
 		}
 		if r.Command.Cmd.Host.Id > 0 {
-			if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Cmd.Host.Id); one.Id == 0 {
+			if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Cmd.Host.Id); one.Id == 0 || one.Scene != models.SceneHostSource {
 				return nil, errors.New("sql 连接 配置有误，请确认")
 			}
 		}
@@ -191,8 +202,30 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if err := dtos.CheckSql(r.Command.Sql); err != nil {
 			return nil, err
 		}
-		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 {
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 || one.Scene != models.SceneSqlSource {
 			return nil, errors.New("sql 连接 配置有误，请确认")
+		}
+	} else if r.Protocol == models.ProtocolJenkins {
+		if err := dtos.CheckJenkins(r.Command.Jenkins); err != nil {
+			return nil, err
+		}
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Jenkins.Source.Id); one.Id == 0 || one.Scene != models.SceneJenkinsSource {
+			return nil, errors.New("jenkins 连接 配置有误，请确认")
+		}
+	} else if r.Protocol == models.ProtocolGit {
+		if err := dtos.CheckGit(r.Command.Git); err != nil {
+			return nil, err
+		}
+		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Git.LinkId); one.Id == 0 || one.Scene != models.SceneGitSource {
+			return nil, errors.New("git 连接 配置有误，请确认")
+		}
+	}
+	pl := len(r.VarFields)
+	for i, param := range r.VarFields {
+		if param.Key == "" && i < (pl-1) {
+			return nil, fmt.Errorf("变量参数 %v 名称不得为空", i+1)
+		} else if strings.Contains(param.Key, ".") {
+			return nil, fmt.Errorf("参数key %v 不得包含.点符合", i+1)
 		}
 	}
 	for i, msg := range r.MsgSet {
@@ -201,11 +234,17 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 	}
 
+	if d.Status != enum.StatusDisable { // 编辑后，单子都是草稿
+		d.Status = enum.StatusDisable
+		d.StatusRemark = "编辑"
+		d.StatusDt = time.Now().Format(time.DateTime)
+	}
 	d.Name = r.Name
 	d.Spec = r.Spec
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
 	d.Type = r.Type
+	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	err = data.NewCronConfigData(dm.ctx).Set(d)
@@ -267,8 +306,17 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 	if err != nil {
 		return nil, err
 	}
-
-	res, err := NewJobConfig(conf).Running(dm.ctx, "手动执行")
+	if r.MsgSet != nil {
+		if conf.MsgSet, err = jsoniter.Marshal(r.VarFields); err != nil {
+			return nil, errs.New(err, "消息设置序列化错误")
+		}
+	}
+	if r.VarFields != nil {
+		if conf.VarFields, err = jsoniter.Marshal(r.VarFields); err != nil {
+			return nil, errs.New(err, "字段设置序列化错误")
+		}
+	}
+	res, err := NewJobConfig(conf).Running(dm.ctx, "手动执行", map[string]any{})
 	if err != nil {
 		return nil, err
 	}
