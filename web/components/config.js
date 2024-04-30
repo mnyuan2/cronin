@@ -171,7 +171,9 @@ var MyConfig = Vue.extend({
                                     <el-tab-pane label="sql" name="4" label-position="left">
                                         <el-form-item label="驱动" size="mini">
                                             <el-select v-model="form.command.sql.driver" placeholder="驱动">
+                                                <el-option v-for="dic_v in dic_sql_driver" :label="dic_v.name" :value="dic_v.key"></el-option>
                                                 <el-option label="mysql" value="mysql"></el-option>
+                                                <el-option label="clickhouse" value="clickhouse"></el-option>
                                             </el-select>
                                         </el-form-item>
                                         <el-form-item label="链接" size="mini">
@@ -1204,6 +1206,7 @@ var MyConfig = Vue.extend({
         getDicSqlSource(){
             let types = [
                 Enum.dicSqlSource,
+                Enum.dicSqlType,
                 Enum.dicJenkinsSource,
                 Enum.dicGitSource,
                 Enum.dicGitEvent,
@@ -1221,6 +1224,7 @@ var MyConfig = Vue.extend({
                 this.dic_user = res[Enum.dicUser]
                 this.dic_msg = res[Enum.dicMsg]
                 this.dic_cmd_type = res[Enum.dicCmdType]
+                this.dic_sql_ = res[Enum.dicSqlType]
             })
         },
         // 解析proto内容

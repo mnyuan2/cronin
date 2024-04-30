@@ -10,6 +10,7 @@ const (
 	DicHostSource    = 14   // 主机 连接
 	DicCmdType       = 1001 // 命令行类型
 	DicGitEvent      = 1002 // git 事件
+	DicSqlDriver     = 1003 // sql 驱动
 )
 
 const (

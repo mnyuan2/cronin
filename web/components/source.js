@@ -1,7 +1,7 @@
 var MySource = Vue.extend({
     template: `<el-main>
         <el-menu :default-active="list.labelIndex" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
-            <el-menu-item index="11" :disabled="list.request">mysql</el-menu-item>
+            <el-menu-item index="11" :disabled="list.request">sql</el-menu-item>
             <el-menu-item index="12" :disabled="list.request">jenkins</el-menu-item>
             <el-menu-item index="13" :disabled="list.request">git</el-menu-item>
             <el-menu-item index="14" :disabled="list.request">主机</el-menu-item>
@@ -31,6 +31,12 @@ var MySource = Vue.extend({
                 
                 <el-tabs type="border-card" v-model="form.data.type">
                     <el-tab-pane label="sql" name="11">
+                        <el-form-item label="类型*">
+                            <el-select v-model="form.data.source.sql.type">
+                                <el-option v-for="dic_v in dic_sql_type" :label="dic_v.name" :value="dic_v.key"></el-option>
+                            </el-select>
+                            <el-input v-model="form.data.source.sql.hostname"></el-input>
+                        </el-form-item>
                         <el-form-item label="主机*">
                             <el-input v-model="form.data.source.sql.hostname"></el-input>
                         </el-form-item>
@@ -103,6 +109,7 @@ var MySource = Vue.extend({
     name: "MySource",
     data(){
         return {
+            dic_sql_type:[],
             list:{
                 labelIndex: '11',
                 items: [],
@@ -129,6 +136,7 @@ var MySource = Vue.extend({
     // 模块初始化
     mounted(){
         this.getList()
+        this.getDicList()
     },
 
     // 具体方法
@@ -191,6 +199,15 @@ var MySource = Vue.extend({
                     return this.$message.error(res.message)
                 }
                 return this.$message.success('连接成功');
+            })
+        },
+        // 枚举
+        getDicList(){
+            let types = [
+                Enum.dicSqlType
+            ]
+            api.dicList(types,(res) =>{
+                this.dic_sql_type = res[Enum.dicSqlType]
             })
         },
         // 初始化表单数据

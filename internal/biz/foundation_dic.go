@@ -158,7 +158,11 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			{Id: enum.GitEventPullsCreate, Name: enum.GitEventMap[enum.GitEventPullsCreate]},
 			{Id: enum.GitEventPullsMerge, Name: enum.GitEventMap[enum.GitEventPullsMerge]},
 		}
-
+	case enum.DicSqlDriver:
+		items = []*pb.DicGetItem{
+			{Key: enum.SqlDriverMysql, Name: enum.SqlDriverMysql},
+			{Key: enum.SqlDriverClickhouse, Name: enum.SqlDriverClickhouse},
+		}
 	}
 
 	return items, nil
