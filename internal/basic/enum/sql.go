@@ -9,3 +9,8 @@ const (
 	SqlDriverMysql      = "mysql"
 	SqlDriverClickhouse = "clickhouse"
 )
+
+var SqlDriverMap = map[string]string{
+	SqlDriverMysql:      "mysql",
+	SqlDriverClickhouse: "clickhouse",
+}

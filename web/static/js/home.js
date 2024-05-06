@@ -215,7 +215,7 @@ const Enum ={
     dicHostSource: 14,
     dicCmdType: 1001,
     dicGitEvent: 1002,
-    dicSqlType: 1003,
+    dicSqlDriver: 1003,
 }
 
 /**

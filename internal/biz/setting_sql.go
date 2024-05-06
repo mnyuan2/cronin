@@ -121,6 +121,11 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 				return nil, fmt.Errorf("加密失败，%w", err)
 			}
 		}
+		if _, ok := enum.SqlDriverMap[r.Source.Sql.Driver]; !ok {
+			if err != nil {
+				return nil, fmt.Errorf("sql 驱动有误")
+			}
+		}
 	case enum.DicJenkinsSource:
 		r.Source.Jenkins.Hostname = strings.Trim(r.Source.Jenkins.Hostname, "/")
 	case enum.DicGitSource:

@@ -172,13 +172,11 @@ var MyConfig = Vue.extend({
                                         <el-form-item label="驱动" size="mini">
                                             <el-select v-model="form.command.sql.driver" placeholder="驱动">
                                                 <el-option v-for="dic_v in dic_sql_driver" :label="dic_v.name" :value="dic_v.key"></el-option>
-                                                <el-option label="mysql" value="mysql"></el-option>
-                                                <el-option label="clickhouse" value="clickhouse"></el-option>
                                             </el-select>
                                         </el-form-item>
                                         <el-form-item label="链接" size="mini">
                                             <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
-                                                <el-option v-for="(dic_v,dic_k) in dic_sql_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                                <el-option v-for="(dic_v,dic_k) in dic_sql_source" v-show="dic_v.extend.driver == form.command.sql.driver" :label="dic_v.name" :value="dic_v.id"></el-option>
                                             </el-select>
                                             <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
                                         </el-form-item>
@@ -222,7 +220,9 @@ var MyConfig = Vue.extend({
                                             </el-tooltip>
                                         </el-form-item>
                                         <el-form-item label="执行间隔" size="mini" v-if="form.command.sql.err_action !=3" label-width="69px">
-                                            <el-input type="number" v-model="form.command.sql.interval" placeholder="s秒"></el-input>
+                                            <el-input type="number" v-model="form.command.sql.interval" placeholder="s秒">
+                                                <span slot="append">s/秒</span>
+                                            </el-input>
                                         </el-form-item>
                                     </el-tab-pane>
                                     
@@ -446,6 +446,7 @@ var MyConfig = Vue.extend({
     data(){
         return {
             dic_sql_source:[],
+            dic_sql_driver:[],
             dic_user: [],
             dic_msg: [],
             dic_jenkins_source: [],
@@ -1206,7 +1207,7 @@ var MyConfig = Vue.extend({
         getDicSqlSource(){
             let types = [
                 Enum.dicSqlSource,
-                Enum.dicSqlType,
+                Enum.dicSqlDriver,
                 Enum.dicJenkinsSource,
                 Enum.dicGitSource,
                 Enum.dicGitEvent,
@@ -1224,7 +1225,7 @@ var MyConfig = Vue.extend({
                 this.dic_user = res[Enum.dicUser]
                 this.dic_msg = res[Enum.dicMsg]
                 this.dic_cmd_type = res[Enum.dicCmdType]
-                this.dic_sql_ = res[Enum.dicSqlType]
+                this.dic_sql_driver = res[Enum.dicSqlDriver]
             })
         },
         // 解析proto内容

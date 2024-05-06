@@ -389,16 +389,6 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 	return res, nil
 }
 
-// rpc 执行函数
-func (job *JobConfig) sqlFunc(ctx context.Context) (err errs.Errs) {
-	switch job.commandParse.Sql.Driver {
-	case models.SqlSourceMysql:
-		return job.sqlMysql(ctx, job.commandParse.Sql)
-	default:
-		return errs.New(nil, fmt.Sprintf("未支持的sql 驱动 %s", job.commandParse.Sql.Driver), errs.SysError)
-	}
-}
-
 // http请求
 func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string) (resp []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "http-request")

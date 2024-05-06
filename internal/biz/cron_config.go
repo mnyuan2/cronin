@@ -204,6 +204,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 || one.Scene != models.SceneSqlSource {
 			return nil, errors.New("sql 连接 配置有误，请确认")
+		} else if set, err := dtos.ParseSource(one); err != nil || set.Sql.Driver != r.Command.Sql.Driver {
+			return nil, errors.New("sql 连接 驱动有误，请确认")
 		}
 	} else if r.Protocol == models.ProtocolJenkins {
 		if err := dtos.CheckJenkins(r.Command.Jenkins); err != nil {

@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"gitlab.com/metakeule/fmtdate"
 	"reflect"
 	"strings"
 	"testing"
 	"text/template"
+	"time"
 )
 
 func TestTemplate(t *testing.T) {
@@ -170,4 +172,45 @@ func TestTemplateJson(t *testing.T) {
 	}
 	fmt.Println(string(b))
 
+}
+
+func TestFuncs(t *testing.T) {
+	const tmpl = `Now: {{ Now }} \n\r {{date}}`
+	temp := template.Must(template.New("test").Funcs(template.FuncMap{
+		"Now": func() time.Time { return time.Now() },
+		"date": func(param ...any) (date string, err error) {
+			var sec *int64
+			var format *string
+			l := len(param)
+			if l > 0 {
+				temp := fmt.Sprintf("%v", param[0])
+				format = &temp
+			}
+			if l > 1 && param[1] != nil {
+				if temp, err := Int64s().ParseAny(param[1]); err != nil {
+					return "", err
+				} else {
+					sec = &temp
+				}
+			}
+			if format == nil {
+				temp := "YYYY-MM-DD hh:mm:ss"
+				format = &temp
+			}
+			if sec != nil {
+				date = fmtdate.Format(*format, time.Unix(*sec, 0))
+			} else {
+				date = fmtdate.Format(*format, time.Now())
+			}
+			return date, err
+		},
+	}).Parse(tmpl))
+
+	buf := bytes.NewBuffer([]byte{})
+
+	err := temp.Execute(buf, nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(buf.String())
 }

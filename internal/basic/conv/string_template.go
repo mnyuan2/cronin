@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/metakeule/fmtdate"
 	"reflect"
 	"text/template"
+	"time"
 )
 
 type StringTemplate struct {
@@ -52,6 +54,35 @@ func DefaultStringTemplate() *StringTemplate {
 				default:
 					return val
 				}
+			},
+			// 格式化 时间/日期
+			//  参数1：string format 格式表达式，默认 YYYY-MM-DD
+			//  参数2：int64 timestamp 时间戳，默认 Unix 时间戳
+			"date": func(param ...any) (date string, err error) {
+				var timestamp *int64
+				var format *string
+				l := len(param)
+				if l > 0 {
+					temp := fmt.Sprintf("%v", param[0])
+					format = &temp
+				}
+				if l > 1 && param[1] != nil {
+					if temp, err := Int64s().ParseAny(param[1]); err != nil {
+						return "", err
+					} else {
+						timestamp = &temp
+					}
+				}
+				if format == nil {
+					temp := "YYYY-MM-DD"
+					format = &temp
+				}
+				if timestamp != nil {
+					date = fmtdate.Format(*format, time.Unix(*timestamp, 0))
+				} else {
+					date = fmtdate.Format(*format, time.Now())
+				}
+				return date, err
 			},
 		},
 	}

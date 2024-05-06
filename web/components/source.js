@@ -12,6 +12,11 @@ var MySource = Vue.extend({
         
         <el-table :data="list.items">
             <el-table-column property="title" label="链接名称"></el-table-column>
+            <el-table-column label="驱动" v-if="list.param.type==11">
+                <template slot-scope="scope">
+                    {{scope.row.source.sql.driver}}
+                </template>
+            </el-table-column>
             <el-table-column property="create_dt" label="创建时间"></el-table-column>
             <el-table-column property="update_dt" label="更新时间"></el-table-column>
             <el-table-column label="操作">
@@ -31,11 +36,10 @@ var MySource = Vue.extend({
                 
                 <el-tabs type="border-card" v-model="form.data.type">
                     <el-tab-pane label="sql" name="11">
-                        <el-form-item label="类型*">
-                            <el-select v-model="form.data.source.sql.type">
-                                <el-option v-for="dic_v in dic_sql_type" :label="dic_v.name" :value="dic_v.key"></el-option>
+                        <el-form-item label="驱动*">
+                            <el-select v-model="form.data.source.sql.driver">
+                                <el-option v-for="dic_v in dic_sql_driver" :label="dic_v.name" :value="dic_v.key"></el-option>
                             </el-select>
-                            <el-input v-model="form.data.source.sql.hostname"></el-input>
                         </el-form-item>
                         <el-form-item label="主机*">
                             <el-input v-model="form.data.source.sql.hostname"></el-input>
@@ -190,7 +194,7 @@ var MySource = Vue.extend({
                 api.dicDel([body.type])
             })
         },
-        // sql连接连接
+        // 连接连接
         pingForm(){
             let body = copyJSON(this.form.data);
             body.type = Number(body.type)
@@ -204,10 +208,10 @@ var MySource = Vue.extend({
         // 枚举
         getDicList(){
             let types = [
-                Enum.dicSqlType
+                Enum.dicSqlDriver
             ]
             api.dicList(types,(res) =>{
-                this.dic_sql_type = res[Enum.dicSqlType]
+                this.dic_sql_driver = res[Enum.dicSqlDriver]
             })
         },
         // 初始化表单数据
@@ -223,6 +227,7 @@ var MySource = Vue.extend({
                     type: this.list.param.type,
                     source:{
                         sql:{
+                            driver: "mysql",
                             hostname: "",
                             port: "",
                             database:"",
