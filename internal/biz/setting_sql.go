@@ -174,7 +174,11 @@ func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingS
 			Password: password,
 			Port:     r.Source.Sql.Port,
 		}
-		err = db.Conn(conf).Error
+		if r.Source.Sql.Driver == enum.SqlDriverClickhouse {
+			err = db.ConnClickhouse(conf).Error
+		} else if r.Source.Sql.Driver == enum.SqlDriverMysql {
+			err = db.Conn(conf).Error
+		}
 		if err != nil {
 			return nil, err
 		}

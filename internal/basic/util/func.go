@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"regexp"
 	"runtime/debug"
 	"strings"
 )
@@ -22,6 +23,16 @@ func PanicInfo(recover any) string {
 			}
 		}
 		return debugStack
+	}
+	return ""
+}
+
+// 解析sql类型名称
+func ParseSqlTypeName(sql string) string {
+	reg1 := regexp.MustCompile("^(?:[\\n\\t]*)(\\S*)(?:\\s*)")
+	result := reg1.FindAllStringSubmatch(sql, 1)
+	if len(result) > 0 {
+		return strings.ToUpper(result[0][1])
 	}
 	return ""
 }

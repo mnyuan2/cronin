@@ -1243,8 +1243,9 @@ var MyConfig = Vue.extend({
         },
         // 执行一下
         configRun(){
+
             // 主要是强制类型
-            let body = {
+            let body = copyJSON({
                 id: this.form.id,
                 name: this.form.name,
                 type: Number(this.form.type),
@@ -1254,7 +1255,7 @@ var MyConfig = Vue.extend({
                 remark: this.form.remark,
                 var_fields: this.form.var_fields,
                 msg_set: this.form.msg_set,
-            }
+            })
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.interval = Number(body.command.sql.interval)
             body.command.sql.source.id = Number(body.command.sql.source.id)

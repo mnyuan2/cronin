@@ -8,11 +8,13 @@ import (
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/tracing"
+	"cron/internal/basic/util"
 	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -30,7 +32,7 @@ func (job *JobConfig) sqlFunc(ctx context.Context) (err errs.Errs) {
 	}
 }
 
-// mysql 语句执行
+// sql 语句执行
 func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "exec-"+r.Driver)
 	defer func() {
@@ -72,7 +74,7 @@ func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 	if r.Driver == enum.SqlDriverMysql {
 		_db = db.Conn(conf).WithContext(ctx)
 	} else {
-		_db = db.ConnClickhouse(conf)
+		_db = db.ConnClickhouse(conf).WithContext(ctx)
 	}
 
 	if _db.Error != nil {
@@ -116,7 +118,8 @@ func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 				}
 			}
 		case enum.SqlStatementSourceLocal:
-			statement = append(statement, &pb.KvItem{Value: item.Local})
+			key := util.ParseSqlTypeName(item.Local)
+			statement = append(statement, &pb.KvItem{Key: key, Value: item.Local})
 		default:
 			return errs.New(_db.Error, "sql 语句来源异常")
 		}
@@ -164,12 +167,23 @@ func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []*pb.
 	return nil
 }
 
-func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) (err error) {
+func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, item *pb.KvItem) (err error) {
 	ctx, span := job.tracer.Start(_db.Statement.Context, "sql-item")
-	span.AddEvent("", trace.WithAttributes(attribute.String("sql", sql.Value)))
+	span.AddEvent("", trace.WithAttributes(attribute.String("sql", item.Value)))
 	defer span.End()
 
-	resp := _db.Exec(sql.Value)
+	dataStr := ""
+	resp := &gorm.DB{}
+	if item.Key == "SELECT" {
+		data := []map[string]any{}
+		resp = _db.Raw(item.Value).Scan(&data)
+		if len(data) > 0 {
+			dataStr, _ = jsoniter.MarshalToString(data)
+		}
+	} else {
+		resp = _db.Exec(item.Value)
+	}
+
 	if resp.Error != nil {
 		err = resp.Error
 		span.SetStatus(codes.Error, "执行失败")
@@ -182,7 +196,10 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) 
 		}
 	} else {
 		span.SetStatus(codes.Ok, "成功")
-		span.AddEvent("", trace.WithAttributes(attribute.Int64("rows affected", resp.RowsAffected)))
+		span.AddEvent("", trace.WithAttributes(
+			attribute.Int64("rows affected", resp.RowsAffected),
+			attribute.String("rows", dataStr),
+		))
 	}
 	return err
 }

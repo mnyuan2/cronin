@@ -59,8 +59,10 @@ func Conn(conf *config.MysqlSource) *gorm.DB {
 }
 
 // 连接 clickhouse
+//
+//	资料：https://github.com/go-gorm/clickhouse
 func ConnClickhouse(conf *config.MysqlSource) *gorm.DB {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=false&loc=Local",
+	dsn := fmt.Sprintf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=10s&read_timeout=20s",
 		conf.Username, conf.Password, conf.Hostname, conf.Port, conf.Database)
 	// 连接数据库
 	db, err := gorm.Open(clickhouse.Open(dsn), &gorm.Config{})

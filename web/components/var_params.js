@@ -32,14 +32,23 @@ var MyVarParams = Vue.extend({
                 <ul>
                     <li><b>jsonString</b> &nbsp; json数据转字符串，示例：{"a":"A","b":{"b1":"B1","B2":22},"c":["c1","c2"]}</li>
                     <li><b>jsonString2</b> &nbsp; json数据转字符串2次，示例: {\\"a\\":\\"A\\",\\"b\\":{\\"b1\\":\\"B1\\",\\"B2\\":22},\\"c\\":[\\"c1\\",\\"c2\\"]}</li>
-                    <li><b>date(string format="YYYY-MM-DD hh:mm:ss" int64 timestamp=null) string</b> &nbsp; 格式化时间，参数为可选，默认为当前时间
+                    <li><b>date(string format=\`YYYY-MM-DD hh:mm:ss\` Time time=null) string</b> &nbsp; 格式化时间，参数为可选，默认为当前时间
                         <ul>
                             <li>参数1：format 输出格式表达式，字符串类型；默认值 YYYY-MM-DD hh:mm:ss；更多表达式说明如下：<pre>{{date_format}}</pre></li>
-                            <li>参数2：timestamp 时间戳，数值类型；默认为当前时间戳</li>
+                            <li>参数2：time 时间，Time 对象；默认为当前时间</li>
                             <li>返回值：格式化后的字符串</li>
                             <li>示例：<code>[[date]]</code> 输出 <code>{{date_time}}</code></li>
-                            <li>示例：<code>[[date "YYYY-MM-DD"]]</code> 输出 <code>{{date_only}}</code></li>
-                            <li>示例：<code>[[date "hh:mm:ss" {{Math.floor(this.cur_date.getTime()/1000)}}]]</code> 输出 <code>{{time_only}}</code></li>
+                            <li>示例：<code>[[date \`YYYY-MM-DD\`]]</code> 输出 <code>{{date_only}}</code></li>
+<!--                            <li>示例：<code>[[date \`hh:mm:ss\` Time]]</code> 输出 <code>{{time_only}}</code></li>-->
+                        </ul>
+                    </li>
+                    <li><b>time(string duration=\`\`) Time</b> 获取时间对象
+                        <ul>
+                            <li>参数1：duration 相对持续时间，示例："300ms"、"-1.5h"、"2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".</li>
+                            <li>返回值：Time 对象</li>
+                            <li>示例：<code>[[time]]</code> 输出 <code>{{date_time}}.2306929 +0800 CST m=+0.047068901</code></li>
+                            <li>示例：<code>[[time \`-720h\`]]</code> 输出 <code>{{date_time_30day}}.2306929 +0800 CST m=+0.047068901</code></li>
+                            <li>与 <b>date</b> 函数组合使用：<code>[[date \`\` (time \`-720h\`)]]</code> 输出 <code>{{date_time_30day}}</code></li>
                         </ul>
                     </li>
                 </ul>
@@ -79,6 +88,7 @@ var MyVarParams = Vue.extend({
             date_only: "0000-00-00",
             time_only: "00:00:00",
             date_time: "0000-00-00 00:00:00",
+            date_time_30day: "0000-00-00 00:00:00",
             date_format: "M    - month (1)\nMM   - month (01)\nMMM  - month (Jan)\nMMMM - month (January)\nD    - day (2)\nDD   - day (02)\nDDD  - day (Mon)\nDDDD - day (Monday)\nYY   - year (06)\nYYYY - year (2006)\nhh   - hours (15)\nmm   - minutes (04)\nss   - seconds (05)"
         }
     },
@@ -94,10 +104,13 @@ var MyVarParams = Vue.extend({
     methods:{
         currentDate(){
             this.cur_date = new Date()
-            this.date_only = this.cur_date.getFullYear()+'-'+this.cur_date.getMonth()+'-'+(this.cur_date.getDate() < 10 ? ("0"+ this.cur_date.getDate()) : this.cur_date.getDate())
+            this.date_only = this.cur_date.getFullYear()+'-'+this.cur_date.getMonth().toString().padStart(2,'0')+'-'+this.cur_date.getDate() .toString().padStart(2,'0')
             this.time_only = this.cur_date.getHours().toString().padStart(2,'0')+':'+this.cur_date.getMinutes().toString().padStart(2,'0')+':'+this.cur_date.getSeconds().toString().padStart(2,'0')
             this.date_time = this.date_only +' '+ this.time_only
-            console.log(this.cur_date.getTime())
+            let date30 = new Date((new Date()).getTime() - (30 * 24 * 60 * 60 * 1000))
+            this.date_time_30day = date30.getFullYear()+'-'+date30.getMonth().toString().padStart(2,'0')+'-'+date30.getDate().toString().padStart(2,'0') + ' ' +
+                date30.getHours().toString().padStart(2,'0')+':'+date30.getMinutes().toString().padStart(2,'0')+':'+date30.getSeconds().toString().padStart(2,'0')
+            console.log(this.cur_date.toISOString(), date30.toISOString(), this.date_time_30day)
         }
     }
 })

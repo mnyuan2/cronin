@@ -55,33 +55,53 @@ func DefaultStringTemplate() *StringTemplate {
 					return val
 				}
 			},
-			// 格式化 时间/日期
-			//  参数1：string format 格式表达式，默认 YYYY-MM-DD
-			//  参数2：int64 timestamp 时间戳，默认 Unix 时间戳
-			"date": func(param ...any) (date string, err error) {
-				var timestamp *int64
-				var format *string
+			// 兼容 null 参数，转换为 nil
+			"null": func() any {
+				return nil
+			},
+			// 获取时间
+			//  参数1：string duration 持续时间字符串，示例 "300ms", "-1.5h" 或 "2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".
+			"time": func(param ...any) (ti time.Time, err error) { // 1.相对时间、2.时间戳、3.时间字符串；
 				l := len(param)
-				if l > 0 {
-					temp := fmt.Sprintf("%v", param[0])
+				dur := time.Duration(0)
+				if l > 0 && param[0] != nil && param[0] != "" {
+					param1, ok := param[0].(string)
+					if !ok {
+						return time.Time{}, fmt.Errorf("time param 1 not string")
+					}
+					dur, err = time.ParseDuration(param1)
+					if err != nil {
+						return time.Time{}, fmt.Errorf("time param 1 error, %w", err)
+					}
+				}
+				// 更多参数，后面根据情况扩展
+				return time.Now().Add(dur), nil
+			},
+			// 格式化 时间/日期
+			//  参数1：string format 格式表达式，默认 YYYY-MM-DD hh:mm:ss
+			//  参数2：object time 时间对象，默认 当前时间
+			"date": func(param ...any) (date string, err error) {
+				var format *string
+				l, t := len(param), time.Now()
+				if l > 0 && param[0] != nil && param[0] != "" {
+					temp, ok := param[0].(string)
+					if !ok {
+						return "", fmt.Errorf("date param 1 not string")
+					}
 					format = &temp
 				}
 				if l > 1 && param[1] != nil {
-					if temp, err := Int64s().ParseAny(param[1]); err != nil {
-						return "", err
+					if ti, ok := param[1].(time.Time); !ok {
+						return "", fmt.Errorf("date param 2 not Time")
 					} else {
-						timestamp = &temp
+						t = ti
 					}
 				}
 				if format == nil {
-					temp := "YYYY-MM-DD"
+					temp := "YYYY-MM-DD hh:mm:ss"
 					format = &temp
 				}
-				if timestamp != nil {
-					date = fmtdate.Format(*format, time.Unix(*timestamp, 0))
-				} else {
-					date = fmtdate.Format(*format, time.Now())
-				}
+				date = fmtdate.Format(*format, t)
 				return date, err
 			},
 		},

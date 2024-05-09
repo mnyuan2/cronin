@@ -175,33 +175,50 @@ func TestTemplateJson(t *testing.T) {
 }
 
 func TestFuncs(t *testing.T) {
-	const tmpl = `Now: {{ Now }} \n\r {{date}}`
+	// 我希望获得30天前的时间，假设语法 {{}}
+	const tmpl = "Now: {{ Now }} \n\r {{date `YYYY-MM-DD` (time `-720h`)}}"
 	temp := template.Must(template.New("test").Funcs(template.FuncMap{
 		"Now": func() time.Time { return time.Now() },
-		"date": func(param ...any) (date string, err error) {
-			var sec *int64
-			var format *string
+		"null": func() any {
+			return nil
+		},
+		"time": func(param ...any) (ti time.Time, err error) { // 1.相对时间、2.时间戳、3.时间字符串；
 			l := len(param)
-			if l > 0 {
-				temp := fmt.Sprintf("%v", param[0])
+			dur := time.Duration(0)
+			if l > 0 && param[0] != nil && param[0] != "" {
+				param1, ok := param[0].(string)
+				if !ok {
+					return time.Time{}, fmt.Errorf("time param 1 not string")
+				}
+				dur, err = time.ParseDuration(param1)
+				if err != nil {
+					return time.Time{}, fmt.Errorf("time param 1 error, %w", err)
+				}
+			}
+			return time.Now().Add(dur), nil
+		},
+		"date": func(param ...any) (date string, err error) { // 参数：1.格式、2.时间对象
+			var format *string
+			l, t := len(param), time.Now()
+			if l > 0 && param[0] != nil {
+				temp, ok := param[0].(string)
+				if !ok {
+					return "", fmt.Errorf("date param 1 not string")
+				}
 				format = &temp
 			}
 			if l > 1 && param[1] != nil {
-				if temp, err := Int64s().ParseAny(param[1]); err != nil {
-					return "", err
+				if ti, ok := param[1].(time.Time); !ok {
+					return "", fmt.Errorf("date param 2 not Time")
 				} else {
-					sec = &temp
+					t = ti
 				}
 			}
 			if format == nil {
 				temp := "YYYY-MM-DD hh:mm:ss"
 				format = &temp
 			}
-			if sec != nil {
-				date = fmtdate.Format(*format, time.Unix(*sec, 0))
-			} else {
-				date = fmtdate.Format(*format, time.Now())
-			}
+			date = fmtdate.Format(*format, t)
 			return date, err
 		},
 	}).Parse(tmpl))
