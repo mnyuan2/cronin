@@ -1,8 +1,9 @@
 package pb
 
 type KvItem struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key    string `json:"key"`
+	Value  string `json:"value"`
+	Remark string `json:"remark"`
 }
 
 // 任务语句
@@ -69,6 +70,7 @@ type CronConfigListItem struct {
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
+	AfterTmpl      string             `json:"after_tmpl"`          // 结果模板
 	VarFields      []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
 	Command        *CronConfigCommand `json:"command" gorm:"-"`
 	MsgSet         []*CronMsgSet      `json:"msg_set" gorm:"-"`
@@ -84,6 +86,7 @@ type CronConfigSetRequest struct {
 	Type      int                `json:"type"`               // 类型
 	Spec      string             `json:"spec"`               // 执行时间表达式
 	Protocol  int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	AfterTmpl string             `json:"after_tmpl"`         // 结果模板
 	VarFields []*KvItem          `json:"var_fields"`         // 定义变量参数
 	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
 	Status    int                `json:"status"`             // 状态
@@ -184,6 +187,7 @@ type CronConfigRunRequest struct {
 	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
 	Status    int                `json:"status"`             // 状态
 	Remark    string             `json:"remark"`
+	AfterTmpl string             `json:"after_tmpl"`          // 结果模板
 	VarFields []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
 	MsgSet    []*CronMsgSet      `json:"msg_set"`             // 消息设置
 }

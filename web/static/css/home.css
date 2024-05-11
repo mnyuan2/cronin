@@ -10,7 +10,7 @@ body{
     padding: 0;
     border: 0;
 }
-h3,h2{
+h3,h2,h4{
     font-size: 120%;
     font-weight: 400;
     color: #1f2f3d;
@@ -164,6 +164,9 @@ i.el-alert__icon{
     height: 38px;
     border: 0;
     padding: 0 13px;
+}
+.var_fields .el-input-group__prepend{
+    width: 350px;
 }
 /*.http_header_box .el-input-group__append{*/
 /*    padding: 0 5px;*/
@@ -321,4 +324,7 @@ i.el-alert__icon{
 }
 .config-select .el-table .el-table__cell{
     padding: 8px 0;
+}
+b code{
+    font-weight: normal;
 }

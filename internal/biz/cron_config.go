@@ -246,6 +246,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
 	d.Type = r.Type
+	d.AfterTmpl = r.AfterTmpl
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
@@ -299,10 +300,11 @@ func (dm *CronConfigService) Del() {
 // 任务执行
 func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfigRunResponse, err error) {
 	conf := &models.CronConfig{
-		Id:       r.Id,
-		Env:      dm.user.Env,
-		Type:     r.Type,
-		Protocol: r.Protocol,
+		Id:        r.Id,
+		Env:       dm.user.Env,
+		Type:      r.Type,
+		Protocol:  r.Protocol,
+		AfterTmpl: r.AfterTmpl,
 	}
 	conf.Command, err = jsoniter.Marshal(r.Command)
 	if err != nil {

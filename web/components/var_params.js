@@ -15,10 +15,14 @@ var MyVarParams = Vue.extend({
             <p><code>[[range .Names]][[.]][[end]]</code></p>
             <p> &nbsp; &nbsp; &nbsp; &nbsp; 使用 range 语句遍历一个变量的值</p>
             <p><code>[[if .Condition]]...[[end]]</code></p>
-            <p> &nbsp; &nbsp; &nbsp; &nbsp; 根据 if 条件判断是否输出某个内容</p>
-            <p><code>[[if .Condition]]...[[end]]</code></p>
-            <p> &nbsp; &nbsp; &nbsp; &nbsp; 根据 if 条件判断是否输出某个内容</p>
-            <p>官方内置函数:
+            <p> &nbsp; &nbsp; &nbsp; &nbsp; 根据 if 条件判断是否输出某个内容，相关比较运算符：eq（==）、ne（!=）、lt（<）、le（<=）、gt（>）、ge（>=）</p>
+            <p> &nbsp; &nbsp; &nbsp; &nbsp; 完整样例：<code>[[if .Condition]] A [[else if .Condition]] B [[else]] C [[end]]</code></p>
+            <p><code>[[$var := \`data\`]][[$var]]</code></p>
+            <p> &nbsp; &nbsp; &nbsp; &nbsp; 模板内申明变量、使用变量;</p>
+            <p> &nbsp; &nbsp; &nbsp; &nbsp; 案例：<code>[[$data := json_decode \`{"code":"2","msg":"业务处理失败"}\`]][[if ne $data.code \`0\`]][[$data.msg]][[end]]</code> 输出 <code>业务处理失败</code></p>
+            
+            <h4>官方内置函数</h4>
+            <p>
                 <ul>
                     <li><b>len</b> &nbsp; 返回一个字符串、数组、切片、映射或通道的长度。</li>
                     <li><b>index</b> &nbsp; 返回一个字符串、数组或切片中指定位置的元素。</li>
@@ -28,11 +32,13 @@ var MyVarParams = Vue.extend({
                 </ul>
             </p>
             
-            <p>系统内置函数：
+            <h4>系统内置函数</h4>
+            <p>
                 <ul>
                     <li><b>jsonString</b> &nbsp; json数据转字符串，示例：{"a":"A","b":{"b1":"B1","B2":22},"c":["c1","c2"]}</li>
                     <li><b>jsonString2</b> &nbsp; json数据转字符串2次，示例: {\\"a\\":\\"A\\",\\"b\\":{\\"b1\\":\\"B1\\",\\"B2\\":22},\\"c\\":[\\"c1\\",\\"c2\\"]}</li>
-                    <li><b>date(string format=\`YYYY-MM-DD hh:mm:ss\` Time time=null) string</b> &nbsp; 格式化时间，参数为可选，默认为当前时间
+                    <li><b>json_decode(<code>string str</code>) any</b> &nbsp; json字段解析，非规范json字符串抛出异常</li>
+                    <li><b>date(<code>string format=\`YYYY-MM-DD hh:mm:ss\` Time time=null</code>) string</b> &nbsp; 格式化时间，参数为可选，默认为当前时间
                         <ul>
                             <li>参数1：format 输出格式表达式，字符串类型；默认值 YYYY-MM-DD hh:mm:ss；更多表达式说明如下：<pre>{{date_format}}</pre></li>
                             <li>参数2：time 时间，Time 对象；默认为当前时间</li>
@@ -42,7 +48,7 @@ var MyVarParams = Vue.extend({
 <!--                            <li>示例：<code>[[date \`hh:mm:ss\` Time]]</code> 输出 <code>{{time_only}}</code></li>-->
                         </ul>
                     </li>
-                    <li><b>time(string duration=\`\`) Time</b> 获取时间对象
+                    <li><b>time(<code>string duration=\`\`</code>) Time</b> 获取时间对象
                         <ul>
                             <li>参数1：duration 相对持续时间，示例："300ms"、"-1.5h"、"2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".</li>
                             <li>返回值：Time 对象</li>

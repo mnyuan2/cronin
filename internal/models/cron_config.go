@@ -77,6 +77,7 @@ type CronConfig struct {
 	Spec         string `json:"spec" gorm:"column:spec;type:varchar(32);default:'';comment:执行时间 表达式;"`
 	Protocol     int    `json:"protocol" gorm:"column:protocol;type:tinyint(2);default:0;comment:协议：1.http、2.grpc、3.系统命令、4.sql执行;"`
 	Command      []byte `json:"command" gorm:"column:command;type:json;default:null;comment:命令内容;"`
+	AfterTmpl    string `json:"after_tmpl" gorm:"column:after_tmpl;type:varchar(1024);default:'';comment:结束模板;"`
 	Remark       string `json:"remark" gorm:"column:remark;type:varchar(255);comment:备注;"`
 	Status       int    `json:"status" gorm:"column:status;type:tinyint(2);default:1;comment:状态：1.停止、2.启用、3.完成、4.错误;"`
 	StatusRemark string `json:"status_remark" gorm:"column:status_remark;type:varchar(255);comment:状态变更描述;"`

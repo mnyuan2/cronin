@@ -172,14 +172,16 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, item *pb.KvItem)
 	span.AddEvent("", trace.WithAttributes(attribute.String("sql", item.Value)))
 	defer span.End()
 
-	dataStr := ""
 	resp := &gorm.DB{}
 	if item.Key == "SELECT" {
+		dataStr := ""
 		data := []map[string]any{}
 		resp = _db.Raw(item.Value).Scan(&data)
 		if len(data) > 0 {
 			dataStr, _ = jsoniter.MarshalToString(data)
 		}
+		span.SetAttributes(attribute.String("type", item.Key))
+		span.AddEvent("", trace.WithAttributes(attribute.String("rows", dataStr)))
 	} else {
 		resp = _db.Exec(item.Value)
 	}
@@ -198,7 +200,6 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, item *pb.KvItem)
 		span.SetStatus(codes.Ok, "成功")
 		span.AddEvent("", trace.WithAttributes(
 			attribute.Int64("rows affected", resp.RowsAffected),
-			attribute.String("rows", dataStr),
 		))
 	}
 	return err

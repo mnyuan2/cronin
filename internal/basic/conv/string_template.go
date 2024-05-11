@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"gitlab.com/metakeule/fmtdate"
 	"reflect"
 	"text/template"
@@ -54,6 +55,13 @@ func DefaultStringTemplate() *StringTemplate {
 				default:
 					return val
 				}
+			},
+			// 解码 json 字符串
+			//  返回可能是切片、也可能是map
+			"json_decode": func(str string) (any, error) {
+				data := map[string]any{}
+				err := jsoniter.UnmarshalFromString(str, &data)
+				return data, err
 			},
 			// 兼容 null 参数，转换为 nil
 			"null": func() any {

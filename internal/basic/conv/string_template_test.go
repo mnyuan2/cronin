@@ -174,6 +174,37 @@ func TestTemplateJson(t *testing.T) {
 
 }
 
+// 模板方式 json 响应处理
+func TestTemplateJsonResult(t *testing.T) {
+	// 我可以将这个数据作为输入，通过模板语法确定某个变量的值，从而确定结果是否符合预期。
+	str := `{"code":"00","msg":"成功","data":{"list":[],"page":{"size":0,"page":1,"total":2}}}`
+	tmpl := "{{$data := json_decode .result}} --> {{if ne $data.code `0`}}{{$data.msg}}{{end}}"
+	temp := template.Must(template.New("test").Funcs(template.FuncMap{
+		"null": func() any {
+			return nil
+		},
+		// 解码 json 字符串
+		//  返回可能是切片、也可能是map
+		"json_decode": func(str string) (any, error) {
+			data := map[string]any{}
+			err := jsoniter.UnmarshalFromString(str, &data)
+			return data, err
+		},
+	}).Parse(tmpl))
+
+	buf := bytes.NewBuffer([]byte{})
+	param := map[string]string{"result": str}
+
+	err := temp.Execute(buf, param)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(buf.String())
+	// 可以根据这个输出，如果空白就是错误，仅接收 true 这个特定结果 为成功。
+	fmt.Println(param)
+
+}
+
 func TestFuncs(t *testing.T) {
 	// 我希望获得30天前的时间，假设语法 {{}}
 	const tmpl = "Now: {{ Now }} \n\r {{date `YYYY-MM-DD` (time `-720h`)}}"

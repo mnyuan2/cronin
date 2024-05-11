@@ -73,15 +73,17 @@ var MyConfig = Vue.extend({
                                     :picker-options="pickerOptions">
                                 </el-date-picker>
                             </el-form-item>
-                            <el-form-item prop="plate" label-width="50px" size="mini" class="http_header_box">
+                            <el-form-item label-width="50px" size="mini" class="http_header_box var_fields">
                                 <span slot="label" style="white-space: nowrap;">
                                     参数
                                     <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
-                                    <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                                     </el-tooltip>
                                 </span>
-                                <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.value" placeholder="参数说明">
-                                    <el-input v-model="p_v.key" slot="prepend" placeholder="参数 key" @input="e=>inputChangeArrayPush(e,p_i,form.var_fields)"></el-input>
+                                <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.remark" placeholder="参数说明">
+                                    <el-input slot="prepend" v-model="p_v.key" placeholder="key" @input="e=>inputChangeArrayPush(e,p_i,form.var_fields)">
+                                        <el-input slot="suffix" v-model="p_v.value" placeholder="默认值"></el-input>
+                                    </el-input>
                                     <el-button slot="append" icon="el-icon-delete" @click="arrayDelete(p_i, form.var_fields)"></el-button>
                                 </el-input>
                             </el-form-item>
@@ -266,7 +268,16 @@ var MyConfig = Vue.extend({
                                     </el-tab-pane>
                                 </el-tabs>
                             </el-form-item>
-                            <el-form-item label="备注" label-width="46px">
+                            
+                            <el-form-item label-width="50px"  size="mini">
+                                <span slot="label" style="white-space: nowrap;">
+                                    结果<el-tooltip effect="dark" content="任务结果模板分析，点击查看更多" placement="top-start">
+                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                                    </el-tooltip>
+                                </span>
+                                <el-input type="textarea" v-model="form.after_tmpl" rows="2" placeholder="任务成功后，对结果文本进行模板处理；输出空文本表示通过、非空文本将被认为错误描述。"></el-input>
+                            </el-form-item>
+                            <el-form-item label="备注" label-width="50px" size="mini">
                                 <el-input v-model="form.remark"></el-input>
                             </el-form-item>
                             <el-form-item label-width="2px">
@@ -775,6 +786,7 @@ var MyConfig = Vue.extend({
                         events: [],
                     }
                 },
+                after_tmpl: '',
                 msg_set: []
             }
         },
@@ -1253,6 +1265,7 @@ var MyConfig = Vue.extend({
                 protocol: Number(this.form.protocol),
                 command: this.form.command,
                 remark: this.form.remark,
+                after_tmpl: this.form.after_tmpl,
                 var_fields: this.form.var_fields,
                 msg_set: this.form.msg_set,
             })
