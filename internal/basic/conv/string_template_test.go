@@ -134,11 +134,12 @@ func TestTemplateV2(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	str := `{"cmd":{"host":{"id":-1,"ip":"","port":"","type":"","user":"","secret":""},"type":"bash","origin":"local","statement":{"git":{"ref":"","path":[""],"owner":"","link_id":0,"project":""},"type":"","local":"echo [[.a]] '\\n' [[.b]] [[string .b]] [[.b.b1]]","is_batch":0}},"git":{"events":[],"link_id":0},"rpc":{"addr":"","body":"","proto":"","action":"","header":[],"method":"GRPC","actions":[]},"sql":{"driver":"mysql","origin":"local","source":{"id":0,"port":"","title":"","database":"","hostname":"","password":"","username":""},"interval":0,"statement":[],"err_action":1,"err_action_name":""},"http":{"url":"","body":"","header":[{"key":"","value":""}],"method":"GET"},"jenkins":{"name":"","params":[{"key":"","value":""}],"source":{"id":0}}}`
+	str = "[[date `YYYY-MM-DD+hh:mm:ss` (time `-10m`)]]"
 	param := `{"a":"A","b":{"b1":"B1","B2":22},"c":3}`
 
 	varParams := map[string]any{}
 	if param != "" {
-		if er := jsoniter.UnmarshalFromString(param, varParams); er != nil {
+		if er := jsoniter.UnmarshalFromString(param, &varParams); er != nil {
 			t.Fatal(er)
 		}
 	}
@@ -177,29 +178,17 @@ func TestTemplateJson(t *testing.T) {
 // 模板方式 json 响应处理
 func TestTemplateJsonResult(t *testing.T) {
 	// 我可以将这个数据作为输入，通过模板语法确定某个变量的值，从而确定结果是否符合预期。
-	str := `{"code":"00","msg":"成功","data":{"list":[],"page":{"size":0,"page":1,"total":2}}}`
-	tmpl := "{{$data := json_decode .result}} --> {{if ne $data.code `0`}}{{$data.msg}}{{end}}"
-	temp := template.Must(template.New("test").Funcs(template.FuncMap{
-		"null": func() any {
-			return nil
-		},
-		// 解码 json 字符串
-		//  返回可能是切片、也可能是map
-		"json_decode": func(str string) (any, error) {
-			data := map[string]any{}
-			err := jsoniter.UnmarshalFromString(str, &data)
-			return data, err
-		},
-	}).Parse(tmpl))
+	str := `{"code":"000000","message":"成功","data":{"list":[],"page":{"size":0,"page":1,"total":0}}}`
+	tmpl := "[[string 5]]"
 
-	buf := bytes.NewBuffer([]byte{})
-	param := map[string]string{"result": str}
+	//buf := bytes.NewBuffer([]byte{})
+	param := map[string]any{"result": str}
 
-	err := temp.Execute(buf, param)
+	buf, err := DefaultStringTemplate().SetParam(param).Execute([]byte(tmpl))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	fmt.Println(buf.String())
+	fmt.Println("模板输出", string(buf))
 	// 可以根据这个输出，如果空白就是错误，仅接收 true 这个特定结果 为成功。
 	fmt.Println(param)
 

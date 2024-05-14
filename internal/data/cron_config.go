@@ -9,12 +9,14 @@ import (
 )
 
 type CronConfigData struct {
+	ctx       context.Context
 	db        *db.MyDB
 	tableName string
 }
 
 func NewCronConfigData(ctx context.Context) *CronConfigData {
 	return &CronConfigData{
+		ctx:       ctx,
 		db:        db.New(ctx),
 		tableName: "cron_config",
 	}

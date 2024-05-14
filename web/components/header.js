@@ -36,6 +36,13 @@ var MyHeader = Vue.extend({
                                 <el-menu-item><a href="https://gitee.com/mnyuan/cronin/issues/new" target="_blank">反馈</a></el-menu-item>
                                 <el-menu-item disabled>cronin {{sys_info.version}}</el-menu-item>
                               </el-submenu>  
+                              <el-menu-item index="/my/work">我的工作</el-menu-item>
+                              <el-submenu popper-class="submenu" index="user">
+                                <template slot="title">{{user.username}}<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
+                                <el-menu-item :index="'/user?data_id='+user.id">账号信息</el-menu-item>
+                                <el-divider style="margin: 0"></el-divider>
+                                <el-menu-item @click="logout">退出登录</el-menu-item>
+                              </el-submenu>
                           </el-menu-item-group>
                         </el-menu>
                     
@@ -87,13 +94,19 @@ var MyHeader = Vue.extend({
         return {
             sys_info: {},
             envBoxShow: false, // 环境管理弹窗
-            activeIndex: 1
+            activeIndex: 1,
+            user:{},
         }
     },
     // 模块初始化
     created(){},
     // 模块初始化
-    mounted(){},
+    mounted(){
+        this.user = cache.getUser()
+        if (!this.user.id){ // 未登录
+            getLoginPage()
+        }
+    },
 
     // 具体方法
     methods:{
@@ -136,6 +149,11 @@ var MyHeader = Vue.extend({
                 }, true)
             }
         },
+        logout(){
+            cache.setUser('')
+            cache.setToken('')
+            getLoginPage()
+        }
     }
 })
 

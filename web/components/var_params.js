@@ -37,8 +37,8 @@ var MyVarParams = Vue.extend({
                 <ul>
                     <li><b>jsonString</b> &nbsp; json数据转字符串，示例：{"a":"A","b":{"b1":"B1","B2":22},"c":["c1","c2"]}</li>
                     <li><b>jsonString2</b> &nbsp; json数据转字符串2次，示例: {\\"a\\":\\"A\\",\\"b\\":{\\"b1\\":\\"B1\\",\\"B2\\":22},\\"c\\":[\\"c1\\",\\"c2\\"]}</li>
-                    <li><b>json_decode(<code>string str</code>) any</b> &nbsp; json字段解析，非规范json字符串抛出异常</li>
-                    <li><b>date(<code>string format=\`YYYY-MM-DD hh:mm:ss\` Time time=null</code>) string</b> &nbsp; 格式化时间，参数为可选，默认为当前时间
+                    <li><b>json_decode <code>(string str) any</code></b> &nbsp; json字段解析，非规范json字符串抛出异常</li>
+                    <li><b>date <code>(string format=\`YYYY-MM-DD hh:mm:ss\` Time time=null) string</code></b> &nbsp; 格式化时间，参数为可选，默认为当前时间
                         <ul>
                             <li>参数1：format 输出格式表达式，字符串类型；默认值 YYYY-MM-DD hh:mm:ss；更多表达式说明如下：<pre>{{date_format}}</pre></li>
                             <li>参数2：time 时间，Time 对象；默认为当前时间</li>
@@ -48,7 +48,7 @@ var MyVarParams = Vue.extend({
 <!--                            <li>示例：<code>[[date \`hh:mm:ss\` Time]]</code> 输出 <code>{{time_only}}</code></li>-->
                         </ul>
                     </li>
-                    <li><b>time(<code>string duration=\`\`</code>) Time</b> 获取时间对象
+                    <li><b>time <code>(string duration=\`\`) Time</code></b> 获取时间对象
                         <ul>
                             <li>参数1：duration 相对持续时间，示例："300ms"、"-1.5h"、"2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".</li>
                             <li>返回值：Time 对象</li>
@@ -57,6 +57,8 @@ var MyVarParams = Vue.extend({
                             <li>与 <b>date</b> 函数组合使用：<code>[[date \`\` (time \`-720h\`)]]</code> 输出 <code>{{date_time_30day}}</code></li>
                         </ul>
                     </li>
+                    <li><b>float64 <code>(any val) float64</code></b> 转浮点数</li>
+                    <li><b>string <code>(any val) string</code></b> 转字符串</li>
                 </ul>
             </p>
 <!--            <p>系统内置变量：-->

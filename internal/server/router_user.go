@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 设置 sql 连接源 列表
+// 用户列表
 func routerUserList(ctx *gin.Context) {
 	r := &pb.UserListRequest{}
 	if err := ctx.BindQuery(r); err != nil {
@@ -17,7 +17,7 @@ func routerUserList(ctx *gin.Context) {
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
-// 任务设置
+// 用户设置
 func routerUserSet(ctx *gin.Context) {
 	r := &pb.UserSetRequest{}
 	if err := ctx.BindJSON(r); err != nil {
@@ -25,5 +25,75 @@ func routerUserSet(ctx *gin.Context) {
 		return
 	}
 	rep, err := biz.NewUserService(ctx.Request.Context()).Set(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 用户详情
+func routerUserDetail(ctx *gin.Context) {
+	r := &pb.UserDetailRequest{}
+	if err := ctx.BindQuery(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewUserService(ctx.Request.Context()).Detail(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 修改密码
+func routerUserChangePassword(ctx *gin.Context) {
+	r := &pb.UserSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	//user, err := GetUser(ctx)
+	//if err != nil {
+	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+	//	return
+	//}
+	rep, err := biz.NewUserService(ctx.Request.Context()).ChangePassword(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 任务状态变更
+func routerUserChangeStatus(ctx *gin.Context) {
+	r := &pb.UserChangeStatusRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	//user, err := GetUser(ctx)
+	//if err != nil {
+	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+	//	return
+	//}
+	rep, err := biz.NewUserService(ctx.Request.Context()).ChangeStatus(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 设置账号
+func routerUserChangeAccount(ctx *gin.Context) {
+	r := &pb.UserSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	//user, err := GetUser(ctx)
+	//if err != nil {
+	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+	//	return
+	//}
+	rep, err := biz.NewUserService(ctx.Request.Context()).ChangeAccount(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 用户登录
+func routerUserLogin(ctx *gin.Context) {
+	r := &pb.UserLoginRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewUserService(ctx.Request.Context()).Login(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

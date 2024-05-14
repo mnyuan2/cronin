@@ -30,7 +30,7 @@ func UseAuth(NotUserRote map[string]string) gin.HandlerFunc {
 		path := ctx.FullPath()
 		env := ctx.GetHeader("env")
 		if _, ok := NotUserRote[path]; !ok {
-			user, err := auth.ParseHttpToken(ctx)
+			user, err := auth.ParseToken(ctx)
 			if err != nil {
 				authFailed(ctx.Writer, err.Error())
 				//rep.NewResult(ctx).SetErr(err).RenderJson()

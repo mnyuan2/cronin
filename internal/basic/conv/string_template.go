@@ -67,6 +67,12 @@ func DefaultStringTemplate() *StringTemplate {
 			"null": func() any {
 				return nil
 			},
+			"float64": func(val any) (float64, error) {
+				return Float64s().ParseAny(val)
+			},
+			"string": func(any any) string {
+				return fmt.Sprintf("%v", any)
+			},
 			// 获取时间
 			//  参数1：string duration 持续时间字符串，示例 "300ms", "-1.5h" 或 "2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".
 			"time": func(param ...any) (ti time.Time, err error) { // 1.相对时间、2.时间戳、3.时间字符串；

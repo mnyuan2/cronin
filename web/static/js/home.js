@@ -198,6 +198,40 @@ function arrayDelete(index, arr){
     arr.splice(index,1)
 }
 
+function getHomePage() {
+    window.location.href="/index"
+}
+function getLoginPage() {
+    window.location.href="/login"
+}
+
+// 函数用于解析URL中的hash参数
+function getHashParams(url) {
+    let hashParams = {};
+    // 以'#'为分隔符，取数组的第二个元素（即hash参数）
+    let urlParts = url.split('#');
+    if (urlParts.length > 1) {
+        // 对hash参数字符串进行切割
+        let hashs = urlParts[1].split('?')
+        let hash = "";
+        if (hashs.length > 1){
+            hash = hashs[1]
+        }else{
+            hash = hashs[0]
+        }
+
+        let params = hash.split('&');
+
+        params.forEach(function(param) {
+            let splitter = param.split('=');
+            if (splitter.length > 1) {
+                hashParams[splitter[0]] = splitter[1];
+            }
+        });
+    }
+    return hashParams;
+}
+
 /**
  * 业务枚举
  * @type {{dicEnv: number, dicSqlSource: number, envKey: string}}
@@ -418,5 +452,46 @@ var api = {
                 return callback(temp)
             }
         });
+    }
+}
+
+// 缓存信息
+var cache = {
+    /**
+     * 获得令牌
+     * @returns {string}
+     */
+    getToken(){
+        let str = localStorage.getItem('token')
+        return str
+    },
+    /**
+     * 设置令牌
+     * @param str
+     */
+    setToken(str){
+        localStorage.setItem('token', str)
+    },
+    /**
+     * 获取用户信息
+     * @returns {any|{}}
+     */
+    getUser(){
+        let list = JSON.parse(localStorage.getItem('user')) ?? {}
+        return list
+    },
+    /**
+     * 设置用户信息
+     * @param user
+     */
+    setUser(user){
+        let str = ''
+        if (typeof user === 'string'){
+            str = user
+        }else if (typeof user === 'object'){
+            str = JSON.stringify(user)
+        }
+
+        localStorage.setItem('user', str)
     }
 }

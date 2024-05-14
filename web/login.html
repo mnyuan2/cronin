@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>用户登录-cronin</title>
+    <link rel="stylesheet" href="/static/css/element-ui@2.15.14.css">
+    <link rel="stylesheet" href="/static/css/home.css?v=[[.version]]">
+    <script src="/static/js/vue@2.7.16.js"></script>
+    <script src="/static/js/element-ui@2.15.14.js"></script>
+    <script src="/static/js/vue-router@3.6.5.js"></script>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/moment.min.js"></script>
+    <script src="/static/js/Sortable.min.js"></script>
+
+</head>
+<body>
+<div id="app">
+    <el-card class="login-box">
+        <el-form>
+            <div class="title-container">
+                <h3 class="title">任务平台</h3>
+            </div>
+
+            <el-form-item prop="account">
+                <el-input prefix-icon="el-icon-user" v-model="form.account" placeholder="登录账号" :validate-event="false"
+                          @keyup.enter.native="login">
+                </el-input>
+            </el-form-item>
+
+            <el-form-item prop="password">
+                <el-input prefix-icon="el-icon-lock" v-model="form.password" placeholder="密码" :validate-event="false"
+                          @keyup.enter.native="login" show-password>
+                </el-input>
+            </el-form-item>
+
+            <el-form-item>
+                <el-button type="primary" style="width:100%;margin-bottom:30px;" @click="login">登录</el-button>
+            </el-form-item>
+        </el-form>
+    </el-card>
+
+</div>
+</body>
+
+<script src="/static/js/home.js?v=[[.version]]"></script>
+<script>
+    // vue
+    const v = new Vue({
+        el: '#app',
+        data(){
+            return {
+                env:"",
+                form:{}
+            };
+        },
+        beforeCreate(){},
+        created(){
+            let q = window.location.search
+            let searchParams = new URLSearchParams(q)
+            this.env = searchParams.get("env")
+        },
+        watch:{},
+        methods:{
+            getSysInfo(){
+                // api.systemInfo((res)=>{
+                //     this.sysInfo = res;
+                //     // 如果服务器时间与本地时间存在较大差异，要给出提示。
+                //     let ser = new Date(res.current_date)
+                //     let cur = new Date()
+                //     let diff = Math.abs(ser.getTime() - cur.getTime())/1000/60 // 分钟
+                //     console.log("服务器时间",ser.toISOString(), "\n本地  时间",cur.toISOString())
+                //     if (diff > 10){
+                //         console.log("服务器时间", ser, "|",cur)
+                //         this.$notify({
+                //             title: '注意',
+                //             dangerouslyUseHTMLString: true,
+                //             message: '服务器时间与当前系统时间存在较大差异，请核查！<br>服务时间：'+ser.toISOString()+'<br>本地时间：'+cur.toISOString(),
+                //             type: 'warning'
+                //         })
+                //     }
+                // }, true)
+            },
+            login(){
+                if (this.form.account == '' || this.form.password == ''){
+                    return this.$message.warning('账号密码不得为空')
+                }
+                api.innerPost("/user/login", this.form, (res) =>{
+                    if (!res.status){
+                        return this.$message.error(res.message)
+                    }
+                    cache.setUser(res.data.user)
+                    cache.setToken(res.data.token)
+                    getHomePage()
+
+                })
+            }
+        }
+    })
+</script>
+<style>
+    body{
+        background: #f2f2f2;
+    }
+    .title{
+        text-align: center;
+    }
+    .login-box{
+        width: 400px;margin: 14% auto 0;
+    }
+</style>
+</html>

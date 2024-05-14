@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"cron/internal/pb"
 	"fmt"
 	"runtime"
 )
@@ -28,7 +29,8 @@ func (c Code) String() string {
 }
 
 const (
-	SysError = Code("999999") // 系统错误
+	SysError      = Code("999999") // 系统错误
+	ParamNotFound = Code(pb.ParamNotFound)
 )
 
 // 错误描述

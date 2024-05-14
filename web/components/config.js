@@ -275,7 +275,7 @@ var MyConfig = Vue.extend({
                                         <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                                     </el-tooltip>
                                 </span>
-                                <el-input type="textarea" v-model="form.after_tmpl" rows="2" placeholder="任务成功后，对结果文本进行模板处理；输出空文本表示通过、非空文本将被认为错误描述。"></el-input>
+                                <el-input type="textarea" v-model="form.after_tmpl" rows="2" placeholder="任务成功后，对结果文本进行模板处理；输出空文本表示通过、非空文本将被认为错误描述。\n支持变量: result·string"></el-input>
                             </el-form-item>
                             <el-form-item label="备注" label-width="50px" size="mini">
                                 <el-input v-model="form.remark"></el-input>
