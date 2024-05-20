@@ -25,7 +25,7 @@ type FoundationService struct {
 
 type DicGetItem struct {
 	// 键
-	Id int32 `json:"id"`
+	Id int `json:"id"`
 	// 备用键
 	Key string `json:"key"`
 	// 值
@@ -173,6 +173,7 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 		Version:     config.Version,
 		CmdName:     "sh",
 		CurrentDate: time.Now().Format(time.RFC3339),
+		IsAudited:   config.MainConf().Task.IsAudited,
 	}
 	// 根据运行环境确认cmd的类型
 	if runtime.GOOS == "windows" {

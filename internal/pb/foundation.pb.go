@@ -12,7 +12,7 @@ type DicGetsList struct {
 }
 type DicGetItem struct {
 	// 键
-	Id int32 `json:"id"`
+	Id int `json:"id"`
 	// 值
 	Name string `json:"name"`
 	// 其它数据，用于业务放关联操作
@@ -34,6 +34,7 @@ type SystemInfoReply struct {
 	Env         string `json:"env"`
 	EnvName     string `json:"env_name"`
 	CurrentDate string `json:"current_date"`
+	IsAudited   bool   `json:"is_audited"` // 是否审计
 }
 
 type ParseProtoRequest struct {

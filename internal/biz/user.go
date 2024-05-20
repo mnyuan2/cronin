@@ -247,7 +247,7 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 			CreateDt:   user.CreateDt,
 		},
 	}
-	if resp.Token, err = auth.GenToken(user.Id, user.Username); err != nil {
+	if resp.Token, err = auth.GenJwtToken(user.Id, user.Username); err != nil {
 		return nil, err
 	}
 	return resp, err

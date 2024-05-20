@@ -65,5 +65,5 @@ type UserLoginRequest struct {
 type UserLoginReply struct {
 	User  *UserDetailReply `json:"user"`
 	Token string           `json:"token"`
-	Menus []byte           `json:"menus"` // 权限菜单，后期补充
+	Menus []string         `json:"menus"` // 权限菜单，后期补充
 }

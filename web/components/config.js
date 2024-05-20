@@ -23,6 +23,7 @@ var MyConfig = Vue.extend({
                         <el-table-column prop="name" label="任务名称"></el-table-column>
                         <el-table-column prop="protocol_name" label="协议"></el-table-column>
                         <el-table-column prop="remark" label="备注"></el-table-column>
+                        <el-table-column prop="status_user_name" label="操作人"></el-table-column>
                         <el-table-column prop="" label="状态">
                             <template slot-scope="scope">
                                 <el-tooltip placement="top-start">
@@ -34,8 +35,11 @@ var MyConfig = Vue.extend({
                         <el-table-column label="操作">
                             <template slot-scope="{row}">
                                 <el-button type="text" @click="editShow(row)">编辑</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2)" v-if="row.status!=2">激活</el-button>
-                                <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2">停用</el-button>
+                                <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4)">提交审核</el-button>
+                                <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5">通过</el-button>
+                                <el-button type="text" @click="rejectBox(row)" v-if="row.status==5">驳回</el-button>
+                                <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6)">激活</el-button>
+                                <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2">停用</el-button>
                                 <el-button type="text" @click="configLogBox(row)">日志</el-button>
                             </template>
                         </el-table-column>
@@ -292,7 +296,8 @@ var MyConfig = Vue.extend({
                         <div slot="footer" class="dialog-footer">
                             <el-button @click="configRun()" class="left">执行一下</el-button>
                             <el-button @click="setConfigShow = false">取 消</el-button>
-                            <el-button type="primary" @click="setCron()">确 定</el-button>
+                            <el-button type="success" @click="setCron()" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">保存草稿</el-button>
+                            <el-button type="primary" @click="auditedBox('open')" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">提交审核</el-button>
                         </div>
                     </el-dialog>
                     <!-- 任务日志弹窗 -->
@@ -452,6 +457,18 @@ var MyConfig = Vue.extend({
                             <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
                         </span>
                     </el-dialog>
+                    <!-- 提交审核弹窗 -->
+                    <el-dialog title="提示" :visible.sync="auditor_box.show" width="30%">
+                        <span>审核人</span>
+                        <!-- 这里需要过滤出具有审核权限的人 -->
+                        <el-select v-model="auditor_box.user_id">
+                            <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+                        </el-select>
+                      <span slot="footer" class="dialog-footer">
+                        <el-button @click="auditedBox('close')">取 消</el-button>
+                        <el-button type="primary" @click="auditedBox('submit')">确 定</el-button>
+                      </span>
+                    </el-dialog>
                 </el-main>`,
     name: "MyConfig",
     data(){
@@ -515,6 +532,11 @@ var MyConfig = Vue.extend({
                 index: -1, // 操作行号
                 data: {}, // 实际内容
                 statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}], // {id:0,name:"完成"} 有歧义，以后待定
+            },
+            // 审核弹窗
+            auditor_box:{
+                show: false,
+                user_id: ''
             },
             form:{},
             hintSpec: "* * * * * *",
@@ -632,7 +654,7 @@ var MyConfig = Vue.extend({
             this.getList()
         },
         // 添加/编辑 任务
-        setCron(){
+        setCron(afterCall){
             if (this.form.name == ''){
                 return this.$message.error('请输入任务名称')
             }else if (this.form.spec == '' && this.form.type != 5){
@@ -659,6 +681,7 @@ var MyConfig = Vue.extend({
                     console.log("config/set 错误", res)
                     return this.$message.error(res.message)
                 }
+                afterCall && afterCall(res.data.id)
                 this.setConfigShow = false;
                 this.form = this.initFormData()
                 this.getList(); // 刷新当前页
@@ -844,9 +867,52 @@ var MyConfig = Vue.extend({
             this.form.protocol = this.form.protocol.toString()
             console.log("编辑：",this.form)
         },
+        // 提交审核
+        auditedBox(type){
+            if (type == 'open'){
+                this.auditor_box.show = true
+                this.auditor_box.user_id = ''
+            }else if (type == 'close'){
+                this.auditor_box.show = false
+                this.auditor_box.user_id = ''
+            }else if (type == 'submit'){
+
+                this.setCron( (id)=> {
+                    api.innerPost("/config/change_status", {id:id,status:5, auditor_user_id: Number(this.auditor_box.user_id)}, (res)=>{
+                        if (!res.status){
+                            return this.$message.error(res.message)
+                        }
+                        // row.status = '5'
+                        // row.status_name = '待审核'
+                        return this.$message.success(res.message)
+                    })
+                })
+            }else{
+                return this.$message.warning('错误操作')
+            }
+        },
+        // 驳回
+        rejectBox(row){
+            this.$prompt('请输入驳回理由', '驳回说明', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                inputPattern: /^.+$/,
+                inputErrorMessage: '驳回理由必填'
+            }).then(({ value }) => {
+                api.innerPost("/config/change_status", {id:row.id, status: 6, status_remark:value}, (res)=>{
+                    if (!res.status){
+                        return this.$message.error(res.message)
+                    }
+                    row.status = '6'
+                    row.status_name = '驳回'
+                    return this.$message.success(res.message)
+                })
+            }).catch(() => {});
+        },
+
         // 改变状态
-        changeStatus(row, newStatus){
-            this.$confirm(newStatus==1? '确认关闭任务': '确认开启任务', '提示',{
+        changeStatus(row, newStatus, newStatusName){
+            this.$confirm('确认'+newStatusName+'任务', '提示', {
                 type: 'warning',
             }).then(()=>{
                 // 确认操作

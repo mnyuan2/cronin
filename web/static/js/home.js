@@ -259,7 +259,14 @@ const Enum ={
 var api = {
     baseUrl : window.location.protocol+"//"+window.location.host,
     env : {},
+    token: '',
 
+    _getToken(){
+        if (!this.token){
+            this.token = cache.getToken()
+        }
+        return this.token
+    },
     /**
      * 内网get请求
      * @param path string 请求路径
@@ -269,22 +276,14 @@ var api = {
      */
     innerGet: function (path,param, success, setting) {
         let url =  this.baseUrl+path
-        // if (param){
-        //     url += "?"
-        //     for (i in param){
-        //         if (param[i]){
-        //             url += i+"="+param[i]+"&"
-        //         }
-        //     }
-        //     url = url.slice(0,-1)
-        // }
         let async = true
         if (setting && typeof setting.async == "boolean"){
             async = setting.async
         }
 
         let header = {
-            'env': this.getEnv().env
+            'env': this.getEnv().env,
+            'Authorization': this._getToken()
         }
         this.ajax('get', url, param, header,success, async)
     },
@@ -297,7 +296,8 @@ var api = {
         param = JSON.stringify(param)
         let header = {
             'Content-Type': 'application/json',
-            'env': this.getEnv().env
+            'env': this.getEnv().env,
+            'Authorization': this._getToken()
         }
         this.ajax('post', url, param, header, success)
     },
@@ -379,7 +379,7 @@ var api = {
             }
         }
 
-        this.ajax('get', this.baseUrl+"/foundation/system_info", null,null, (res) =>{
+        this.innerGet("/foundation/system_info", null,(res) =>{
             if (!res.status){
                 return callback(res);
             }
@@ -396,7 +396,7 @@ var api = {
             }
             localStorage.setItem(Enum.systemInfoKey, JSON.stringify(res.data))
             callback(res.data)
-        }, false)
+        }, {async:false})
     },
 
     setEnv(key, name){
@@ -432,6 +432,9 @@ var api = {
             'success': res => {
                 if (res.code == '000000'){
                     res.status = true
+                }else if (res.code == '999909'){
+                    // 重定向到登录
+                    return getLoginPage()
                 }else{
                     res.status = false
                 }

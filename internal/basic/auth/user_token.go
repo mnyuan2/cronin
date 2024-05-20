@@ -2,9 +2,11 @@ package auth
 
 import (
 	"cron/internal/basic/config"
+	"cron/internal/basic/errs"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/segmentio/asm/ascii"
 	"time"
 )
 
@@ -41,8 +43,38 @@ func ParseToken(ctx *gin.Context) (u *UserToken, err error) {
 	return u, nil
 }
 
+// 解析 http 令牌 v2
+func ParseJwtToken(token string) (u *UserToken, err error) {
+	if token == "" {
+		return nil, errs.New(errors.New("用户未登录"), errs.UserNotLogin)
+	}
+	const prefix = "Bearer "
+	preLen := len(prefix)
+	if len(token) < preLen || !ascii.EqualFoldString(token[:preLen], prefix) {
+		return nil, errors.New("令牌错误")
+	}
+
+	user := &UserToken{}
+	jwtToken, err := jwt.ParseWithClaims(token[preLen:], user, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.MainConf().Crypto.Secret), nil
+	})
+	if err != nil {
+		if err.Error() == "Token is expired" {
+			return nil, errs.New(errors.New("令牌已过期"), "999802")
+		}
+		return nil, err
+	}
+
+	if jwtToken != nil && jwtToken.Valid {
+		if claim, ok := jwtToken.Claims.(*UserToken); ok {
+			return claim, nil
+		}
+	}
+	return nil, errors.New("令牌解析失败")
+}
+
 // 生成令牌
-func GenToken(id int, name string) (string, error) {
+func GenJwtToken(id int, name string) (string, error) {
 	unixTime := time.Now().Unix()
 	u := &UserToken{
 		StandardClaims: jwt.StandardClaims{
@@ -57,7 +89,8 @@ func GenToken(id int, name string) (string, error) {
 	}
 
 	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, u)
-	return tokenClaims.SignedString([]byte(config.MainConf().Crypto.Secret))
+	token, err := tokenClaims.SignedString([]byte(config.MainConf().Crypto.Secret))
+	return "Bearer " + token, err
 }
 
 func GetUser(ctx *gin.Context) (user *UserToken, is bool) {

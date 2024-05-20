@@ -32,7 +32,7 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 	if r.Type == 0 {
 		r.Type = models.TypeOnce
 	}
-	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption())
+	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption()).Eq("status", r.Status)
 	// 构建查询条件
 	if r.Page <= 1 {
 		r.Page = 1

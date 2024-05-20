@@ -32,7 +32,7 @@ func (m *CronConfigData) List(where *db.Where, size int) (list []*models.CronCon
 func (m *CronConfigData) ListPage(where *db.Where, page, size int, list interface{}) (total int64, err error) {
 	str, args := where.Build()
 
-	return m.db.Paginate(list, page, size, m.tableName, "*", "update_dt desc", str, args...)
+	return m.db.Paginate(list, page, size, m.tableName, "*", "id desc", str, args...)
 }
 
 func (m *CronConfigData) Set(data *models.CronConfig) error {
@@ -49,7 +49,7 @@ func (m *CronConfigData) ChangeStatus(data *models.CronConfig, remark string) er
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	data.StatusDt = data.UpdateDt
 	data.StatusRemark = remark
-	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id").Updates(data).Error
+	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id", "auditor_user_id").Updates(data).Error
 }
 
 func (m *CronConfigData) SetEntryId(data *models.CronConfig) error {

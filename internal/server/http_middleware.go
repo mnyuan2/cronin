@@ -2,6 +2,7 @@ package server
 
 import (
 	"cron/internal/basic/auth"
+	"cron/internal/data"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -25,23 +26,44 @@ func useCors() gin.HandlerFunc {
 
 // 授权中间件
 // @param perms
-func UseAuth(NotUserRote map[string]string) gin.HandlerFunc {
+func UseAuth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		path := ctx.FullPath()
 		env := ctx.GetHeader("env")
-		if _, ok := NotUserRote[path]; !ok {
-			user, err := auth.ParseToken(ctx)
-			if err != nil {
-				authFailed(ctx.Writer, err.Error())
-				//rep.NewResult(ctx).SetErr(err).RenderJson()
-				ctx.Abort() // 终止
-				return
-			}
-			user.Env = env
-			ctx.Set("user", user)
-		} else {
-			ctx.Set("user", &auth.UserToken{UserName: "无", Env: env})
+		node, ok := data.Permissions[path]
+		if !ok {
+			NewReply(ctx).SetReply(nil, errors.New("无权访问！")).RenderJson()
+			ctx.Abort() // 终止
+			return
 		}
+		// 无需登录
+		if node.Type == data.AuthTypeOpen {
+			ctx.Next()
+			return
+		}
+		user, err := auth.ParseJwtToken(ctx.Request.Header.Get("Authorization"))
+		if err != nil {
+			//authFailed(ctx.Writer, err.Error())
+			NewReply(ctx).SetReply(nil, err).RenderJson()
+			ctx.Abort() // 终止
+			return
+		}
+		user.Env = env
+		ctx.Set("user", user)
+		// 仅登录
+		if node.Type == data.AuthTypeLogin {
+			ctx.Next()
+			return
+		}
+		// 需要授权
+		if node.Type == data.AuthTypeGrant {
+
+		} else {
+			NewReply(ctx).SetReply(nil, errors.New("节点异常！")).RenderJson()
+			ctx.Abort() // 终止
+			return
+		}
+		//ctx.Set("user", &auth.UserToken{UserName: "无", Env: env})
 
 		ctx.Next()
 	}

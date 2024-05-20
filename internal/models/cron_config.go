@@ -28,6 +28,8 @@ var ProtocolMap = map[int]string{
 
 const (
 	ConfigStatusDisable = 1 // 草稿
+	ConfigStatusAudited = 5 // 待审核
+	ConfigStatusReject  = 6 // 驳回
 	ConfigStatusActive  = 2 // 激活
 	ConfigStatusFinish  = 3 // 完成
 	ConfigStatusError   = 4 // 错误
@@ -37,6 +39,8 @@ const (
 // 通用状态
 var ConfigStatusMap = map[int]string{
 	ConfigStatusDisable: "草稿",
+	ConfigStatusAudited: "待审核",
+	ConfigStatusReject:  "驳回",
 	ConfigStatusActive:  "激活",
 	ConfigStatusError:   "错误",
 	ConfigStatusFinish:  "完成",
@@ -86,6 +90,8 @@ type CronConfig struct {
 	CreateDt     string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
 	MsgSet       []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
 	VarFields    []byte `json:"var_fields" gorm:"column:var_fields;type:json;default:null;comment:定义变量参数;"`
+	CreateUserId int    `json:"create_user_id" gorm:"column:create_user_id;type:int(11);default:0;comment:创建用户;"`
+	StatusUserId int    `json:"status_user_id" gorm:"column:status_user_id;type:int(11);default:0;comment:状态操作人员;"`
 }
 
 func (m *CronConfig) GetProtocolName() string {

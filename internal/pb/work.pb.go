@@ -1,6 +1,7 @@
 package pb
 
 type WorkTableRequest struct {
+	Status int `json:"status" form:"status"`
 }
 type WorkTableReply struct {
 	List []*WorkTableItem `json:"list"`

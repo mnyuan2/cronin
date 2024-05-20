@@ -41,6 +41,8 @@ type CronPipeline struct {
 	UpdateDt            string `json:"update_dt" gorm:"column:update_dt;type:datetime;default:null;comment:更新时间;"`
 	CreateDt            string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
 	MsgSet              []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
+	CreateUserId        int    `json:"create_user_id" gorm:"column:create_user_id;type:int(11);default:0;comment:创建用户;"`
+	StatusUserId        int    `json:"status_user_id" gorm:"column:status_user_id;type:int(11);default:0;comment:状态操作人员;"`
 }
 
 func (m *CronPipeline) ConfigErrActionName() string {

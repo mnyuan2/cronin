@@ -1,53 +1,50 @@
-var MyWork = Vue.extend({
-    template: `<el-main class="my-work">
+var MyRole = Vue.extend({
+    template: `<el-row class="my-work">
 <!--
         先规划一下页面布局（整体仿造tapd，还有我们自己的手机端），
         # 各个环境名称（如果没有对应任务就不在哪上）（默认只有第一个标签页打开）
             流水线和任务混合在一起（sql写法要研究一下）
                 点击跳转到详情页（新的标签页）
 -->
-        <el-card shadow="never" body-style="padding:12px">
-            <el-button size="mini" round plain @click="statusOption(5)" :type="options.status==5?'primary': ''">待办</el-button>
-            <el-button size="mini" round plain @click="statusOption(0)" :type="options.status==0?'primary': ''">所有</el-button>
-        </el-card>
-        <el-row v-for="(group_v,group_k) in group_list">
-            <el-row class="header">
-                <span class="my-table-icon" @click="showTable(group_v)">
-                    <i :class="group_v.show ? 'el-icon-caret-bottom' : 'el-icon-caret-right'"></i>
-                </span>
-                
-                {{group_v.env_title}} <el-divider direction="vertical"></el-divider> 
-                {{group_v.join_type=='config'? '任务' : '流水线'}} <span style="color: #72767b">（{{group_v.total}}）</span>
+        <el-col :span="3">
+            <el-row>
+                <h3>角色列表</h3>
+                <button>添加角色</button>
             </el-row>
-            <el-row class="body" v-if="group_v.show">
-                <el-table :data="group_v.list" v-loading="group_v.loading">
-                    <el-table-column prop="spec" label="执行时间"></el-table-column>
-                    <el-table-column prop="name" label="任务名称"></el-table-column>
-                    <el-table-column prop="protocol_name" label="协议"></el-table-column>
-                    <el-table-column prop="remark" label="备注"></el-table-column>
-                    <el-table-column prop="status_user_name" label="操作人"></el-table-column>
-                    <el-table-column prop="" label="状态">
-                        <template slot-scope="scope">
-                            <el-tooltip placement="top-start">
-                                <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
-                                <span >{{scope.row.status_name}}</span>
-                            </el-tooltip>
-                        </template>
-                    </el-table-column>
-                </el-table>
+            <el-row>
+                ...
             </el-row>
-        </el-row>
-    </el-main>`,
+        </el-col>
+        <el-col>
+            <el-row>Header</el-row>
+            <el-row>Main</el-row>
+        </el-col>
+        
+        <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
+            <el-form>
+                <el-form-item label="名称">
+                    <el-input></el-input>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="dialogVisible = false">取 消</el-button>
+                <el-button type="primary" @click="dialogVisible = false">确 定</el-button>
+            </span>
+        </el-dialog>
+    </el-row>`,
 
-    name: "MyWork",
+    name: "MyRole",
     props: {
         data_id:Number
     },
     data(){
         return {
             group_list: [],
-            options:{
-                status: 5, // 默认待办
+            form:{
+                
             }
         }
     },
@@ -120,4 +117,4 @@ var MyWork = Vue.extend({
     }
 })
 
-Vue.component("MyWork", MyWork);
+Vue.component("MyRole", MyRole);

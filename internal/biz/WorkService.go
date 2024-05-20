@@ -6,6 +6,7 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/pb"
+	"fmt"
 )
 
 type WorkService struct {
@@ -31,13 +32,17 @@ func (dm *WorkService) Table(r *pb.WorkTableRequest) (resp *pb.WorkTableReply, e
 	resp = &pb.WorkTableReply{
 		List: []*pb.WorkTableItem{},
 	}
+	//if _, ok := models.ConfigStatusMap[r.Status]; !ok {
+	//	return nil, errors.New("不支持的状态请求")
+	//}
+	w, args := db.NewWhere().Eq("status", r.Status).Build()
 
-	sql := `SELECT COUNT(*) total, 'config' join_type, env FROM cron_config  GROUP BY env
+	sql := fmt.Sprintf(`SELECT COUNT(*) total, 'config' join_type, env FROM cron_config where %s GROUP BY env
 UNION ALL
-SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline  GROUP BY env`
-
+SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GROUP BY env`, w, w)
+	args = append(args, args...)
 	list := []*pb.WorkTableItem{}
-	dm.db.Raw(sql).Scan(&list)
+	dm.db.Raw(sql, args...).Scan(&list)
 	if len(list) == 0 {
 		return resp, nil
 	}

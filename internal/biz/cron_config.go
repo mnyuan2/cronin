@@ -34,7 +34,11 @@ func NewCronConfigService(ctx context.Context, user *auth.UserToken) *CronConfig
 
 // 任务配置列表
 func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronConfigListReply, err error) {
-	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption()).In("id", r.Ids)
+	w := db.NewWhere().
+		Eq("type", r.Type).
+		Eq("env", dm.user.Env, db.RequiredOption()).
+		In("id", r.Ids).
+		Eq("status", r.Status)
 	if w.Len() == 0 {
 		return nil, errs.New(nil, "未指定查询条件")
 	}
@@ -64,6 +68,11 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, 7)
 	}
 
+	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicUser)
+	if err != nil {
+		return nil, err
+	}
+	dicUserMap := dtos.DicToMap(dicUser)
 	for _, item := range resp.List {
 		item.Command = &pb.CronConfigCommand{
 			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
@@ -77,6 +86,8 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		item.TypeName = models.ConfigTypeMap[item.Type]
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
+		item.CreateUserName = dicUserMap[item.CreateUserId]
+		item.StatusUserName = dicUserMap[item.StatusUserId]
 		if er := jsoniter.Unmarshal(item.CommandStr, item.Command); er != nil {
 			log.Println("	command 解析错误", item.Id, er.Error())
 		}
@@ -164,6 +175,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 	} else {
 		d.Env = dm.user.Env
+		d.CreateUserId = dm.user.UserId
 	}
 
 	if r.Type == models.TypeCycle {
@@ -246,6 +258,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
 	d.Type = r.Type
+	d.StatusUserId = dm.user.UserId
 	d.AfterTmpl = r.AfterTmpl
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
@@ -270,21 +283,50 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 	if conf.Status == r.Status {
 		return nil, fmt.Errorf("状态相等")
 	}
-	if conf.Type != models.TypeModule {
-		if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
-			NewTaskService(config.MainConf()).Del(conf)
-			conf.EntryId = 0
-		} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
-			if err = NewTaskService(config.MainConf()).AddConfig(conf); err != nil {
-				return nil, err
-			}
-		} else {
+	conf.StatusUserId = dm.user.UserId
+	switch r.Status {
+	case models.ConfigStatusAudited: // 待审核
+		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject {
 			return nil, fmt.Errorf("错误状态请求")
 		}
+		conf.StatusUserId = r.AuditorUserId // 待审核可以指定操作人
+	case models.ConfigStatusDisable: // 草稿、停用
+		if conf.Type != models.TypeModule {
+			if conf.Status == models.ConfigStatusActive { // 启用 到 停用 要关闭执行中的对应任务；
+				NewTaskService(config.MainConf()).Del(conf)
+				conf.EntryId = 0
+			}
+		}
+	case models.ConfigStatusActive: // 激活、通过
+		if conf.Status != models.ConfigStatusDisable &&
+			conf.Status != models.ConfigStatusAudited &&
+			conf.Status != models.ConfigStatusReject &&
+			conf.Status != models.ConfigStatusFinish &&
+			conf.Status != models.ConfigStatusError {
+			return nil, fmt.Errorf("不支持的状态变更操作")
+		}
+		if conf.Type != models.TypeModule {
+			if conf.Status != models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
+				if err = NewTaskService(config.MainConf()).AddConfig(conf); err != nil {
+					return nil, err
+				}
+			}
+		}
+	case models.ConfigStatusReject: // 驳回
+		if conf.Status != models.ConfigStatusAudited {
+			return nil, fmt.Errorf("不支持的状态变更操作")
+		}
+	default:
+		return nil, fmt.Errorf("错误状态请求")
+	}
+
+	statusRemark := "视图操作" + models.ConfigStatusMap[r.Status]
+	if r.StatusRemark != "" {
+		statusRemark = r.StatusRemark
 	}
 
 	conf.Status = r.Status
-	if err = da.ChangeStatus(conf, "视图操作"+models.ConfigStatusMap[r.Status]); err != nil {
+	if err = da.ChangeStatus(conf, statusRemark); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
 		return nil, err
 	}

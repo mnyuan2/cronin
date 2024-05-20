@@ -32,7 +32,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 		r.Static("/components", "web/components")
 	}
 
-	r.Use(gin.Recovery(), UseAuth(nil))
+	r.Use(gin.Recovery(), UseAuth())
 	// api
 	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/foundation/system_info", routerSystemInfo)

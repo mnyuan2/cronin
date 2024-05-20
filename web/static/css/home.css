@@ -334,6 +334,13 @@ b code{
     padding: 10px 2px;
 }
 .my-table-icon{
+    font-size: 15px;
+    width: 22px;
+    display: inline-block;
+    cursor: pointer;
+    margin-right: 8px;
+}
+.my-table-icon i{
     background: #409EFF;
     color: #fff;
     border-radius: 50%;
