@@ -4,6 +4,7 @@ const (
 	DicEnv           = 2    // 程序环境
 	DicMsg           = 3    // 消息模板
 	DicUser          = 4    // 用户
+	DicRole          = 5    // 角色列表
 	DicSqlSource     = 11   // sql 资源连接
 	DicJenkinsSource = 12   // jenkins 资源连接
 	DicGitSource     = 13   // git 连接

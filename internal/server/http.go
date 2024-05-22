@@ -75,6 +75,12 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/user/detail", routerUserDetail)
 	r.POST("/user/login", routerUserLogin)
 
+	r.POST("/role/set", routerRoleSet)
+	r.GET("/role/list", routerRoleList)
+	r.GET("/role/auth_list", routerAuthList)
+	r.POST("/role/auth_set", routerRoleAuthSet)
+	r.POST("/role/change_status")
+
 	// 视图
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.Redirect(http.StatusMovedPermanently, "/index")

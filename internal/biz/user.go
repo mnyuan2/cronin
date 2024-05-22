@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"cron/internal/basic/auth"
+	"cron/internal/basic/cache"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
@@ -60,6 +61,9 @@ func (dm *UserService) Set(r *pb.UserSetRequest) (resp *pb.UserSetReply, err err
 	if r.Username == "" {
 		return nil, errors.New("名称不得为空")
 	}
+	if len(r.RoleIds) == 0 {
+		return nil, errors.New("角色为必填")
+	}
 	r.Account = strings.ToUpper(strings.TrimSpace(r.Account))
 
 	one := &models.CronUser{}
@@ -86,6 +90,24 @@ func (dm *UserService) Set(r *pb.UserSetRequest) (resp *pb.UserSetReply, err err
 	one.Username = r.Username
 	one.Mobile = r.Mobile
 	one.Sort = r.Sort
+	roleIds, _ := conv.Int64s().Join(r.RoleIds)
+	if one.RoleIds != roleIds { // 校验数据
+		roles, err := data.NewCronAuthRoleData(dm.ctx).
+			GetList(db.NewWhere().In("id", r.RoleIds).Eq("status", enum.StatusActive))
+		if err != nil {
+			return nil, err
+		}
+		rolesMap := map[int]int{}
+		for _, role := range roles {
+			rolesMap[role.Id] = role.Id
+		}
+		for _, id := range r.RoleIds {
+			if _, ok := rolesMap[id]; !ok {
+				return nil, errors.New("角色信息有误！")
+			}
+		}
+		one.RoleIds = roleIds
+	}
 
 	// 执行写入
 	err = _data.Set(one)
@@ -208,9 +230,11 @@ func (dm *UserService) Detail(r *pb.UserDetailRequest) (resp *pb.UserDetailReply
 		Sort:       user.Sort,
 		Status:     user.Status,
 		StatusName: enum.StatusMap[user.Status],
+		RoleIds:    []int{},
 		UpdateDt:   user.UpdateDt,
 		CreateDt:   user.CreateDt,
 	}
+	conv.NewStr().Slice(user.RoleIds, &resp.RoleIds)
 	return resp, err
 }
 
@@ -224,7 +248,8 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 		return nil, errors.New("密码异常")
 	}
 
-	user, err := data.NewCronUserData(dm.ctx).Login(r.Account, password)
+	_data := data.NewCronUserData(dm.ctx)
+	user, err := _data.Login(r.Account, password)
 	if err != nil {
 		return nil, fmt.Errorf("登录错误，%w", err)
 	}
@@ -246,9 +271,28 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 			UpdateDt:   user.UpdateDt,
 			CreateDt:   user.CreateDt,
 		},
+		Menus: []*pb.AuthListItem{},
 	}
 	if resp.Token, err = auth.GenJwtToken(user.Id, user.Username); err != nil {
 		return nil, err
 	}
+
+	roleRequest := &pb.AuthListRequest{
+		RoleIds: []int{},
+	}
+	conv.NewStr().Slice(user.RoleIds, &roleRequest.RoleIds)
+	authList, err := NewRoleService(dm.ctx).AuthList(roleRequest)
+	if err != nil {
+		return nil, err
+	}
+	resp.Menus = authList.List
+	menusMap := map[int]int{}
+	for _, item := range resp.Menus {
+		menusMap[item.Id] = item.Id
+	}
+
+	// 缓存用户信息
+	cache.Add(fmt.Sprintf("user_menu_%v", resp.User.Id), menusMap)
+
 	return resp, err
 }

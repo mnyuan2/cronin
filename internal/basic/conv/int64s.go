@@ -3,6 +3,7 @@ package conv
 import (
 	"errors"
 	"strconv"
+	"strings"
 )
 
 type int64s struct{}
@@ -45,4 +46,34 @@ func (i *int64s) ParseAny(val any) (int64, error) {
 		return int64(val.(float32)), nil
 	}
 	return 0, errors.New("未支持的输入类型")
+}
+
+func (i *int64s) Join(list any) (string, error) {
+	//t := reflect.TypeOf(list)
+	//if t.Kind() == reflect.Ptr {
+	//	t = t.Elem()
+	//}
+	//if t.Elem().Kind() != reflect.Slice {
+	//	return "", errors.New("必须为切片输入")
+	//}
+
+	s1 := []string{}
+	switch list.(type) {
+	case []int:
+		for _, v := range list.([]int) {
+			s1 = append(s1, strconv.Itoa(v))
+		}
+	case []int64:
+		for _, v := range list.([]int64) {
+			s1 = append(s1, strconv.Itoa(int(v)))
+		}
+	case []int32:
+		for _, v := range list.([]int32) {
+			s1 = append(s1, strconv.Itoa(int(v)))
+		}
+	default:
+		return "", errors.New("不支持的输入内型")
+	}
+
+	return strings.Join(s1, ","), nil
 }

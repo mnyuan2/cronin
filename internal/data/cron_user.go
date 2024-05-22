@@ -37,7 +37,9 @@ func (m *CronUserData) GetList(where *db.Where) (list []*models.CronUser, err er
 
 func (m *CronUserData) Set(data *models.CronUser) error {
 	if data.Id > 0 {
-		return m.db.Where("id=?", data.Id).Omit("id", "create_dt", "account").Updates(data).Error
+		return m.db.Where("id=?", data.Id).
+			Omit("id", "create_dt", "account", "password", "status").
+			Updates(data).Error
 	} else {
 		return m.db.Create(data).Error
 	}

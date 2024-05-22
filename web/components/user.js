@@ -18,6 +18,7 @@ var MyUser = Vue.extend({
             <el-descriptions-item label="手机号">{{detail.mobile}}</el-descriptions-item>
             <el-descriptions-item label="排序">{{detail.sort}}</el-descriptions-item>
             <el-descriptions-item label="状态">{{detail.status_name}}</el-descriptions-item>
+            <el-descriptions-item label="角色">{{detail.roles}}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{detail.create_dt}}</el-descriptions-item>
             <el-descriptions-item label="更新时间">{{detail.update_dt}}</el-descriptions-item>
         </el-descriptions>
@@ -25,11 +26,16 @@ var MyUser = Vue.extend({
         <!--设置-->
         <el-dialog title="编辑用户信息" :visible.sync="set_box.show" :close-on-click-modal="false" append-to-body="true" width="400px">
             <el-form :model="set_box.form" label-position="left" label-width="100px">
-                <el-form-item label="用户名">
+                <el-form-item label="用户名*">
                     <el-input v-model="set_box.form.username"></el-input>
                 </el-form-item>
                 <el-form-item label="手机号">
                     <el-input v-model="set_box.form.mobile"></el-input>
+                </el-form-item>
+                <el-form-item label="角色*">
+                    <el-select v-model="set_box.form.role_ids" multiple filterable clearable>
+                        <el-option v-for="item in dic_role" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
                 </el-form-item>
                 <el-form-item label="序号">
                     <el-input v-model="set_box.form.sort"></el-input>
@@ -78,6 +84,7 @@ var MyUser = Vue.extend({
     },
     data(){
         return {
+            dic_role: [],
             detail:{},
             set_box:{
                 show: false,
@@ -103,6 +110,7 @@ var MyUser = Vue.extend({
         if (!this.data_id && data_id){
             this.data_id = data_id
         }
+        this.getDic()
         this.getDetail()
     },
 
@@ -117,6 +125,14 @@ var MyUser = Vue.extend({
                 if (!res.status){
                     return this.$message.error(res.message);
                 }
+                res.data.roles = ''
+                res.data.role_ids.forEach((id) => {
+                    this.dic_role.forEach((item)=>{
+                        if (item.id == 1){
+                            res.data.roles += item.name +" "
+                        }
+                    })
+                })
                 this.detail = res.data;
             })
         },
@@ -126,6 +142,9 @@ var MyUser = Vue.extend({
             if (body.username == ""){
                 return this.$message.warning("请输入用户名");
             }
+            if (!body.role_ids || body.role_ids.length <= 0){
+                return this.$message.warning("请选择角色");
+            }
             body.sort = Number(body.sort)
 
             api.innerPost("/user/set", body, (res) =>{
@@ -133,6 +152,7 @@ var MyUser = Vue.extend({
                     return this.$message.error(res.message)
                 }
                 this.setBox(false)
+                this.getDetail()
                 // api.dicList([Enum.dicUser],()=>{}, true) // 存在变化，更新缓存
             })
         },
@@ -143,7 +163,8 @@ var MyUser = Vue.extend({
                     id: this.detail.id,
                     username: this.detail.username,
                     mobile: this.detail.mobile,
-                    sort: this.detail.sort
+                    sort: this.detail.sort,
+                    role_ids: this.detail.role_ids,
                 }
             }else{
                 this.set_box.form = {}
@@ -211,6 +232,14 @@ var MyUser = Vue.extend({
                 }
                 this.accountBox(false)
                 this.getDetail()
+            })
+        },
+        getDic(){
+            let types = [
+                Enum.dicRole,
+            ]
+            api.dicList(types,(res) =>{
+                this.dic_role = res[Enum.dicRole]
             })
         },
 

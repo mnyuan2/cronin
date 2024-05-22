@@ -346,3 +346,21 @@ b code{
     border-radius: 50%;
     padding: 1px;
 }
+
+.my-role{
+    margin: 20px 10px;
+}
+.my-role .body{
+    padding-bottom: 10px;
+    position: relative;
+    overflow: auto;
+}
+.my-role .footer{
+    position: fixed;
+    bottom: 0;
+    z-index: 1;
+    background: #fff;
+    width: 100%;
+    border-top: 1px solid #f2f2f2;
+    padding: 10px 20px;
+}

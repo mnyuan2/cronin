@@ -111,6 +111,9 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 		w.Eq("scene", models.SceneMsg).Eq("status", enum.StatusActive)
 	case enum.DicUser:
 		_sql = "SELECT id, username name FROM `cron_user` ORDER BY sort asc,id desc"
+	case enum.DicRole:
+		_sql = "SELECT id, name FROM cron_auth_role %WHERE "
+		w.Eq("status", enum.StatusActive)
 	}
 
 	if _sql != "" {

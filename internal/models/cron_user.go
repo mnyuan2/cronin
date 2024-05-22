@@ -11,4 +11,5 @@ type CronUser struct {
 	Status   int    `json:"status" gorm:"column:status;type:tinyint(2);default:2;comment:状态：1.停止、2.启用、9.删除;"`
 	UpdateDt string `json:"update_dt" gorm:"column:update_dt;type:datetime;default:null;comment:更新时间;"`
 	CreateDt string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
+	RoleIds  string `json:"role_ids" gorm:"column:role_ids;type:varchar(255);default:'';comment:拥有角色;"`
 }

@@ -2,8 +2,10 @@ package server
 
 import (
 	"cron/internal/basic/auth"
+	"cron/internal/basic/cache"
 	"cron/internal/data"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -30,11 +32,12 @@ func UseAuth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		path := ctx.FullPath()
 		env := ctx.GetHeader("env")
-		node, ok := data.Permissions[path]
+		node, ok := data.NewAuthData().Map()[path]
 		if !ok {
 			NewReply(ctx).SetReply(nil, errors.New("无权访问！")).RenderJson()
 			ctx.Abort() // 终止
 			return
+			//node = &data.Permission{Type: data.AuthTypeLogin}
 		}
 		// 无需登录
 		if node.Type == data.AuthTypeOpen {
@@ -57,13 +60,23 @@ func UseAuth() gin.HandlerFunc {
 		}
 		// 需要授权
 		if node.Type == data.AuthTypeGrant {
+			menu := cache.Get(fmt.Sprintf("user_menu_%v", user.UserId))
+			if menu == nil {
+				NewReply(ctx).SetReply(nil, errors.New("请重新登录！")).RenderJson()
+				ctx.Abort() // 终止
+				return
+			}
+			if _, ok := menu.(map[int]int)[node.Id]; !ok {
+				NewReply(ctx).SetReply(nil, errors.New("没有访问权限！")).RenderJson()
+				ctx.Abort() // 终止
+				return
+			}
 
 		} else {
 			NewReply(ctx).SetReply(nil, errors.New("节点异常！")).RenderJson()
 			ctx.Abort() // 终止
 			return
 		}
-		//ctx.Set("user", &auth.UserToken{UserName: "无", Env: env})
 
 		ctx.Next()
 	}

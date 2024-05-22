@@ -28,6 +28,7 @@ type UserSetRequest struct {
 	Mobile   string `json:"mobile"`
 	Sort     int    `json:"sort"`
 	Password string `json:"password"`
+	RoleIds  []int  `json:"role_ids"`
 }
 type UserSetReply struct {
 	Id int `json:"id"`
@@ -45,6 +46,7 @@ type UserDetailReply struct {
 	Sort       int    `json:"sort"`
 	Status     int    `json:"status"`
 	StatusName string `json:"status_name"`
+	RoleIds    []int  `json:"role_ids"`
 	UpdateDt   string `json:"update_dt,omitempty"`
 	CreateDt   string `json:"create_dt,omitempty"`
 }
@@ -65,5 +67,5 @@ type UserLoginRequest struct {
 type UserLoginReply struct {
 	User  *UserDetailReply `json:"user"`
 	Token string           `json:"token"`
-	Menus []string         `json:"menus"` // 权限菜单，后期补充
+	Menus []*AuthListItem  `json:"menus"` // 权限菜单，后期补充
 }

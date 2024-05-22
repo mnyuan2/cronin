@@ -133,9 +133,11 @@ function arrayToTree(arrList, id, fid, children = 'children') {
         let up = arrList.filter(x => x[id] == item[fid])
         let sit = arrList.filter(x => x[fid] == item[id])
         if (sit.length) item[children] = sit
-        if (!(up.length && !sit.length)) map.push(item)
+        if (!(up.length && !sit.length)) {
+            map.push(item)
+        }
     })
-    return map.length > 0 ? [map[0]] : map;
+    return map;
     // if (arrList.length == map.length)return map
     // return arrayToTree(map, id, fid)
 }
@@ -243,6 +245,7 @@ const Enum ={
     dicEnv: 2,
     dicMsg: 3,
     dicUser: 4,
+    dicRole: 5,
     dicSqlSource: 11,
     dicJenkinsSource: 12,
     dicGitSource: 13,

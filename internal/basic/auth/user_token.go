@@ -19,9 +19,13 @@ const (
 type UserToken struct {
 	jwt.StandardClaims
 	//Env int    `json:"env"`
-	UserId   int    `json:"user_id"`
-	UserName string `json:"user_name"`
-	Env      string `json:"env,omitempty"`
+	UserId   int      `json:"user_id"`
+	UserName string   `json:"user_name"`
+	Env      string   `json:"env,omitempty"`
+	Data     UserData `json:"-"` // 用户附加数据
+}
+
+type UserData struct {
 }
 
 // 解析http令牌
