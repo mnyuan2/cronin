@@ -16,6 +16,7 @@ import (
 	"cron/internal/models"
 	"cron/internal/pb"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"github.com/axgle/mahonia"
 	"github.com/jhump/protoreflect/grpcreflect"
@@ -89,16 +90,21 @@ func NewJobConfig(conf *models.CronConfig) *JobConfig {
 func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 	job.varParams = map[string]any{}
 	if len(job.conf.VarFields) > 5 {
-		//根据定义初始化参数，没有传入默认为空字符串
+		// 参数也可以通过模板初始化，以获得动态默认值
+		str, err := conv.DefaultStringTemplate().Execute(job.conf.VarFields)
+		if err != nil {
+			return errs.New(err, "模板错误")
+		}
+
 		temp := []*pb.KvItem{}
-		if err := jsoniter.Unmarshal(job.conf.VarFields, &temp); err != nil {
+		if err := jsoniter.Unmarshal(str, &temp); err != nil {
 			return errs.New(err, "变量参数字段解析错误")
 		}
 		for _, item := range temp {
 			if item.Key == "" {
 				continue
 			}
-			job.varParams[item.Key] = ""
+			job.varParams[item.Key] = item.Value
 		}
 	}
 
@@ -177,6 +183,10 @@ func (job *JobConfig) Run() {
 	}
 
 	res, err = job.Exec(ctx)
+	if err == nil {
+		err = job.AfterTmpl(res)
+	}
+
 	if err != nil {
 		job.ErrorCount++
 		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
@@ -239,6 +249,9 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	}
 
 	res, err = job.Exec(ctx)
+	if err == nil {
+		err = job.AfterTmpl(res)
+	}
 	if err != nil {
 		job.ErrorCount++
 		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
@@ -267,6 +280,23 @@ func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 		err = errs.New(nil, fmt.Sprintf("未支持的protocol=%v", job.conf.Protocol))
 	}
 	return res, err
+}
+
+// 结果模板处理
+func (job *JobConfig) AfterTmpl(result []byte) errs.Errs {
+	if job.conf.AfterTmpl != "" {
+		str, er := conv.DefaultStringTemplate().
+			SetParam(map[string]any{
+				"result": string(result),
+			}).
+			Execute([]byte(job.conf.AfterTmpl))
+		if er != nil {
+			return errs.New(er, "结果 模板错误")
+		} else if string(str) != "" {
+			return errs.New(errors.New(string(str)), "业务失败")
+		}
+	}
+	return nil
 }
 
 // http 执行函数
@@ -387,16 +417,6 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		res = re
 	}
 	return res, nil
-}
-
-// rpc 执行函数
-func (job *JobConfig) sqlFunc(ctx context.Context) (err errs.Errs) {
-	switch job.commandParse.Sql.Driver {
-	case models.SqlSourceMysql:
-		return job.sqlMysql(ctx, job.commandParse.Sql)
-	default:
-		return errs.New(nil, fmt.Sprintf("未支持的sql 驱动 %s", job.commandParse.Sql.Driver), errs.SysError)
-	}
 }
 
 // http请求

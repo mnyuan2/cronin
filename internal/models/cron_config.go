@@ -28,6 +28,8 @@ var ProtocolMap = map[int]string{
 
 const (
 	ConfigStatusDisable = 1 // 草稿
+	ConfigStatusAudited = 5 // 待审核
+	ConfigStatusReject  = 6 // 驳回
 	ConfigStatusActive  = 2 // 激活
 	ConfigStatusFinish  = 3 // 完成
 	ConfigStatusError   = 4 // 错误
@@ -37,6 +39,8 @@ const (
 // 通用状态
 var ConfigStatusMap = map[int]string{
 	ConfigStatusDisable: "草稿",
+	ConfigStatusAudited: "待审核",
+	ConfigStatusReject:  "驳回",
 	ConfigStatusActive:  "激活",
 	ConfigStatusError:   "错误",
 	ConfigStatusFinish:  "完成",
@@ -77,6 +81,7 @@ type CronConfig struct {
 	Spec         string `json:"spec" gorm:"column:spec;type:varchar(32);default:'';comment:执行时间 表达式;"`
 	Protocol     int    `json:"protocol" gorm:"column:protocol;type:tinyint(2);default:0;comment:协议：1.http、2.grpc、3.系统命令、4.sql执行;"`
 	Command      []byte `json:"command" gorm:"column:command;type:json;default:null;comment:命令内容;"`
+	AfterTmpl    string `json:"after_tmpl" gorm:"column:after_tmpl;type:varchar(1024);default:'';comment:结束模板;"`
 	Remark       string `json:"remark" gorm:"column:remark;type:varchar(255);comment:备注;"`
 	Status       int    `json:"status" gorm:"column:status;type:tinyint(2);default:1;comment:状态：1.停止、2.启用、3.完成、4.错误;"`
 	StatusRemark string `json:"status_remark" gorm:"column:status_remark;type:varchar(255);comment:状态变更描述;"`
@@ -85,6 +90,8 @@ type CronConfig struct {
 	CreateDt     string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
 	MsgSet       []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
 	VarFields    []byte `json:"var_fields" gorm:"column:var_fields;type:json;default:null;comment:定义变量参数;"`
+	CreateUserId int    `json:"create_user_id" gorm:"column:create_user_id;type:int(11);default:0;comment:创建用户;"`
+	StatusUserId int    `json:"status_user_id" gorm:"column:status_user_id;type:int(11);default:0;comment:状态操作人员;"`
 }
 
 func (m *CronConfig) GetProtocolName() string {

@@ -10,7 +10,7 @@ body{
     padding: 0;
     border: 0;
 }
-h3,h2{
+h3,h2,h4{
     font-size: 120%;
     font-weight: 400;
     color: #1f2f3d;
@@ -164,6 +164,9 @@ i.el-alert__icon{
     height: 38px;
     border: 0;
     padding: 0 13px;
+}
+.var_fields .el-input-group__prepend{
+    width: 350px;
 }
 /*.http_header_box .el-input-group__append{*/
 /*    padding: 0 5px;*/
@@ -321,4 +324,47 @@ i.el-alert__icon{
 }
 .config-select .el-table .el-table__cell{
     padding: 8px 0;
+}
+b code{
+    font-weight: normal;
+}
+
+.my-work .header{
+    border-bottom: 1px solid #f5f5f5;
+    padding: 10px 2px;
+}
+.my-table-icon{
+    font-size: 15px;
+    width: 22px;
+    display: inline-block;
+    cursor: pointer;
+    margin-right: 8px;
+}
+.my-table-icon i{
+    background: #409EFF;
+    color: #fff;
+    border-radius: 50%;
+    padding: 1px;
+}
+
+.my-role{
+    margin: 20px 10px;
+}
+.my-role .body{
+    padding-bottom: 10px;
+    position: relative;
+    overflow: auto;
+}
+.my-role .footer{
+    position: fixed;
+    bottom: 0;
+    z-index: 1;
+    background: #fff;
+    width: 100%;
+    border-top: 1px solid #f2f2f2;
+    padding: 10px 20px;
+}
+.active{
+    background: #f0f7ff;
+    color: #409eff;
 }

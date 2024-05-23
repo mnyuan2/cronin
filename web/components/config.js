@@ -23,6 +23,7 @@ var MyConfig = Vue.extend({
                         <el-table-column prop="name" label="任务名称"></el-table-column>
                         <el-table-column prop="protocol_name" label="协议"></el-table-column>
                         <el-table-column prop="remark" label="备注"></el-table-column>
+                        <el-table-column prop="status_user_name" label="操作人"></el-table-column>
                         <el-table-column prop="" label="状态">
                             <template slot-scope="scope">
                                 <el-tooltip placement="top-start">
@@ -34,8 +35,11 @@ var MyConfig = Vue.extend({
                         <el-table-column label="操作">
                             <template slot-scope="{row}">
                                 <el-button type="text" @click="editShow(row)">编辑</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2)" v-if="row.status!=2">激活</el-button>
-                                <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2">停用</el-button>
+                                <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4) && auth_tags.config_submit">提交审核</el-button>
+                                <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5 && auth_tags.config_audit">通过</el-button>
+                                <el-button type="text" @click="rejectBox(row)" v-if="row.status==5 && auth_tags.config_audit">驳回</el-button>
+                                <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6) && auth_tags.config_submit">激活</el-button>
+                                <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2 && auth_tags.config_submit">停用</el-button>
                                 <el-button type="text" @click="configLogBox(row)">日志</el-button>
                             </template>
                         </el-table-column>
@@ -73,15 +77,17 @@ var MyConfig = Vue.extend({
                                     :picker-options="pickerOptions">
                                 </el-date-picker>
                             </el-form-item>
-                            <el-form-item prop="plate" label-width="50px" size="mini" class="http_header_box">
+                            <el-form-item label-width="50px" size="mini" class="http_header_box var_fields">
                                 <span slot="label" style="white-space: nowrap;">
                                     参数
                                     <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
-                                    <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                                     </el-tooltip>
                                 </span>
-                                <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.value" placeholder="参数说明">
-                                    <el-input v-model="p_v.key" slot="prepend" placeholder="参数 key" @input="e=>inputChangeArrayPush(e,p_i,form.var_fields)"></el-input>
+                                <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.remark" placeholder="参数说明">
+                                    <el-input slot="prepend" v-model="p_v.key" placeholder="key" @input="e=>inputChangeArrayPush(e,p_i,form.var_fields)">
+                                        <el-input slot="suffix" v-model="p_v.value" placeholder="默认值"></el-input>
+                                    </el-input>
                                     <el-button slot="append" icon="el-icon-delete" @click="arrayDelete(p_i, form.var_fields)"></el-button>
                                 </el-input>
                             </el-form-item>
@@ -171,12 +177,12 @@ var MyConfig = Vue.extend({
                                     <el-tab-pane label="sql" name="4" label-position="left">
                                         <el-form-item label="驱动" size="mini">
                                             <el-select v-model="form.command.sql.driver" placeholder="驱动">
-                                                <el-option label="mysql" value="mysql"></el-option>
+                                                <el-option v-for="dic_v in dic_sql_driver" :label="dic_v.name" :value="dic_v.key"></el-option>
                                             </el-select>
                                         </el-form-item>
                                         <el-form-item label="链接" size="mini">
                                             <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
-                                                <el-option v-for="(dic_v,dic_k) in dic_sql_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                                                <el-option v-for="(dic_v,dic_k) in dic_sql_source" v-show="dic_v.extend.driver == form.command.sql.driver" :label="dic_v.name" :value="dic_v.id"></el-option>
                                             </el-select>
                                             <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
                                         </el-form-item>
@@ -220,7 +226,9 @@ var MyConfig = Vue.extend({
                                             </el-tooltip>
                                         </el-form-item>
                                         <el-form-item label="执行间隔" size="mini" v-if="form.command.sql.err_action !=3" label-width="69px">
-                                            <el-input type="number" v-model="form.command.sql.interval" placeholder="s秒"></el-input>
+                                            <el-input type="number" v-model="form.command.sql.interval" placeholder="s秒">
+                                                <span slot="append">s/秒</span>
+                                            </el-input>
                                         </el-form-item>
                                     </el-tab-pane>
                                     
@@ -264,7 +272,16 @@ var MyConfig = Vue.extend({
                                     </el-tab-pane>
                                 </el-tabs>
                             </el-form-item>
-                            <el-form-item label="备注" label-width="46px">
+                            
+                            <el-form-item label-width="50px"  size="mini">
+                                <span slot="label" style="white-space: nowrap;">
+                                    结果<el-tooltip effect="dark" content="任务结果模板分析，点击查看更多" placement="top-start">
+                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                                    </el-tooltip>
+                                </span>
+                                <el-input type="textarea" v-model="form.after_tmpl" rows="2" placeholder="任务成功后，对结果文本进行模板处理；输出空文本表示通过、非空文本将被认为错误描述。\n支持变量: result·string"></el-input>
+                            </el-form-item>
+                            <el-form-item label="备注" label-width="50px" size="mini">
                                 <el-input v-model="form.remark"></el-input>
                             </el-form-item>
                             <el-form-item label-width="2px">
@@ -279,7 +296,8 @@ var MyConfig = Vue.extend({
                         <div slot="footer" class="dialog-footer">
                             <el-button @click="configRun()" class="left">执行一下</el-button>
                             <el-button @click="setConfigShow = false">取 消</el-button>
-                            <el-button type="primary" @click="setCron()">确 定</el-button>
+                            <el-button type="success" @click="setCron()" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">保存草稿</el-button>
+                            <el-button type="primary" @click="auditedBox('open')" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">提交审核</el-button>
                         </div>
                     </el-dialog>
                     <!-- 任务日志弹窗 -->
@@ -439,11 +457,24 @@ var MyConfig = Vue.extend({
                             <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
                         </span>
                     </el-dialog>
+                    <!-- 提交审核弹窗 -->
+                    <el-dialog title="提示" :visible.sync="auditor_box.show" width="30%">
+                        <span>审核人</span>
+                        <!-- 这里需要过滤出具有审核权限的人 -->
+                        <el-select v-model="auditor_box.user_id">
+                            <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+                        </el-select>
+                      <span slot="footer" class="dialog-footer">
+                        <el-button @click="auditedBox('close')">取 消</el-button>
+                        <el-button type="primary" @click="auditedBox('submit')">确 定</el-button>
+                      </span>
+                    </el-dialog>
                 </el-main>`,
     name: "MyConfig",
     data(){
         return {
             dic_sql_source:[],
+            dic_sql_driver:[],
             dic_user: [],
             dic_msg: [],
             dic_jenkins_source: [],
@@ -452,6 +483,7 @@ var MyConfig = Vue.extend({
             dic_host_source: [],
             dic_cmd_type: [],
             sys_info:{},
+            auth_tags:{},
             list: [],
             listPage:{
                 total:0,
@@ -502,6 +534,11 @@ var MyConfig = Vue.extend({
                 data: {}, // 实际内容
                 statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}], // {id:0,name:"完成"} 有歧义，以后待定
             },
+            // 审核弹窗
+            auditor_box:{
+                show: false,
+                user_id: ''
+            },
             form:{},
             hintSpec: "* * * * * *",
             labelType: '1',
@@ -528,6 +565,7 @@ var MyConfig = Vue.extend({
     mounted(){
         console.log("config mounted")
         this.getList()
+        this.auth_tags = cache.getAuthTags()
     },
     watch:{
         "form.spec":{
@@ -618,7 +656,7 @@ var MyConfig = Vue.extend({
             this.getList()
         },
         // 添加/编辑 任务
-        setCron(){
+        setCron(afterCall){
             if (this.form.name == ''){
                 return this.$message.error('请输入任务名称')
             }else if (this.form.spec == '' && this.form.type != 5){
@@ -645,6 +683,7 @@ var MyConfig = Vue.extend({
                     console.log("config/set 错误", res)
                     return this.$message.error(res.message)
                 }
+                afterCall && afterCall(res.data.id)
                 this.setConfigShow = false;
                 this.form = this.initFormData()
                 this.getList(); // 刷新当前页
@@ -772,6 +811,7 @@ var MyConfig = Vue.extend({
                         events: [],
                     }
                 },
+                after_tmpl: '',
                 msg_set: []
             }
         },
@@ -829,13 +869,59 @@ var MyConfig = Vue.extend({
             this.form.protocol = this.form.protocol.toString()
             console.log("编辑：",this.form)
         },
+        // 提交审核
+        auditedBox(type){
+            if (type == 'open'){
+                this.auditor_box.show = true
+                this.auditor_box.user_id = ''
+            }else if (type == 'close'){
+                this.auditor_box.show = false
+                this.auditor_box.user_id = ''
+            }else if (type == 'submit'){
+
+                this.setCron( (id)=> {
+                    api.innerPost("/config/change_status", {id:id,status:5, auditor_user_id: Number(this.auditor_box.user_id)}, (res)=>{
+                        if (!res.status){
+                            return this.$message.error(res.message)
+                        }
+                        // row.status = '5'
+                        // row.status_name = '待审核'
+                        return this.$message.success(res.message)
+                    })
+                })
+            }else{
+                return this.$message.warning('错误操作')
+            }
+        },
+        // 驳回
+        rejectBox(row){
+            this.$prompt('请输入驳回理由', '驳回说明', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                inputPattern: /^.+$/,
+                inputErrorMessage: '驳回理由必填'
+            }).then(({ value }) => {
+                api.innerPost("/config/change_status?auth_type=audit", {id:row.id, status: 6, status_remark:value}, (res)=>{
+                    if (!res.status){
+                        return this.$message.error(res.message)
+                    }
+                    row.status = '6'
+                    row.status_name = '驳回'
+                    return this.$message.success(res.message)
+                })
+            }).catch(() => {});
+        },
+
         // 改变状态
-        changeStatus(row, newStatus){
-            this.$confirm(newStatus==1? '确认关闭任务': '确认开启任务', '提示',{
+        changeStatus(row, newStatus, newStatusName){
+            this.$confirm('确认'+newStatusName+'任务', '提示', {
                 type: 'warning',
             }).then(()=>{
-                // 确认操作
-                api.innerPost("/config/change_status", {id:row.id,status:Number(newStatus)}, (res)=>{
+                let path = "/config/change_status"
+                if (newStatus == 2){
+                    path += "?auth_type=audit"
+                }
+                api.innerPost(path, {id:row.id,status:Number(newStatus)}, (res)=>{
                     if (!res.status){
                         return this.$message.error(res.message)
                     }
@@ -1204,6 +1290,7 @@ var MyConfig = Vue.extend({
         getDicSqlSource(){
             let types = [
                 Enum.dicSqlSource,
+                Enum.dicSqlDriver,
                 Enum.dicJenkinsSource,
                 Enum.dicGitSource,
                 Enum.dicGitEvent,
@@ -1221,6 +1308,7 @@ var MyConfig = Vue.extend({
                 this.dic_user = res[Enum.dicUser]
                 this.dic_msg = res[Enum.dicMsg]
                 this.dic_cmd_type = res[Enum.dicCmdType]
+                this.dic_sql_driver = res[Enum.dicSqlDriver]
             })
         },
         // 解析proto内容
@@ -1238,8 +1326,9 @@ var MyConfig = Vue.extend({
         },
         // 执行一下
         configRun(){
+
             // 主要是强制类型
-            let body = {
+            let body = copyJSON({
                 id: this.form.id,
                 name: this.form.name,
                 type: Number(this.form.type),
@@ -1247,9 +1336,10 @@ var MyConfig = Vue.extend({
                 protocol: Number(this.form.protocol),
                 command: this.form.command,
                 remark: this.form.remark,
+                after_tmpl: this.form.after_tmpl,
                 var_fields: this.form.var_fields,
                 msg_set: this.form.msg_set,
-            }
+            })
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.interval = Number(body.command.sql.interval)
             body.command.sql.source.id = Number(body.command.sql.source.id)

@@ -2,7 +2,11 @@ package server
 
 import (
 	"cron/internal/basic/auth"
+	"cron/internal/basic/cache"
+	"cron/internal/basic/errs"
+	"cron/internal/data"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -25,22 +29,62 @@ func useCors() gin.HandlerFunc {
 
 // 授权中间件
 // @param perms
-func UseAuth(NotUserRote map[string]string) gin.HandlerFunc {
+func UseAuth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		path := ctx.FullPath()
 		env := ctx.GetHeader("env")
-		if _, ok := NotUserRote[path]; !ok {
-			user, err := auth.ParseHttpToken(ctx)
-			if err != nil {
-				authFailed(ctx.Writer, err.Error())
-				//rep.NewResult(ctx).SetErr(err).RenderJson()
+		if auth_type := ctx.Request.URL.Query().Get("auth_type"); auth_type != "" { // 固定的参数校验头
+			path += "?auth_type=" + auth_type
+			ctx.Set("auth_type", auth_type) // 业务需要根据这个参数来判断权限
+		}
+		if path == "" {
+			ctx.Next()
+			return
+		}
+		node, ok := data.NewAuthData().Map()[path]
+		if !ok {
+			NewReply(ctx).SetReply(nil, errors.New("无权访问！")).RenderJson()
+			ctx.Abort() // 终止
+			return
+			//node = &data.Permission{Type: data.AuthTypeLogin}
+		}
+		// 无需登录
+		if node.Type == data.AuthTypeOpen {
+			ctx.Next()
+			return
+		}
+		user, err := auth.ParseJwtToken(ctx.Request.Header.Get("Authorization"))
+		if err != nil {
+			//authFailed(ctx.Writer, err.Error())
+			NewReply(ctx).SetReply(nil, err).RenderJson()
+			ctx.Abort() // 终止
+			return
+		}
+		user.Env = env
+		ctx.Set("user", user)
+		// 仅登录
+		if node.Type == data.AuthTypeLogin {
+			ctx.Next()
+			return
+		}
+		// 需要授权
+		if node.Type == data.AuthTypeGrant {
+			menu := cache.Get(fmt.Sprintf("user_menu_%v", user.UserId))
+			if menu == nil {
+				NewReply(ctx).SetReply(nil, errs.New(errors.New("请重新登录！"), errs.UserNotLogin)).RenderJson()
 				ctx.Abort() // 终止
 				return
 			}
-			user.Env = env
-			ctx.Set("user", user)
+			if _, ok := menu.(map[int]int)[node.Id]; !ok {
+				NewReply(ctx).SetReply(nil, errors.New("没有访问权限！")).RenderJson()
+				ctx.Abort() // 终止
+				return
+			}
+
 		} else {
-			ctx.Set("user", &auth.UserToken{UserName: "无", Env: env})
+			NewReply(ctx).SetReply(nil, errors.New("节点异常！")).RenderJson()
+			ctx.Abort() // 终止
+			return
 		}
 
 		ctx.Next()

@@ -121,6 +121,11 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 				return nil, fmt.Errorf("加密失败，%w", err)
 			}
 		}
+		if _, ok := enum.SqlDriverMap[r.Source.Sql.Driver]; !ok {
+			if err != nil {
+				return nil, fmt.Errorf("sql 驱动有误")
+			}
+		}
 	case enum.DicJenkinsSource:
 		r.Source.Jenkins.Hostname = strings.Trim(r.Source.Jenkins.Hostname, "/")
 	case enum.DicGitSource:
@@ -169,7 +174,11 @@ func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingS
 			Password: password,
 			Port:     r.Source.Sql.Port,
 		}
-		err = db.Conn(conf).Error
+		if r.Source.Sql.Driver == enum.SqlDriverClickhouse {
+			err = db.ConnClickhouse(conf).Error
+		} else if r.Source.Sql.Driver == enum.SqlDriverMysql {
+			err = db.Conn(conf).Error
+		}
 		if err != nil {
 			return nil, err
 		}

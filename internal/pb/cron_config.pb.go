@@ -1,8 +1,9 @@
 package pb
 
 type KvItem struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key    string `json:"key"`
+	Value  string `json:"value"`
+	Remark string `json:"remark"`
 }
 
 // 任务语句
@@ -43,10 +44,11 @@ type GitEventPRMerge struct {
 
 // 任务列表
 type CronConfigListRequest struct {
-	Ids  []int `form:"ids[]"`
-	Type int   `form:"type"`
-	Page int   `form:"page"`
-	Size int   `form:"size"`
+	Ids    []int `form:"ids[]"`
+	Type   int   `form:"type"`
+	Page   int   `form:"page"`
+	Size   int   `form:"size"`
+	Status int   `form:"status"`
 }
 type CronConfigListReply struct {
 	List []*CronConfigListItem `json:"list"`
@@ -69,26 +71,34 @@ type CronConfigListItem struct {
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
+	AfterTmpl      string             `json:"after_tmpl"`          // 结果模板
 	VarFields      []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
 	Command        *CronConfigCommand `json:"command" gorm:"-"`
 	MsgSet         []*CronMsgSet      `json:"msg_set" gorm:"-"`
 	VarFieldsStr   []byte             `json:"-" gorm:"column:var_fields;"`
 	CommandStr     []byte             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
 	MsgSetStr      []byte             `json:"-" gorm:"column:msg_set;"`
+	CreateUserId   int                `json:"create_user_id"`
+	CreateUserName string             `json:"create_user_name" gorm:"-"`
+	StatusUserId   int                `json:"status_user_id"`
+	StatusUserName string             `json:"status_user_name" gorm:"-"`
 }
 
 // 任务设置
 type CronConfigSetRequest struct {
-	Id        int                `json:"id,omitempty"`       // 主键
-	Name      string             `json:"name,omitempty"`     // 任务名称
-	Type      int                `json:"type"`               // 类型
-	Spec      string             `json:"spec"`               // 执行时间表达式
-	Protocol  int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
-	VarFields []*KvItem          `json:"var_fields"`         // 定义变量参数
-	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
-	Status    int                `json:"status"`             // 状态
-	Remark    string             `json:"remark"`             // 备注
-	MsgSet    []*CronMsgSet      `json:"msg_set"`            // 消息设置
+	Id            int                `json:"id,omitempty"`       // 主键
+	Name          string             `json:"name,omitempty"`     // 任务名称
+	Type          int                `json:"type"`               // 类型
+	Spec          string             `json:"spec"`               // 执行时间表达式
+	Protocol      int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	AfterTmpl     string             `json:"after_tmpl"`         // 结果模板
+	VarFields     []*KvItem          `json:"var_fields"`         // 定义变量参数
+	Command       *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status        int                `json:"status"`             // 状态
+	StatusRemark  string             `json:"status_remark"`
+	AuditorUserId int                `json:"auditor_user_id"`
+	Remark        string             `json:"remark"`  // 备注
+	MsgSet        []*CronMsgSet      `json:"msg_set"` // 消息设置
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`
@@ -184,6 +194,7 @@ type CronConfigRunRequest struct {
 	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
 	Status    int                `json:"status"`             // 状态
 	Remark    string             `json:"remark"`
+	AfterTmpl string             `json:"after_tmpl"`          // 结果模板
 	VarFields []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
 	MsgSet    []*CronMsgSet      `json:"msg_set"`             // 消息设置
 }

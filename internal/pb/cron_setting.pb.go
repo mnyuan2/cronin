@@ -9,6 +9,7 @@ type SettingSource struct {
 
 // sql 源
 type SettingSqlSource struct {
+	Driver   string `json:"driver"`
 	Hostname string `json:"hostname"`
 	Port     string `json:"port"`
 	Username string `json:"username"`

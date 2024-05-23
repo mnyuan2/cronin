@@ -32,7 +32,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 		r.Static("/components", "web/components")
 	}
 
-	r.Use(gin.Recovery(), UseAuth(nil))
+	r.Use(gin.Recovery(), UseAuth())
 	// api
 	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/foundation/system_info", routerSystemInfo)
@@ -47,6 +47,8 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/pipeline/list", routerPipelineList)
 	r.POST("/pipeline/set", routerPipelineSet)
 	r.POST("/pipeline/change_status", routerPipelineChangeStatus)
+
+	r.GET("/work/table", routerWorkTable)
 
 	r.GET("/log/list", routerLogList)
 	r.GET("/log/traces", routerLogTraces)
@@ -67,6 +69,17 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 
 	r.GET("/user/list", routerUserList)
 	r.POST("/user/set", routerUserSet)
+	r.POST("/user/change_password", routerUserChangePassword)
+	r.POST("/user/change_status", routerUserChangeStatus)
+	r.POST("/user/change_account", routerUserChangeAccount)
+	r.GET("/user/detail", routerUserDetail)
+	r.POST("/user/login", routerUserLogin)
+
+	r.POST("/role/set", routerRoleSet)
+	r.GET("/role/list", routerRoleList)
+	r.GET("/role/auth_list", routerAuthList)
+	r.POST("/role/auth_set", routerRoleAuthSet)
+	r.POST("/role/change_status")
 
 	// 视图
 	r.GET("/", func(ctx *gin.Context) {
@@ -74,6 +87,9 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	})
 	r.GET("/index", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "index.html", map[string]string{"version": config.Version})
+	})
+	r.GET("/login", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "login.html", map[string]string{"version": config.Version})
 	})
 
 	return r

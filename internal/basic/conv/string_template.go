@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
+	"gitlab.com/metakeule/fmtdate"
 	"reflect"
 	"text/template"
+	"time"
 )
 
 type StringTemplate struct {
@@ -52,6 +55,68 @@ func DefaultStringTemplate() *StringTemplate {
 				default:
 					return val
 				}
+			},
+			// 解码 json 字符串
+			//  返回可能是切片、也可能是map
+			"json_decode": func(str string) (any, error) {
+				data := map[string]any{}
+				err := jsoniter.UnmarshalFromString(str, &data)
+				return data, err
+			},
+			// 兼容 null 参数，转换为 nil
+			"null": func() any {
+				return nil
+			},
+			"float64": func(val any) (float64, error) {
+				return Float64s().ParseAny(val)
+			},
+			"string": func(any any) string {
+				return fmt.Sprintf("%v", any)
+			},
+			// 获取时间
+			//  参数1：string duration 持续时间字符串，示例 "300ms", "-1.5h" 或 "2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".
+			"time": func(param ...any) (ti time.Time, err error) { // 1.相对时间、2.时间戳、3.时间字符串；
+				l := len(param)
+				dur := time.Duration(0)
+				if l > 0 && param[0] != nil && param[0] != "" {
+					param1, ok := param[0].(string)
+					if !ok {
+						return time.Time{}, fmt.Errorf("time param 1 not string")
+					}
+					dur, err = time.ParseDuration(param1)
+					if err != nil {
+						return time.Time{}, fmt.Errorf("time param 1 error, %w", err)
+					}
+				}
+				// 更多参数，后面根据情况扩展
+				return time.Now().Add(dur), nil
+			},
+			// 格式化 时间/日期
+			//  参数1：string format 格式表达式，默认 YYYY-MM-DD hh:mm:ss
+			//  参数2：object time 时间对象，默认 当前时间
+			"date": func(param ...any) (date string, err error) {
+				var format *string
+				l, t := len(param), time.Now()
+				if l > 0 && param[0] != nil && param[0] != "" {
+					temp, ok := param[0].(string)
+					if !ok {
+						return "", fmt.Errorf("date param 1 not string")
+					}
+					format = &temp
+				}
+				if l > 1 && param[1] != nil {
+					if ti, ok := param[1].(time.Time); !ok {
+						return "", fmt.Errorf("date param 2 not Time")
+					} else {
+						t = ti
+					}
+				}
+				if format == nil {
+					temp := "YYYY-MM-DD hh:mm:ss"
+					format = &temp
+				}
+				date = fmtdate.Format(*format, t)
+				return date, err
 			},
 		},
 	}
