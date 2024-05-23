@@ -84,6 +84,7 @@ var MyUser = Vue.extend({
     },
     data(){
         return {
+            user:{},
             dic_role: [],
             detail:{},
             set_box:{
@@ -110,6 +111,7 @@ var MyUser = Vue.extend({
         if (!this.data_id && data_id){
             this.data_id = data_id
         }
+        this.user = cache.getUser()
         this.getDic()
         this.getDetail()
     },
@@ -147,7 +149,15 @@ var MyUser = Vue.extend({
             }
             body.sort = Number(body.sort)
 
-            api.innerPost("/user/set", body, (res) =>{
+            // 附加权限标记
+            let path = "/user/set"
+            if (!body.id){
+                path += "?auth_type=add"
+            }else if (body.id != this.user.id){
+                path += "?auth_type=edit"
+            }
+
+            api.innerPost(path, body, (res) =>{
                 if (!res.status){
                     return this.$message.error(res.message)
                 }

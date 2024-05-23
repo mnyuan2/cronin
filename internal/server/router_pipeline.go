@@ -2,6 +2,7 @@ package server
 
 import (
 	"cron/internal/biz"
+	"cron/internal/models"
 	"cron/internal/pb"
 	"github.com/gin-gonic/gin"
 )
@@ -51,6 +52,18 @@ func routerPipelineChangeStatus(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
 		return
 	}
+	if authType := ctx.GetString("auth_type"); authType == "audit" {
+		if r.Status != models.ConfigStatusActive && r.Status != models.ConfigStatusReject { // 只能操作 通过、驳回
+			NewReply(ctx).SetError(pb.ParamError, "权限与状态不匹配").RenderJson()
+			return
+		}
+	} else {
+		if r.Status == models.ConfigStatusActive || r.Status == models.ConfigStatusReject { // 不能操作 通过、驳回
+			NewReply(ctx).SetError(pb.ParamError, "权限与状态不匹配").RenderJson()
+			return
+		}
+	}
+
 	rep, err := biz.NewCronPipelineService(ctx.Request.Context(), user).ChangeStatus(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

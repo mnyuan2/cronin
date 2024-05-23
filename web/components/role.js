@@ -13,7 +13,7 @@ var MyRole = Vue.extend({
             </el-row>
             <el-row>
                 <ul>
-                    <li v-for="(role_v,role_i) in roleList" @click="selectedRole(role_v)" style="cursor: pointer">
+                    <li v-for="(role_v,role_i) in roleList" @click="selectedRole(role_v)" style="cursor: pointer;padding: 4px 6px;" :class="role_detail.id==role_v.id? 'active': ''">
                         {{role_v.name}}
                     </li>
                 </ul>

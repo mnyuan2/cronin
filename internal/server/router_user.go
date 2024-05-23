@@ -24,6 +24,31 @@ func routerUserSet(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
+
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+
+	// 这里有三种情况：add.新增、edit.编辑所有、olay.编辑自己
+	authType := ctx.GetString("auth_type")
+	if authType == "add" { // 新增
+		if r.Id > 0 {
+			NewReply(ctx).SetError(pb.ParamError, "权限与操作不匹配").RenderJson()
+			return
+		}
+	} else if authType == "edit" { // 编辑
+		if r.Id <= 0 {
+			NewReply(ctx).SetError(pb.ParamError, "权限与操作不匹配").RenderJson()
+			return
+		}
+	} else { // 修改自己
+		if r.Id != user.UserId {
+			NewReply(ctx).SetError(pb.ParamError, "没有操作权限").RenderJson()
+			return
+		}
+	}
 	rep, err := biz.NewUserService(ctx.Request.Context()).Set(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

@@ -112,7 +112,7 @@
                                 this.sysInfo.env_name = item.name
                                 // 环境不同，历史缓存要清除
                                 if (oldEnv.env != item.key){
-                                    localStorage.clear()
+                                    cache.delDic()
                                 }
                                 api.setEnv(item.key, item.name)
                             }

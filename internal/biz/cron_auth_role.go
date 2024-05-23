@@ -89,6 +89,7 @@ func (dm *RoleService) AuthList(r *pb.AuthListRequest) (resp *pb.AuthListReply, 
 			Name:  item.Title,
 			Path:  item.Path,
 			Group: item.Group,
+			Tag:   item.Tag,
 		})
 	}
 

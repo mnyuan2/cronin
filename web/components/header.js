@@ -28,6 +28,7 @@ var MyHeader = Vue.extend({
                                 <template slot="title">设置<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
                                 <el-menu-item index="/message_template">通知</el-menu-item>
                                 <el-menu-item index="/users">人员</el-menu-item>
+                                <el-menu-item index="/role">权限</el-menu-item>
                               </el-submenu>
                               <el-submenu popper-class="submenu" index="about">
                                 <template slot="title">关于<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
@@ -150,8 +151,7 @@ var MyHeader = Vue.extend({
             }
         },
         logout(){
-            cache.setUser('')
-            cache.setToken('')
+            cache.empty()
             getLoginPage()
         }
     }

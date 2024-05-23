@@ -193,7 +193,7 @@ func (dm *UserService) ChangeAccount(r *pb.UserSetRequest) (resp *pb.UserSetRepl
 	if newAccount == one.Account {
 		return &pb.UserSetReply{}, nil
 	}
-	if !conv.NewStr().IsChinese(r.Account) {
+	if conv.NewStr().IsChinese(r.Account) {
 		return nil, errors.New("可输入字母、数字、符号")
 	}
 

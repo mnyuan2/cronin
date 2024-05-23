@@ -90,6 +90,15 @@
                     }
                     cache.setUser(res.data.user)
                     cache.setToken(res.data.token)
+                    cache.setMenu(res.data.menus)
+                    let tags = {}
+                    res.data.menus.forEach(function (item) {
+                        if (item.tag){
+                            tags[item.tag] = item.id
+                        }
+                    })
+                    cache.setAuthTags(tags)
+
                     getHomePage()
 
                 })

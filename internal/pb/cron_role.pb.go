@@ -42,6 +42,7 @@ type AuthListItem struct {
 	Name  string `json:"name"`
 	Path  string `json:"path"`
 	Group string `json:"group"`
+	Tag   string `json:"tag"`
 }
 
 // 角色规则列表

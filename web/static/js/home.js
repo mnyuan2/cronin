@@ -499,5 +499,59 @@ var cache = {
         }
 
         localStorage.setItem('user', str)
+    },
+    /**
+     * 获得权限节点信息
+     * @returns {any|{}}
+     */
+    getMenu(){
+        let list = JSON.parse(localStorage.getItem('menus')) ?? {}
+        return list
+    },
+    /**
+     * 设置权限节点信息
+     * @param menus
+     */
+    setMenu(menus){
+        let str = ''
+        if (typeof menus === 'string'){
+            str = menus
+        }else if (typeof menus === 'object'){
+            str = JSON.stringify(menus)
+        }
+
+        localStorage.setItem('menus', str)
+    },
+    /**
+     * 设置权限标记
+     * @param tags
+     */
+    setAuthTags(tags){
+        let str = ''
+        if (typeof tags === 'string'){
+            str = tags
+        }else if (typeof tags === 'object'){
+            str = JSON.stringify(tags)
+        }
+
+        localStorage.setItem('auth_tags', str)
+    },
+    /**
+     * 获得权限标记
+     * @returns {any|{}}
+     */
+    getAuthTags(){
+        let list = JSON.parse(localStorage.getItem('auth_tags')) ?? {}
+        return list
+    },
+    empty(){
+        localStorage.removeItem('dic')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        localStorage.removeItem('system_info')
+        localStorage.removeItem('menus')
+    },
+    delDic(){
+        localStorage.removeItem('dic')
     }
 }

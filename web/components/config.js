@@ -35,11 +35,11 @@ var MyConfig = Vue.extend({
                         <el-table-column label="操作">
                             <template slot-scope="{row}">
                                 <el-button type="text" @click="editShow(row)">编辑</el-button>
-                                <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4)">提交审核</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5">通过</el-button>
-                                <el-button type="text" @click="rejectBox(row)" v-if="row.status==5">驳回</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6)">激活</el-button>
-                                <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2">停用</el-button>
+                                <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4) && auth_tags.config_submit">提交审核</el-button>
+                                <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5 && auth_tags.config_audit">通过</el-button>
+                                <el-button type="text" @click="rejectBox(row)" v-if="row.status==5 && auth_tags.config_audit">驳回</el-button>
+                                <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6) && auth_tags.config_submit">激活</el-button>
+                                <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2 && auth_tags.config_submit">停用</el-button>
                                 <el-button type="text" @click="configLogBox(row)">日志</el-button>
                             </template>
                         </el-table-column>
@@ -483,6 +483,7 @@ var MyConfig = Vue.extend({
             dic_host_source: [],
             dic_cmd_type: [],
             sys_info:{},
+            auth_tags:{},
             list: [],
             listPage:{
                 total:0,
@@ -564,6 +565,7 @@ var MyConfig = Vue.extend({
     mounted(){
         console.log("config mounted")
         this.getList()
+        this.auth_tags = cache.getAuthTags()
     },
     watch:{
         "form.spec":{
@@ -899,7 +901,7 @@ var MyConfig = Vue.extend({
                 inputPattern: /^.+$/,
                 inputErrorMessage: '驳回理由必填'
             }).then(({ value }) => {
-                api.innerPost("/config/change_status", {id:row.id, status: 6, status_remark:value}, (res)=>{
+                api.innerPost("/config/change_status?auth_type=audit", {id:row.id, status: 6, status_remark:value}, (res)=>{
                     if (!res.status){
                         return this.$message.error(res.message)
                     }
@@ -915,8 +917,11 @@ var MyConfig = Vue.extend({
             this.$confirm('确认'+newStatusName+'任务', '提示', {
                 type: 'warning',
             }).then(()=>{
-                // 确认操作
-                api.innerPost("/config/change_status", {id:row.id,status:Number(newStatus)}, (res)=>{
+                let path = "/config/change_status"
+                if (newStatus == 2){
+                    path += "?auth_type=audit"
+                }
+                api.innerPost(path, {id:row.id,status:Number(newStatus)}, (res)=>{
                     if (!res.status){
                         return this.$message.error(res.message)
                     }
