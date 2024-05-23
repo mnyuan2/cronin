@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -31,4 +32,29 @@ func (f *float64s) ToString(val float64, scales ...int) string {
 	}
 
 	return fmt.Sprintf("%."+strconv.Itoa(scale)+"f", val)
+}
+
+func (m *float64s) ParseAny(val any) (float64, error) {
+	switch val.(type) {
+	case int32:
+		return float64(val.(int32)), nil
+	case int:
+		return float64(val.(int)), nil
+	case int64:
+		return float64(val.(int64)), nil
+	case string:
+		if val == "" {
+			return 0, nil
+		}
+		result, err := strconv.ParseFloat(val.(string), 64)
+		if err != nil {
+			return 0, err
+		}
+		return result, nil
+	case float64:
+		return val.(float64), nil
+	case float32:
+		return float64(val.(float32)), nil
+	}
+	return 0, errors.New("未支持的输入类型")
 }

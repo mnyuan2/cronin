@@ -34,6 +34,9 @@
 <script src="/components/env.js?v=[[.version]]"></script>
 <script src="/components/message_template.js?v=[[.version]]"></script>
 <script src="/components/users.js?v=[[.version]]"></script>
+<script src="/components/user.js?v=[[.version]]"></script>
+<script src="/components/my_work.js?v=[[.version]]"></script>
+<script src="/components/role.js?v=[[.version]]"></script>
 <script src="/components/var_params.js?v=[[.version]]"></script>
 <script>
     // 路由
@@ -45,6 +48,9 @@
             {path: '/source', component: MySource},
             {path: '/message_template', component: MyMessageTemplate},
             {path: '/users', component: MyUsers},
+            {path: '/user', component: MyUser},
+            {path: '/my/work', component: MyWork},
+            {path: '/role', component: MyRole},
             {path: '/logs', component: MyConfigLog},
             {path: '/trace', component: MyTrace},
             {path: '/var_params', component: MyVarParams},
@@ -106,7 +112,7 @@
                                 this.sysInfo.env_name = item.name
                                 // 环境不同，历史缓存要清除
                                 if (oldEnv.env != item.key){
-                                    localStorage.clear()
+                                    cache.delDic()
                                 }
                                 api.setEnv(item.key, item.name)
                             }

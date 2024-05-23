@@ -2,8 +2,8 @@ package server
 
 import (
 	"cron/internal/biz"
+	"cron/internal/models"
 	"cron/internal/pb"
-	"fmt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,7 +25,6 @@ func httpList(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	fmt.Println(ctx.QueryArray("ids"))
 	user, err := GetUser(ctx)
 	if err != nil {
 		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
@@ -64,6 +63,18 @@ func httpChangeStatus(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
 		return
 	}
+	if authType := ctx.GetString("auth_type"); authType == "audit" {
+		if r.Status != models.ConfigStatusActive && r.Status != models.ConfigStatusReject { // 只能操作 通过、驳回
+			NewReply(ctx).SetError(pb.ParamError, "权限与状态不匹配").RenderJson()
+			return
+		}
+	} else {
+		if r.Status == models.ConfigStatusActive || r.Status == models.ConfigStatusReject { // 不能操作 通过、驳回
+			NewReply(ctx).SetError(pb.ParamError, "权限与状态不匹配").RenderJson()
+			return
+		}
+	}
+
 	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).ChangeStatus(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

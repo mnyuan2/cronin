@@ -25,7 +25,7 @@ type FoundationService struct {
 
 type DicGetItem struct {
 	// 键
-	Id int32 `json:"id"`
+	Id int `json:"id"`
 	// 备用键
 	Key string `json:"key"`
 	// 值
@@ -87,7 +87,7 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	items := []*pb.DicGetItem{}
 	switch t {
 	case enum.DicSqlSource:
-		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
+		_sql = "SELECT id,title as name, concat('{\"driver\":',content->'$.sql.driver','}') extend  FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneSqlSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
 	case enum.DicJenkinsSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
@@ -111,6 +111,9 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 		w.Eq("scene", models.SceneMsg).Eq("status", enum.StatusActive)
 	case enum.DicUser:
 		_sql = "SELECT id, username name FROM `cron_user` ORDER BY sort asc,id desc"
+	case enum.DicRole:
+		_sql = "SELECT id, name FROM cron_auth_role %WHERE "
+		w.Eq("status", enum.StatusActive)
 	}
 
 	if _sql != "" {
@@ -158,7 +161,11 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			{Id: enum.GitEventPullsCreate, Name: enum.GitEventMap[enum.GitEventPullsCreate]},
 			{Id: enum.GitEventPullsMerge, Name: enum.GitEventMap[enum.GitEventPullsMerge]},
 		}
-
+	case enum.DicSqlDriver:
+		items = []*pb.DicGetItem{
+			{Key: enum.SqlDriverMysql, Name: enum.SqlDriverMysql},
+			{Key: enum.SqlDriverClickhouse, Name: enum.SqlDriverClickhouse},
+		}
 	}
 
 	return items, nil
@@ -169,6 +176,7 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 		Version:     config.Version,
 		CmdName:     "sh",
 		CurrentDate: time.Now().Format(time.RFC3339),
+		IsAudited:   config.MainConf().Task.IsAudited,
 	}
 	// 根据运行环境确认cmd的类型
 	if runtime.GOOS == "windows" {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/config"
 	"fmt"
+	"gorm.io/driver/clickhouse"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -46,6 +47,25 @@ func Conn(conf *config.MysqlSource) *gorm.DB {
 			SingularTable: true, // use singular table name, table for `User` would be `user` with this option enabled
 		},
 	})
+	if err != nil {
+		db.AddError(err)
+	} else if err = polling(db); err != nil { // 启用连接池
+		db.AddError(fmt.Errorf("连接池设置异常 %w", err))
+	} else if conf.Debug { // 调试模式
+		db = db.Debug()
+	}
+
+	return db
+}
+
+// 连接 clickhouse
+//
+//	资料：https://github.com/go-gorm/clickhouse
+func ConnClickhouse(conf *config.MysqlSource) *gorm.DB {
+	dsn := fmt.Sprintf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=10s&read_timeout=20s",
+		conf.Username, conf.Password, conf.Hostname, conf.Port, conf.Database)
+	// 连接数据库
+	db, err := gorm.Open(clickhouse.Open(dsn), &gorm.Config{})
 	if err != nil {
 		db.AddError(err)
 	} else if err = polling(db); err != nil { // 启用连接池

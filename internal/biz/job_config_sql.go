@@ -8,6 +8,8 @@ import (
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/tracing"
+	"cron/internal/basic/util"
+	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -20,9 +22,19 @@ import (
 	"time"
 )
 
-// mysql 命令执行
-func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
-	ctx, span := job.tracer.Start(ctx, "exec-mysql")
+// sql 执行函数
+func (job *JobConfig) sqlFunc(ctx context.Context) (err errs.Errs) {
+	switch job.commandParse.Sql.Driver {
+	case enum.SqlDriverMysql, enum.SqlDriverClickhouse:
+		return job.sql(ctx, job.commandParse.Sql)
+	default:
+		return errs.New(nil, fmt.Sprintf("未支持的sql 驱动 %s", job.commandParse.Sql.Driver), errs.SysError)
+	}
+}
+
+// sql 语句执行
+func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
+	ctx, span := job.tracer.Start(ctx, "exec-"+r.Driver)
 	defer func() {
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
@@ -32,6 +44,7 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 		}
 		span.End()
 	}()
+	span.SetAttributes(attribute.String("driver", r.Driver))
 	//b, _ := jsoniter.Marshal(r)
 	//span.AddEvent("sql_set", trace.WithAttributes(
 	//attribute.String("sql_set", string(b)),
@@ -41,8 +54,8 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 	if er != nil {
 		return errs.New(er, "连接配置异常")
 	}
-	s := &pb.SettingSource{}
-	if er = jsoniter.UnmarshalFromString(source.Content, s); er != nil {
+	s, er := dtos.ParseSource(source)
+	if er != nil {
 		return errs.New(er, "连接配置解析异常")
 	}
 
@@ -57,7 +70,12 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 		Password: password,
 		Port:     s.Sql.Port,
 	}
-	_db := db.Conn(conf).WithContext(ctx)
+	_db := &gorm.DB{}
+	if r.Driver == enum.SqlDriverMysql {
+		_db = db.Conn(conf).WithContext(ctx)
+	} else {
+		_db = db.ConnClickhouse(conf).WithContext(ctx)
+	}
 
 	if _db.Error != nil {
 		span.AddEvent("连接失败", trace.WithAttributes(
@@ -100,7 +118,8 @@ func (job *JobConfig) sqlMysql(ctx context.Context, r *pb.CronSql) (err errs.Err
 				}
 			}
 		case enum.SqlStatementSourceLocal:
-			statement = append(statement, &pb.KvItem{Value: item.Local})
+			key := util.ParseSqlTypeName(item.Local)
+			statement = append(statement, &pb.KvItem{Key: key, Value: item.Local})
 		default:
 			return errs.New(_db.Error, "sql 语句来源异常")
 		}
@@ -148,12 +167,25 @@ func (job *JobConfig) sqlMysqlExec(r *pb.CronSql, _db *gorm.DB, statement []*pb.
 	return nil
 }
 
-func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) (err error) {
+func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, item *pb.KvItem) (err error) {
 	ctx, span := job.tracer.Start(_db.Statement.Context, "sql-item")
-	span.AddEvent("", trace.WithAttributes(attribute.String("sql", sql.Value)))
+	span.AddEvent("", trace.WithAttributes(attribute.String("sql", item.Value)))
 	defer span.End()
 
-	resp := _db.Exec(sql.Value)
+	resp := &gorm.DB{}
+	if item.Key == "SELECT" {
+		dataStr := ""
+		data := []map[string]any{}
+		resp = _db.Raw(item.Value).Scan(&data)
+		if len(data) > 0 {
+			dataStr, _ = jsoniter.MarshalToString(data)
+		}
+		span.SetAttributes(attribute.String("type", item.Key))
+		span.AddEvent("", trace.WithAttributes(attribute.String("rows", dataStr)))
+	} else {
+		resp = _db.Exec(item.Value)
+	}
+
 	if resp.Error != nil {
 		err = resp.Error
 		span.SetStatus(codes.Error, "执行失败")
@@ -166,7 +198,9 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, sql *pb.KvItem) 
 		}
 	} else {
 		span.SetStatus(codes.Ok, "成功")
-		span.AddEvent("", trace.WithAttributes(attribute.Int64("rows affected", resp.RowsAffected)))
+		span.AddEvent("", trace.WithAttributes(
+			attribute.Int64("rows affected", resp.RowsAffected),
+		))
 	}
 	return err
 }

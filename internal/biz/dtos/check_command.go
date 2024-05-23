@@ -93,6 +93,9 @@ func CheckSql(sql *pb.CronSql) error {
 			return errors.New("请确认是否批量解析")
 		}
 	}
+	if _, ok := enum.SqlDriverMap[sql.Driver]; !ok {
+		return errors.New("sql 驱动设置有误")
+	}
 
 	name, ok := models.SqlErrActionMap[sql.ErrAction]
 	if !ok {
