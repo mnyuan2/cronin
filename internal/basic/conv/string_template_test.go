@@ -7,6 +7,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"gitlab.com/metakeule/fmtdate"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -196,7 +197,7 @@ func TestTemplateJsonResult(t *testing.T) {
 
 func TestFuncs(t *testing.T) {
 	// 我希望获得30天前的时间，假设语法 {{}}
-	const tmpl = "Now: {{ Now }} \n\r {{date `YYYY-MM-DD` (time `-720h`)}}"
+	const tmpl = "Now: {{ Now }} \n\r {{date `YYYY-MM-DD` (time `-720h`)}} \n\r {{rawurlencode (date `YYYY-MM-DD hh:mm:ss` (time `-23h`))}}"
 	temp := template.Must(template.New("test").Funcs(template.FuncMap{
 		"Now": func() time.Time { return time.Now() },
 		"null": func() any {
@@ -240,6 +241,11 @@ func TestFuncs(t *testing.T) {
 			}
 			date = fmtdate.Format(*format, t)
 			return date, err
+		},
+		"rawurlencode": func(param string) string {
+			str := url.QueryEscape(param)
+			str = strings.ReplaceAll(str, "+", "%20")
+			return str
 		},
 	}).Parse(tmpl))
 

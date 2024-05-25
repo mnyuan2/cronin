@@ -48,12 +48,14 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 		UpdateDt:     "",
 		CreateDt:     "",
 		MsgSet:       conf.MsgSet,
+		VarFields:    []byte(conf.VarParams),
 	})
 	if err := job.parse(conf); err != nil {
 		log.Println("流水线配置解析错误", err.Error())
 		// ...
 	}
-	job.conf.Parse(nil)
+	param, _ := job.conf.ParseParams(nil)
+	job.conf.Parse(param)
 
 	// 日志
 	job.tracer = tracing.Tracer(job.pipeline.Env+"-cronin", trace.WithInstrumentationAttributes(

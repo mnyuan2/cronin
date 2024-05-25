@@ -86,19 +86,19 @@ func NewJobConfig(conf *models.CronConfig) *JobConfig {
 	return job
 }
 
-// 解析
-func (job *JobConfig) Parse(params map[string]any) errs.Errs {
+// 解析参数
+func (job *JobConfig) ParseParams(in map[string]any) (map[string]any, errs.Errs) {
 	job.varParams = map[string]any{}
 	if len(job.conf.VarFields) > 5 {
 		// 参数也可以通过模板初始化，以获得动态默认值
 		str, err := conv.DefaultStringTemplate().Execute(job.conf.VarFields)
 		if err != nil {
-			return errs.New(err, "模板错误")
+			return nil, errs.New(err, "模板错误")
 		}
 
 		temp := []*pb.KvItem{}
 		if err := jsoniter.Unmarshal(str, &temp); err != nil {
-			return errs.New(err, "变量参数字段解析错误")
+			return nil, errs.New(err, "变量参数字段解析错误")
 		}
 		for _, item := range temp {
 			if item.Key == "" {
@@ -108,13 +108,18 @@ func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 		}
 	}
 
-	for k, v := range params {
+	for k, v := range in {
 		if _, ok := job.varParams[k]; ok {
 			job.varParams[k] = v
 		}
 	}
+	return job.varParams, nil
+}
+
+// 解析
+func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 	// 进行模板替换
-	cmd, err := conv.DefaultStringTemplate().SetParam(job.varParams).Execute(job.conf.Command)
+	cmd, err := conv.DefaultStringTemplate().SetParam(params).Execute(job.conf.Command)
 	if err != nil {
 		return errs.New(err, "模板错误")
 	}
@@ -177,14 +182,14 @@ func (job *JobConfig) Run() {
 			return
 		}
 	}
-
-	if err = job.Parse(nil); err != nil {
+	param, err := job.ParseParams(nil)
+	if err = job.Parse(param); err != nil {
 		return
 	}
 
 	res, err = job.Exec(ctx)
 	if err == nil {
-		err = job.AfterTmpl(res)
+		err = job.AfterTmpl(res, param)
 	}
 
 	if err != nil {
@@ -196,7 +201,7 @@ func (job *JobConfig) Run() {
 	}
 
 	// 连续错误达到5次，任务终止。
-	if job.ErrorCount >= 5 || (err != nil && err.Code() == errs.SysError.String()) {
+	if job.ErrorCount >= 20 || (err != nil && err.Code() == errs.SysError.String()) {
 		cronRun.Remove(cron.EntryID(job.conf.EntryId))
 		job.conf.Status = models.ConfigStatusError
 		job.conf.EntryId = 0
@@ -214,6 +219,8 @@ func (job *JobConfig) Run() {
 }
 
 // 执行任务 未注册版本
+//
+//	给定 context 的情况下，内部不要开协程，会引发上下文终止的错误
 func (job *JobConfig) Running(ctx context.Context, remark string, params map[string]any) (res []byte, err errs.Errs) {
 	st := time.Now()
 	ctx, span := job.tracer.Start(ctx, "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
@@ -243,6 +250,11 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		attribute.String("remark", remark),
 	)
 
+	params, err = job.ParseParams(params)
+	if err != nil {
+		span.AddEvent("", trace.WithAttributes(attribute.Stringer("config", bytes.NewBuffer(job.conf.Command))))
+		return
+	}
 	if err = job.Parse(params); err != nil {
 		span.AddEvent("", trace.WithAttributes(attribute.Stringer("config", bytes.NewBuffer(job.conf.Command))))
 		return
@@ -250,14 +262,14 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 
 	res, err = job.Exec(ctx)
 	if err == nil {
-		err = job.AfterTmpl(res)
+		err = job.AfterTmpl(res, params)
 	}
 	if err != nil {
 		job.ErrorCount++
-		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
+		job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
 	} else {
 		job.ErrorCount = 0
-		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
+		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
 	}
 	return res, err
 }
@@ -283,12 +295,16 @@ func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // 结果模板处理
-func (job *JobConfig) AfterTmpl(result []byte) errs.Errs {
+func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) errs.Errs {
+	p := map[string]any{
+		"result": string(result),
+	}
+	for k, v := range param {
+		p[k] = v
+	}
 	if job.conf.AfterTmpl != "" {
 		str, er := conv.DefaultStringTemplate().
-			SetParam(map[string]any{
-				"result": string(result),
-			}).
+			SetParam(p).
 			Execute([]byte(job.conf.AfterTmpl))
 		if er != nil {
 			return errs.New(er, "结果 模板错误")

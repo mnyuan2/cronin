@@ -389,7 +389,8 @@ var MyPipeline = Vue.extend({
                 configs:[], // 任务集合
                 config_disable_action: '1',
                 config_err_action: '1',
-                msg_set: []
+                msg_set: [],
+                status: '1',
             }
         },
         // 编辑弹窗

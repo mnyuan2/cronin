@@ -812,7 +812,8 @@ var MyConfig = Vue.extend({
                     }
                 },
                 after_tmpl: '',
-                msg_set: []
+                msg_set: [],
+                status: '1',
             }
         },
         // 编辑弹窗

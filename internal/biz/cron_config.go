@@ -135,7 +135,8 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 		if c.conf.Id > 0 && dm.user.Env != c.conf.Env {
 			continue
 		}
-		c.Parse(nil)
+		param, _ := c.ParseParams(nil)
+		c.Parse(param)
 		conf := c.conf
 		next := ""
 		if s, err := secondParser.Parse(conf.Spec); err == nil {
@@ -344,6 +345,7 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 	conf := &models.CronConfig{
 		Id:        r.Id,
 		Env:       dm.user.Env,
+		Name:      r.Name,
 		Type:      r.Type,
 		Protocol:  r.Protocol,
 		AfterTmpl: r.AfterTmpl,
@@ -353,7 +355,7 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 		return nil, err
 	}
 	if r.MsgSet != nil {
-		if conf.MsgSet, err = jsoniter.Marshal(r.VarFields); err != nil {
+		if conf.MsgSet, err = jsoniter.Marshal(r.MsgSet); err != nil {
 			return nil, errs.New(err, "消息设置序列化错误")
 		}
 	}
