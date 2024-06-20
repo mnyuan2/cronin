@@ -175,6 +175,9 @@ func (job *JobPipeline) Run() {
 				return
 			}
 		}
+		if job.pipeline.Interval > 0 {
+			time.Sleep(time.Duration(job.pipeline.Interval) * time.Second)
+		}
 	}
 	// 结束语
 	job.conf.messagePush(ctx, enum.StatusActive, "完成", nil, time.Since(st).Seconds())

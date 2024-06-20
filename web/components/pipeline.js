@@ -102,6 +102,11 @@ var MyPipeline = Vue.extend({
                                 </div>
                             </el-form-item>
                             
+                            <el-form-item label="执行间隔" label-width="76px">
+                                <el-input type="number" v-model="form.data.interval" placeholder="单个任务完成后，等待间隔时间">
+                                    <span slot="append">s/秒</span>
+                                </el-input>
+                            </el-form-item>
                             <el-form-item label="任务停用" label-width="76px">
                                 <el-tooltip class="item" effect="dark" content="存在停止、错误状态任务时流水线整体停止" placement="top-start">
                                     <el-radio v-model="form.data.config_disable_action" label="1">停止</el-radio>
@@ -202,6 +207,7 @@ var MyPipeline = Vue.extend({
                 user: [],
                 msg: [],
             },
+            sys_info:{},
             auth_tags:{},
             labelType: '2',
             // 列表数据
@@ -265,6 +271,9 @@ var MyPipeline = Vue.extend({
     created(){
         this.form.data = this.initFormData()
         this.getDic()
+        api.systemInfo((res)=>{
+            this.sys_info = res;
+        })
     },
     // 模块初始化
     mounted(){
@@ -360,6 +369,7 @@ var MyPipeline = Vue.extend({
                 configs:data.configs,
                 remark: data.remark,
                 msg_set: data.msg_set,
+                interval: Number(data.interval),
                 config_disable_action: Number(data.config_disable_action),
                 config_err_action: Number(data.config_err_action),
             }
@@ -370,6 +380,9 @@ var MyPipeline = Vue.extend({
                     data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
                 }
             })
+            if (body.interval < 0){
+                body.interval = 0
+            }
 
             api.innerPost("/pipeline/set", body, (res)=>{
                 if (!res.status){
@@ -389,6 +402,7 @@ var MyPipeline = Vue.extend({
                 configs:[], // 任务集合
                 config_disable_action: '1',
                 config_err_action: '1',
+                interval: '',
                 msg_set: [],
                 status: '1',
             }

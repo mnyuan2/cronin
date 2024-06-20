@@ -110,6 +110,7 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 
 	d.Name = r.Name
 	d.Spec = r.Spec
+	d.Interval = r.Interval
 	d.Remark = r.Remark
 	d.VarParams = r.VarParams
 	d.ConfigIds, _ = jsoniter.Marshal(r.ConfigIds)
