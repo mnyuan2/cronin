@@ -7,6 +7,7 @@ import (
 	"cron/internal/pb"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -76,6 +77,9 @@ func CheckSql(sql *pb.CronSql) error {
 			}
 			if item.Git.Owner == "" {
 				return errors.New("未设置 sql 语句 仓库空间")
+			}
+			if !regexp.MustCompile(`^[a-zA-Z][\w-]{1,}[a-zA-Z0-9]$`).MatchString(item.Git.Owner) {
+				return errors.New("仓库空间: 只允许字母、数字或者下划线（_）、中划线（-），至少 2 个字符，必须以字母开头，不能以特殊字符结尾")
 			}
 			if item.Git.Project == "" {
 				return errors.New("未设置 sql 语句 项目名称")
@@ -177,6 +181,9 @@ func CheckGit(c *pb.CronGit) error {
 		case enum.GitEventPullsMerge:
 			if e.PRMerge.Owner == "" {
 				return errors.New("git 仓库空间 未设置")
+			}
+			if !regexp.MustCompile(`^[a-zA-Z][\w-]{1,}[a-zA-Z0-9]$`).MatchString(e.PRMerge.Owner) {
+				return errors.New("git 仓库空间 只允许字母、数字或者下划线（_）、中划线（-），至少 2 个字符，必须以字母开头，不能以特殊字符结尾")
 			}
 			if e.PRMerge.Repo == "" {
 				return errors.New("git 项目名称 未设置")

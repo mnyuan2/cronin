@@ -34,13 +34,14 @@ var authList = []*Permission{
 	{Id: 11, Path: "/foundation/dic_gets", Title: "枚举选项", Group: "", Type: AuthTypeLogin},
 	{Id: 12, Path: "/foundation/system_info", Title: "系统信息", Group: "基础", Type: AuthTypeLogin},
 	{Id: 13, Path: "/foundation/parse_proto", Title: "解析proto", Group: "基础", Type: AuthTypeLogin},
+	{Id: 14, Path: "/foundation/events", Title: "sse事件", Group: "基础", Type: AuthTypeLogin},
 
 	{Id: 20, Path: "/config/", Title: "任务", Group: "", Type: AuthTypeGrant},
 	{Id: 21, Path: "/config/list", Title: "列表", Group: "任务", Type: AuthTypeGrant},
 	{Id: 22, Path: "/config/set", Title: "新增/编辑", Group: "任务", Type: AuthTypeGrant},
 	{Id: 23, Path: "/config/change_status", Title: "提交/停用", Group: "任务", Type: AuthTypeGrant, Tag: "config_submit"},
 	{Id: 24, Path: "/config/change_status?auth_type=audit", Title: "审核", Group: "任务", Type: AuthTypeGrant, Tag: "config_audit"},
-	{Id: 25, Path: "/config/get", Title: "详情", Group: "任务", Type: AuthTypeGrant},
+	{Id: 25, Path: "/config/detail", Title: "详情", Group: "任务", Type: AuthTypeGrant},
 	{Id: 26, Path: "/config/run", Title: "执行一下", Group: "任务", Type: AuthTypeLogin},
 	{Id: 27, Path: "/config/register_list", Title: "已注册列表", Group: "任务", Type: AuthTypeLogin},
 
@@ -49,6 +50,7 @@ var authList = []*Permission{
 	{Id: 32, Path: "/pipeline/set", Title: "新增/编辑", Group: "流水线", Type: AuthTypeGrant},
 	{Id: 33, Path: "/pipeline/change_status", Title: "提交/停用", Group: "流水线", Type: AuthTypeGrant, Tag: "pipeline_submit"},
 	{Id: 34, Path: "/pipeline/change_status?auth_type=audit", Title: "审核", Group: "流水线", Type: AuthTypeGrant, Tag: "pipeline_audit"},
+	{Id: 35, Path: "/pipeline/detail", Title: "详情", Group: "流水线", Type: AuthTypeGrant},
 
 	{Id: 41, Path: "/work/table", Title: "工作表", Group: "我的", Type: AuthTypeLogin},
 

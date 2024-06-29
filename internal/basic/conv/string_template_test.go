@@ -9,6 +9,7 @@ import (
 	"gitlab.com/metakeule/fmtdate"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"text/template"
@@ -256,4 +257,16 @@ func TestFuncs(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println(buf.String())
+}
+
+func TestName(t *testing.T) {
+	str := "http://abc.com"
+	//str := "Valid_Address123"
+	// 定义匹配规则的正则表达式
+	re := regexp.MustCompile(`^[a-zA-Z][\w-]{1,}[a-zA-Z0-9]$`)
+
+	// 使用正则表达式进行匹配
+	is := re.MatchString(str)
+	fmt.Println("结果", is)
+
 }

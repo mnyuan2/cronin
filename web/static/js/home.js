@@ -131,11 +131,9 @@ function arrayToTree(arrList, id, fid, children = 'children') {
     let map = []
     arrList.forEach(item => {
         let up = arrList.filter(x => x[id] == item[fid])
-        let sit = arrList.filter(x => x[fid] == item[id])
-        if (sit.length) item[children] = sit
-        if (!(up.length && !sit.length)) {
-            map.push(item)
-        }
+        let sub = arrList.filter(x => x[fid] == item[id])
+        if (sub.length) item[children] = sub
+        if (!up.length) map.push(item)
     })
     return map;
     // if (arrList.length == map.length)return map
@@ -463,6 +461,31 @@ var api = {
 
 // 缓存信息
 var cache = {
+
+    /**
+     * 获得环境
+     * @returns {any|{}}
+     */
+    getEnv(){
+        let list = JSON.parse(localStorage.getItem('env')) ?? {}
+        return list
+    },
+
+    /**
+     * 设置环境
+     * @param val
+     */
+    setEnv(val){
+        let str = ''
+        if (typeof val === 'string'){
+            str = val
+        }else if (typeof val === 'object'){
+            str = JSON.stringify(val)
+        }
+
+        localStorage.setItem('user', str)
+    },
+
     /**
      * 获得令牌
      * @returns {string}

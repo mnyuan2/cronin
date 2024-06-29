@@ -1,478 +1,507 @@
 var MyConfig = Vue.extend({
-    template: `<el-main>
-                    <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
-                        <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>
-                        <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>
-                        <el-menu-item index="5" :disabled="listRequest">组件任务</el-menu-item>
-                        <div style="float: right">
-                            <el-button type="text" @click="createShow()">添加任务</el-button>
-                            <el-button type="text" @click="getRegisterList()">已注册任务</el-button>
-                        </div>
-                    </el-menu>
-                    <el-table :data="list">
-                        <el-table-column prop="id" label="编号"></el-table-column>
-                        <el-table-column prop="" label="执行成功率">
-                            <template slot-scope="scope">
-                                <el-tooltip placement="top-start">
-                                    <div slot="content">{{scope.row.topRatio}}%<br/>近期{{scope.row.top_number}}次执行，{{scope.row.top_error_number}}次失败。</div>
-                                    <i :class="getTopIcon(scope.row.top_number, scope.row.topRatio)"></i>
-                                </el-tooltip>
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="spec" label="执行时间"></el-table-column>
-                        <el-table-column prop="name" label="任务名称"></el-table-column>
-                        <el-table-column prop="protocol_name" label="协议"></el-table-column>
-                        <el-table-column prop="remark" label="备注"></el-table-column>
-                        <el-table-column prop="status_user_name" label="操作人"></el-table-column>
-                        <el-table-column prop="" label="状态">
-                            <template slot-scope="scope">
-                                <el-tooltip placement="top-start">
-                                    <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
-                                    <span :class="statusClass(scope.row.status)">{{scope.row.status_name}}</span>
-                                </el-tooltip>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="操作">
-                            <template slot-scope="{row}">
-                                <el-button type="text" @click="editShow(row)">编辑</el-button>
-                                <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4) && auth_tags.config_submit">提交审核</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5 && auth_tags.config_audit">通过</el-button>
-                                <el-button type="text" @click="rejectBox(row)" v-if="row.status==5 && auth_tags.config_audit">驳回</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6) && auth_tags.config_submit">激活</el-button>
-                                <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2 && auth_tags.config_submit">停用</el-button>
-                                <el-button type="text" @click="configLogBox(row)">日志</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                    <el-pagination
-                            @size-change="handleSizeChange"
-                            @current-change="handleCurrentChange"
-                            :current-page.sync="listPage.page"
-                            :page-size="listPage.size"
-                            layout="total, prev, pager, next"
-                            :total="listPage.total">
-                    </el-pagination>
-                    
-                    
-                    <!-- 任务设置表单 -->
-                    <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false" class="config-form-box">
-                        <el-form :model="form">
-                            <el-form-item label="名称*" label-width="50px">
-                                <el-input v-model="form.name"></el-input>
-                            </el-form-item>
-                            <el-form-item label="类型*" label-width="50px">
-                                <el-radio v-model="form.type" label="1">周期</el-radio>
-                                <el-radio v-model="form.type" label="2">单次</el-radio>
-                                <el-radio v-model="form.type" label="5">组件</el-radio>
-                            </el-form-item>
-                            <el-form-item label="时间*" label-width="50px" v-if="form.type != 5">
-                                <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
-                                <el-date-picker 
-                                    style="width: 100%"
-                                    v-show="form.type==2" 
-                                    v-model="form.spec" 
-                                    value-format="yyyy-MM-dd HH:mm:ss"
-                                    type="datetime" 
-                                    placeholder="选择运行时间" 
-                                    :picker-options="pickerOptions">
-                                </el-date-picker>
-                            </el-form-item>
-                            <el-form-item label-width="50px" size="mini" class="http_header_box var_fields">
-                                <span slot="label" style="white-space: nowrap;">
-                                    参数
-                                    <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
-                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
-                                    </el-tooltip>
-                                </span>
-                                <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.remark" placeholder="参数说明">
-                                    <el-input slot="prepend" v-model="p_v.key" placeholder="key" @input="e=>inputChangeArrayPush(e,p_i,form.var_fields)">
-                                        <el-input slot="suffix" v-model="p_v.value" placeholder="默认值"></el-input>
-                                    </el-input>
-                                    <el-button slot="append" icon="el-icon-delete" @click="arrayDelete(p_i, form.var_fields)"></el-button>
-                                </el-input>
-                            </el-form-item>
-                            
-                            <el-form-item>
-                                <el-tabs type="border-card" v-model="form.protocol">
-                                    <el-tab-pane label="http" name="1">
-                                        <el-form-item label="请求地址" class="http_url_box" size="mini">
-                                            <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
-                                                <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
-                                                    <el-option label="GET" value="GET"></el-option>
-                                                    <el-option label="POST" value="POST"></el-option>
-                                                </el-select>
-                                            </el-input>
-                                        </el-form-item>
+    template: `<el-container>
+    <!--边栏-->
+    <el-aside width="240px" style="padding-top: 10px">
+        <el-card class="aside-card">
+            <div slot="header">
+                <span class="h3">执行任务</span>
+            </div>
+            <ol>
+                <li v-for="item in queue.exec">
+                    <p style="margin: 0;">{{item.name}}</p>
+                    <p style="margin: 0;color: #909399;line-height: 100%;font-size: 12px;">({{durationTransform(item.duration, 's')}})</p>
+                </li>
+            </ul>
+            <div v-show="!queue.exec.length">-</div>
+        </el-card>
+        <el-card class="aside-card">
+            <div slot="header">
+                <span class="h3">注册任务</span>
+            </div>
+            <ol>
+                <li v-for="item in queue.register">
+                    <p style="margin: 0;">{{item.name}}</p>
+<!--                    <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:'config'}}" style="color: #606266">{{item.name}}</router-link>-->
+                </li>
+            </ol>
+            <div v-show="!queue.register.length">-</div>
+        </el-card>
+    </el-aside>
+    <!--主内容-->
+    <el-main>
+        <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
+            <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>
+            <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>
+            <el-menu-item index="5" :disabled="listRequest">组件任务</el-menu-item>
+            <div style="float: right">
+                <el-button type="text" @click="createShow()">添加任务</el-button>
+                <el-button type="text" @click="getRegisterList()">已注册任务</el-button>
+            </div>
+        </el-menu>
+        <el-table :data="list">
+            <el-table-column prop="" label="成功率" width="80">
+                <template slot-scope="scope">
+                    <el-tooltip placement="top-start">
+                        <div slot="content">{{scope.row.topRatio}}%<br/>近期{{scope.row.top_number}}次执行，{{scope.row.top_error_number}}次失败。</div>
+                        <i :class="getTopIcon(scope.row.top_number, scope.row.topRatio)"></i>
+                    </el-tooltip>
+                </template>
+            </el-table-column>
+            <el-table-column prop="spec" label="执行时间" v-show="labelType!=5" width="160"></el-table-column>
+            <el-table-column prop="name" label="任务名称"></el-table-column>
+            <el-table-column prop="protocol_name" label="协议" width="80"></el-table-column>
+            <el-table-column prop="remark" label="备注"></el-table-column>
+            <el-table-column prop="status_user_name" label="操作人" width="90"></el-table-column>
+            <el-table-column prop="" label="状态" width="70">
+                <template slot-scope="scope">
+                    <el-tooltip placement="top-start">
+                        <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
+                        <span :class="statusClass(scope.row.status)">{{scope.row.status_name}}</span>
+                    </el-tooltip>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="{row}">
+                    <el-button type="text" @click="editShow(row)">编辑</el-button>
+                    <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4) && auth_tags.config_submit">提交审核</el-button>
+                    <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5 && auth_tags.config_audit">通过</el-button>
+                    <el-button type="text" @click="rejectBox(row)" v-if="row.status==5 && auth_tags.config_audit">驳回</el-button>
+                    <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6) && auth_tags.config_submit">激活</el-button>
+                    <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2 && auth_tags.config_submit">停用</el-button>
+                    <el-button type="text" @click="configLogBox(row)">日志</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                :current-page.sync="listPage.page"
+                :page-size="listPage.size"
+                layout="total, prev, pager, next"
+                :total="listPage.total">
+        </el-pagination>
+    </el-main>
+    
+    <!-- 任务设置表单 -->
+    <el-dialog :title="setConfigTitle" :visible.sync="setConfigShow" :close-on-click-modal="false" class="config-form-box">
+        <el-form :model="form">
+            <el-form-item label="名称*" label-width="50px">
+                <el-input v-model="form.name"></el-input>
+            </el-form-item>
+            <el-form-item label="类型*" label-width="50px">
+                <el-radio v-model="form.type" label="1">周期</el-radio>
+                <el-radio v-model="form.type" label="2">单次</el-radio>
+                <el-radio v-model="form.type" label="5">组件</el-radio>
+            </el-form-item>
+            <el-form-item label="时间*" label-width="50px" v-if="form.type != 5">
+                <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec"></el-input>
+                <el-date-picker 
+                    style="width: 100%"
+                    v-show="form.type==2" 
+                    v-model="form.spec" 
+                    value-format="yyyy-MM-dd HH:mm:ss"
+                    type="datetime" 
+                    placeholder="选择运行时间" 
+                    :picker-options="pickerOptions">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item label-width="50px" size="mini" class="http_header_box var_fields">
+                <span slot="label" style="white-space: nowrap;">
+                    参数
+                    <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
+                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                    </el-tooltip>
+                </span>
+                <el-input v-for="(p_v,p_i) in form.var_fields" v-model="p_v.remark" placeholder="参数说明">
+                    <el-input slot="prepend" v-model="p_v.key" placeholder="key" @input="e=>inputChangeArrayPush(e,p_i,form.var_fields)">
+                        <el-input slot="suffix" v-model="p_v.value" placeholder="默认值"></el-input>
+                    </el-input>
+                    <el-button slot="append" icon="el-icon-delete" @click="arrayDelete(p_i, form.var_fields)"></el-button>
+                </el-input>
+            </el-form-item>
             
-                                        <el-form-item label="请求Header" class="http_header_box" size="mini">
-                                            <el-input v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
-                                                <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
-                                                <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
-                                            </el-input>
-                                        </el-form-item>
-                                        <el-form-item label="请求Body参数" size="mini">
-                                            <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
-                                        </el-form-item>
-                                    </el-tab-pane>
-                                    <el-tab-pane label="rpc" name="2">
-                                        <el-form-item label="请求模式" size="mini">
-                                            <el-radio v-model="form.command.rpc.method" label="GRPC">GRPC</el-radio>
-                                        </el-form-item>
-                                        <el-form-item label="proto" size="mini" style="margin-top: -10px">
-                                            <el-input type="textarea" v-model="form.command.rpc.proto" rows="5" placeholder="请输入*.proto 文件内容" style=""></el-input>
-                                        </el-form-item>
-                                        <el-form-item label="地址" label-width="42px" size="mini">
-                                            <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
-                                        </el-form-item>
-                                        <el-form-item label="方法" size="mini">
-                                            <el-select v-model="form.command.rpc.action" filterable clearable placeholder="填写proto信息后点击解析，可获得其方法进行选择" style="min-width: 400px">
-                                                <el-option v-for="item in form.command.rpc.actions" :key="item" :label="item" :value="item"></el-option>
-                                            </el-select>
-                                            <el-button @click="parseProto()">解析proto</el-button>
-                                        </el-form-item>
-                                        <el-form-item label="请求参数" size="mini">
-                                            <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
-                                        </el-form-item>
-                                    </el-tab-pane>
-                                    <el-tab-pane label="cmd" name="3">
-                                        主机
-                                        <el-select v-model="form.command.cmd.host.id" size="mini" style="width:180px">
-                                            <el-option v-for="dic_v in dic_host_source" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                        </el-select>
-                                        来源
-                                        <el-select v-model="form.command.cmd.origin" size="mini" style="width:80px">
-                                            <el-option label="当前" value="local"></el-option>
-                                            <el-option label="git" value="git"></el-option>
-                                        </el-select>
-                                        类型
-                                        <el-select v-model="form.command.cmd.type" size="mini" clearable style="width:80px">
-                                            <el-option v-for="dic_v in dic_cmd_type" :label="dic_v.name" :value="dic_v.key"></el-option>
-                                        </el-select>
-                                        <el-card class="box-card" shadow="hover" v-if="form.command.cmd.origin=='git'">
-                                            <el-form :model="form.command.cmd.statement.git" label-width="70px" size="small">
-                                                <el-form-item label="连接">
-                                                    <el-select v-model="form.command.cmd.statement.git.link_id" placement="请选择git链接">
-                                                        <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                                    </el-select>
-                                                </el-form-item>
-                                                <el-form-item label="仓库空间">
-                                                    <el-input v-model="form.command.cmd.statement.git.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
-                                                </el-form-item>
-                                                <el-form-item label="项目名称">
-                                                    <el-input v-model="form.command.cmd.statement.git.project" placeholder="仓库路径"></el-input>
-                                                </el-form-item>
-                                                <el-form-item label="文件路径">
-                                                    <el-input v-for="(path_v,path_i) in form.command.cmd.statement.git.path" v-model="form.command.cmd.statement.git.path[path_i]" placeholder="文件的路径">
-                                                    </el-input>
-                                                </el-form-item>
-                                                <el-form-item label="引用">
-                                                    <el-input v-model="form.command.cmd.statement.git.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
-                                                </el-form-item>
-                                            </el-form>
-                                        </el-card>
-                                        <el-card class="box-card"  shadow="hover" v-if="form.command.cmd.origin=='local'">
-                                            <el-input type="textarea" v-model="form.command.cmd.statement.local" rows="5" placeholder="请输入命令行执行内容"></el-input>
-                                        </el-card>
-                                    </el-tab-pane>
-                                    <el-tab-pane label="sql" name="4" label-position="left">
-                                        <el-form-item label="驱动" size="mini">
-                                            <el-select v-model="form.command.sql.driver" placeholder="驱动">
-                                                <el-option v-for="dic_v in dic_sql_driver" :label="dic_v.name" :value="dic_v.key"></el-option>
-                                            </el-select>
-                                        </el-form-item>
-                                        <el-form-item label="链接" size="mini">
-                                            <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
-                                                <el-option v-for="(dic_v,dic_k) in dic_sql_source" v-show="dic_v.extend.driver == form.command.sql.driver" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                            </el-select>
-                                            <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
-                                        </el-form-item>
-                                        <el-form-item label="执行语句" size="mini">
-                                            <div>
-                                                来源
-                                                <el-select v-model="form.command.sql.origin" size="mini" style="width:80px">
-                                                    <el-option label="本地" value="local"></el-option>
-                                                    <el-option label="git" value="git"></el-option>
-                                                </el-select>
-                                                <el-button type="text" @click="sqlSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
-                                            </div>
-                                            <div style="overflow-y: auto;max-height: 420px;">
-                                                <!--本地sql展示-->
-                                                <div v-if="form.command.sql.origin == 'local'" v-for="(statement,sql_index) in form.command.sql.statement" v-show="statement.type=='local' || statement.type==''" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                                    <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 45px;"><code class="language-sql hljs">{{statement.local}}</code></pre>
-                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
-                                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
-                                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
-                                                </div>
-                                                <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
-                                                <!--git sql展示-->
-                                                <div v-if="form.command.sql.origin == 'git'" v-for="(statement,sql_index) in form.command.sql.statement" v-show="statement.type=='git'" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                                    <el-row v-html="statement.git.descrition"></el-row>
-                                                    <pre v-for="path_item in statement.git.path" style="margin: 0;padding-left: 30px;"><code class="">{{path_item}}</code></pre>
-                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
-                                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
-                                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
-                                                </div>
-                                            </div>
-                                        </el-form-item>
-                                        <el-form-item label="错误行为" size="mini">
-                                            <el-tooltip class="item" effect="dark" content="执行到错误停止，之前的成功语句保留" placement="top-start">
-                                              <el-radio v-model="form.command.sql.err_action" label="1">终止任务</el-radio>
-                                            </el-tooltip>
-                                            <el-tooltip class="item" effect="dark" content="执行到错误跳过，继续执行后面语句" placement="top-start">
-                                              <el-radio v-model="form.command.sql.err_action" label="2">跳过继续</el-radio>
-                                            </el-tooltip>
-                                            <el-tooltip class="item" effect="dark" content="执行到错误，之前的成功语句也整体回滚" placement="top-start">
-                                              <el-radio v-model="form.command.sql.err_action" label="3">事务回滚</el-radio>
-                                            </el-tooltip>
-                                        </el-form-item>
-                                        <el-form-item label="执行间隔" size="mini" v-if="form.command.sql.err_action !=3" label-width="69px">
-                                            <el-input type="number" v-model="form.command.sql.interval" placeholder="s秒">
-                                                <span slot="append">s/秒</span>
-                                            </el-input>
-                                        </el-form-item>
-                                    </el-tab-pane>
-                                    
-                                    <el-tab-pane label="jenkins" name="5">
-                                        <el-form-item label="链接">
-                                            <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
-                                                <el-option v-for="(dic_v,dic_k) in dic_jenkins_source" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                            </el-select>
-                                        </el-form-item>
-                                        <el-form-item label="项目">
-                                            <el-input v-model="form.command.jenkins.name" placeholder="jenkins job name"></el-input>
-                                        </el-form-item>
-                                        <el-form-item label="参数" class="http_header_box">
-                                            <el-input v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">
-                                                <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput"></el-input>
-                                                <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i)"></el-button>
-                                            </el-input>
-                                        </el-form-item>
-                                    </el-tab-pane>
-                                    <el-tab-pane label="git" name="6">
-                                        <el-form-item label="链接">
-                                            <el-select v-model="form.command.git.link_id" placement="请选择链接">
-                                                <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                            </el-select>
-                                        </el-form-item>
-                                        <el-form-item label="事件">
-                                            <div>
-                                                <el-button type="text" @click="gitSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
-                                            </div>
-                                            <div style="overflow-y: auto;max-height: 420px;">
-                                                <el-alert v-show="form.command.git.events.length==0" title="未添加事件，请添加。" type="info"></el-alert>
-                                                <!--git 事件展示-->
-                                                <div v-for="(event,git_index) in form.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                                    <el-row v-html="event.summary" style="min-height: 45px;"></el-row>
-                                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="gitSetDel(git_index)"></i>
-                                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="gitSetShow(git_index,event)"></i>
-                                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
-                                                </div>
-                                            </div>
-                                        </el-form-item>
-                                    </el-tab-pane>
-                                </el-tabs>
-                            </el-form-item>
-                            
-                            <el-form-item label-width="50px"  size="mini">
-                                <span slot="label" style="white-space: nowrap;">
-                                    结果<el-tooltip effect="dark" content="任务结果模板分析，点击查看更多" placement="top-start">
-                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
-                                    </el-tooltip>
-                                </span>
-                                <el-input type="textarea" v-model="form.after_tmpl" rows="2" placeholder="任务成功后，对结果文本进行模板处理；输出空文本表示通过、非空文本将被认为错误描述。\n支持变量: result·string"></el-input>
-                            </el-form-item>
-                            <el-form-item label="备注" label-width="50px" size="mini">
-                                <el-input v-model="form.remark"></el-input>
-                            </el-form-item>
-                            <el-form-item label-width="2px">
-                                <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
-                                <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <el-row v-html="msg.descrition"></el-row>
-                                    <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
-                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
-                                </div>
-                            </el-form-item>
-                        </el-form>
-                        <div slot="footer" class="dialog-footer">
-                            <el-button @click="configRun()" class="left">执行一下</el-button>
-                            <el-button @click="setConfigShow = false">取 消</el-button>
-                            <el-button type="success" @click="setCron()" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">保存草稿</el-button>
-                            <el-button type="primary" @click="auditedBox('open')" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">提交审核</el-button>
-                        </div>
-                    </el-dialog>
-                    <!-- 任务日志弹窗 -->
-                    <el-drawer :title="configLog.title" :visible.sync="configLog.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
-                        <my-config-log :tags="configLog.tags"></my-config-log>
-                    </el-drawer>
-                    <!-- 注册任务列表弹窗 -->
-                    <el-drawer title="已注册任务" :visible.sync="registerListShow" direction="rtl" size="40%" wrapperClosable="false">
-                        <el-table :data="registerList">
-                            <el-table-column property="id" label="编号">
-                                <template slot-scope="scope">
-                                    {{scope.row.id}}/{{scope.row.entry_id}}
-                                </template>
-                            </el-table-column>
-                            <el-table-column property="spec" label="执行时间"></el-table-column>
-                            <el-table-column property="update_dt" label="下一次执行"></el-table-column>
-                            <el-table-column property="name" label="任务名称"></el-table-column>
-                            <el-table-column property="" label="">
-                                <template slot-scope="scope">
-                                    <el-button type="text" @click="configLogBox(scope.row)">日志</el-button>
-                                </template>
-                            </el-table-column>
-                        </el-table>
-                    </el-drawer>
-                    <!-- sql 设置弹窗 -->
-                    <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
-                        <el-form :model="sqlSet.statement.git" v-if="sqlSet.source=='git'" label-width="70px" size="small">
-                            <el-form-item label="连接">
-                                <el-select v-model="sqlSet.statement.git.link_id" placement="请选择git链接">
-                                    <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+            <el-form-item>
+                <el-tabs type="border-card" v-model="form.protocol">
+                    <el-tab-pane label="http" name="1">
+                        <el-form-item label="请求地址" class="http_url_box" size="mini">
+                            <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
+                                <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
+                                    <el-option label="GET" value="GET"></el-option>
+                                    <el-option label="POST" value="POST"></el-option>
                                 </el-select>
-                            </el-form-item>
-                            <el-form-item label="仓库空间">
-                                <el-input v-model="sqlSet.statement.git.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
-                            </el-form-item>
-                            <el-form-item label="项目名称">
-                                <el-input v-model="sqlSet.statement.git.project" placeholder="仓库路径"></el-input>
-                            </el-form-item>
-                            <el-form-item label="文件路径">
-                                <el-input v-for="(path_v,path_i) in sqlSet.statement.git.path" v-model="sqlSet.statement.git.path[path_i]" placeholder="文件的路径" @input="sqlGitPathInput">
-                                    <el-button slot="append" icon="el-icon-delete" @click="sqlGitPathDel(path_i)"></el-button>
-                                </el-input>
-                            </el-form-item>
-                            <el-form-item label="引用">
-                                <el-input v-model="sqlSet.statement.git.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
-                            </el-form-item>
-                            <el-form-item label="批量解析">
-                                <el-tooltip class="item" effect="dark" content="文件中sql预警将根据;分号为分隔符进行多条拆分" placement="top-start">
-                                  <el-radio v-model="sqlSet.statement.is_batch" label="1">是</el-radio>
-                                </el-tooltip>
-                                <el-tooltip class="item" effect="dark" content="不拆分sql，单文件为一个独立sql语句" placement="top-start">
-                                  <el-radio v-model="sqlSet.statement.is_batch" label="2">否</el-radio>
-                                </el-tooltip>
-                            </el-form-item>
-                        </el-form>
-                        
-                        <el-form :model="sqlSet.statement.local"  v-if="sqlSet.source=='local'">
-                            <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.statement.local"></el-input>
-                        </el-form>
-                       
-                        <span slot="footer" class="dialog-footer">
-                            <el-button @click="sqlSet.show = false">取 消</el-button>
-                            <el-button type="primary" @click="sqlSetConfirm()">确 定</el-button>
-                        </span>
-                    </el-dialog>
-                    <!-- git 设置弹窗 -->
-                    <el-dialog :title="'git设置-'+sqlSet.title" :visible.sync="gitSet.show" :show-close="false" :close-on-click-modal="false">
-                        <el-form :model="gitSet.event" label-width="90px" size="small">
-                            <el-form-item label="事件">
-                                <el-select v-model="gitSet.data.id" placement="请选择事件类型">
-                                    <el-option v-for="(dic_v,dic_k) in dic_git_event" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                </el-select>
-                            </el-form-item>
-                            <el-divider><i class="el-icon-setting"></i></el-divider>
-                            
-                            <div v-if="gitSet.data.id==2"> pr创建 开发中 ...
-                                
-                            </div>
-                            
-                            <div v-if="gitSet.data.id==9"> <!-- pr合并 -->
-                                <el-form-item>
-                                    <el-alert title="合并pr前请确认已完成了审查与测试确认！" type="warning" show-icon :closable="false"></el-alert>
-                                </el-form-item>
-                                <el-form-item label="仓库空间*">
-                                    <el-input v-model="gitSet.data.pr_merge.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
-                                </el-form-item>
-                                <el-form-item label="项目名称*">
-                                    <el-input v-model="gitSet.data.pr_merge.repo" placeholder="仓库路径"></el-input>
-                                </el-form-item>
-                                <el-form-item label="PR 编号*">
-                                    <el-input type="number" v-model="gitSet.data.pr_merge.number" placeholder="本仓库PR的序数"></el-input>
-                                </el-form-item>
-                                <el-form-item label="commit 标题">
-                                    <el-input v-model="gitSet.data.pr_merge.title" placeholder="合并 commit 标题，默认为 !{pr_id} {pr_title}"></el-input>
-                                </el-form-item>
-                                <el-form-item label="commit 描述">
-                                    <el-input type="textarea" v-model="gitSet.data.pr_merge.description" placeholder="合并 commit 描述，默认为 Merge pull request !{pr_id} from {author}/{source_branch}"></el-input>
-                                </el-form-item>
-                                <el-form-item label="合并方式">
-                                    <el-select v-model="gitSet.data.pr_merge.merge_method">
-                                        <el-option label="合并分支" value="merge">
-                                            <span style="float: left">合并分支</span>
-                                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">源分支所有的提交都会合并到目标分支，并产生一个新的提交</span>
-                                        </el-option>
-                                        <el-option label="扁平化分支" value="squash">
-                                            <span style="float: left">扁平化分支</span>
-                                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">源分支中的多个提交会打包成一个提交合并到目标分支</span>
-                                        </el-option>
-                                        <el-option label="变基并合并" value="rebase">
-                                            <span style="float: left">变基并合并</span>
-                                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">来自源分支的 2 个提交将被重新定位并提交到目标分支。</span>
-                                        </el-option>
+                            </el-input>
+                        </el-form-item>
+
+                        <el-form-item label="请求Header" class="http_header_box" size="mini">
+                            <el-input v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
+                                <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
+                                <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item label="请求Body参数" size="mini">
+                            <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
+                        </el-form-item>
+                    </el-tab-pane>
+                    <el-tab-pane label="rpc" name="2">
+                        <el-form-item label="请求模式" size="mini">
+                            <el-radio v-model="form.command.rpc.method" label="GRPC">GRPC</el-radio>
+                        </el-form-item>
+                        <el-form-item label="proto" size="mini" style="margin-top: -10px">
+                            <el-input type="textarea" v-model="form.command.rpc.proto" rows="5" placeholder="请输入*.proto 文件内容" style=""></el-input>
+                        </el-form-item>
+                        <el-form-item label="地址" label-width="42px" size="mini">
+                            <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
+                        </el-form-item>
+                        <el-form-item label="方法" size="mini">
+                            <el-select v-model="form.command.rpc.action" filterable clearable placeholder="填写proto信息后点击解析，可获得其方法进行选择" style="min-width: 400px">
+                                <el-option v-for="item in form.command.rpc.actions" :key="item" :label="item" :value="item"></el-option>
+                            </el-select>
+                            <el-button @click="parseProto()">解析proto</el-button>
+                        </el-form-item>
+                        <el-form-item label="请求参数" size="mini">
+                            <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
+                        </el-form-item>
+                    </el-tab-pane>
+                    <el-tab-pane label="cmd" name="3">
+                        主机
+                        <el-select v-model="form.command.cmd.host.id" size="mini" style="width:180px">
+                            <el-option v-for="dic_v in dic_host_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                        </el-select>
+                        来源
+                        <el-select v-model="form.command.cmd.origin" size="mini" style="width:80px">
+                            <el-option label="当前" value="local"></el-option>
+                            <el-option label="git" value="git"></el-option>
+                        </el-select>
+                        类型
+                        <el-select v-model="form.command.cmd.type" size="mini" clearable style="width:80px">
+                            <el-option v-for="dic_v in dic_cmd_type" :label="dic_v.name" :value="dic_v.key"></el-option>
+                        </el-select>
+                        <el-card class="box-card" shadow="hover" v-if="form.command.cmd.origin=='git'">
+                            <el-form :model="form.command.cmd.statement.git" label-width="70px" size="small">
+                                <el-form-item label="连接">
+                                    <el-select v-model="form.command.cmd.statement.git.link_id" placement="请选择git链接">
+                                        <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                                     </el-select>
                                 </el-form-item>
-                                <el-form-item label="合并选项">
-                                    <el-checkbox v-model="gitSet.data.pr_merge.prune_source_branch">合并后删除提交分支</el-checkbox>
+                                <el-form-item label="仓库空间">
+                                    <el-input v-model="form.command.cmd.statement.git.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
                                 </el-form-item>
+                                <el-form-item label="项目名称">
+                                    <el-input v-model="form.command.cmd.statement.git.project" placeholder="仓库路径"></el-input>
+                                </el-form-item>
+                                <el-form-item label="文件路径">
+                                    <el-input v-for="(path_v,path_i) in form.command.cmd.statement.git.path" v-model="form.command.cmd.statement.git.path[path_i]" placeholder="文件的路径">
+                                    </el-input>
+                                </el-form-item>
+                                <el-form-item label="引用">
+                                    <el-input v-model="form.command.cmd.statement.git.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
+                                </el-form-item>
+                            </el-form>
+                        </el-card>
+                        <el-card class="box-card"  shadow="hover" v-if="form.command.cmd.origin=='local'">
+                            <el-input type="textarea" v-model="form.command.cmd.statement.local" rows="5" placeholder="请输入命令行执行内容"></el-input>
+                        </el-card>
+                    </el-tab-pane>
+                    <el-tab-pane label="sql" name="4" label-position="left">
+                        <el-form-item label="驱动" size="mini">
+                            <el-select v-model="form.command.sql.driver" placeholder="驱动">
+                                <el-option v-for="dic_v in dic_sql_driver" :label="dic_v.name" :value="dic_v.key"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="链接" size="mini">
+                            <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
+                                <el-option v-for="(dic_v,dic_k) in dic_sql_source" v-show="dic_v.extend.driver == form.command.sql.driver" :label="dic_v.name" :value="dic_v.id"></el-option>
+                            </el-select>
+                            <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
+                        </el-form-item>
+                        <el-form-item label="执行语句" size="mini">
+                            <div>
+                                来源
+                                <el-select v-model="form.command.sql.origin" size="mini" style="width:80px">
+                                    <el-option label="本地" value="local"></el-option>
+                                    <el-option label="git" value="git"></el-option>
+                                </el-select>
+                                <el-button type="text" @click="sqlSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
                             </div>
-                            <div v-if="gitSet.id==3">
-                                待开发...
+                            <div style="overflow-y: auto;max-height: 420px;">
+                                <!--本地sql展示-->
+                                <div v-if="form.command.sql.origin == 'local'" v-for="(statement,sql_index) in form.command.sql.statement" v-show="statement.type=='local' || statement.type==''" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 45px;"><code class="language-sql hljs">{{statement.local}}</code></pre>
+                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
+                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
+                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
+                                </div>
+                                <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
+                                <!--git sql展示-->
+                                <div v-if="form.command.sql.origin == 'git'" v-for="(statement,sql_index) in form.command.sql.statement" v-show="statement.type=='git'" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <el-row v-html="statement.git.descrition"></el-row>
+                                    <pre v-for="path_item in statement.git.path" style="margin: 0;padding-left: 30px;"><code class="">{{path_item}}</code></pre>
+                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="sqlSetDel(sql_index)"></i>
+                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="sqlSetShow(sql_index,statement)"></i>
+                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
+                                </div>
                             </div>
-                        </el-form>
-                       
-                        <span slot="footer" class="dialog-footer">
-                            <el-button @click="gitSet.show = false">取 消</el-button>
-                            <el-button type="primary" @click="gitSetConfirm()">确 定</el-button>
-                        </span>
-                    </el-dialog>
+                        </el-form-item>
+                        <el-form-item label="错误行为" size="mini">
+                            <el-tooltip class="item" effect="dark" content="执行到错误停止，之前的成功语句保留" placement="top-start">
+                              <el-radio v-model="form.command.sql.err_action" label="1">终止任务</el-radio>
+                            </el-tooltip>
+                            <el-tooltip class="item" effect="dark" content="执行到错误跳过，继续执行后面语句" placement="top-start">
+                              <el-radio v-model="form.command.sql.err_action" label="2">跳过继续</el-radio>
+                            </el-tooltip>
+                            <el-tooltip class="item" effect="dark" content="执行到错误，之前的成功语句也整体回滚" placement="top-start">
+                              <el-radio v-model="form.command.sql.err_action" label="3">事务回滚</el-radio>
+                            </el-tooltip>
+                        </el-form-item>
+                        <el-form-item label="执行间隔" size="mini" v-if="form.command.sql.err_action !=3" label-width="69px">
+                            <el-input type="number" v-model="form.command.sql.interval" placeholder="s秒">
+                                <span slot="append">s/秒</span>
+                            </el-input>
+                        </el-form-item>
+                    </el-tab-pane>
+                    
+                    <el-tab-pane label="jenkins" name="5">
+                        <el-form-item label="链接">
+                            <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
+                                <el-option v-for="(dic_v,dic_k) in dic_jenkins_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="项目">
+                            <el-input v-model="form.command.jenkins.name" placeholder="jenkins job name"></el-input>
+                        </el-form-item>
+                        <el-form-item label="参数" class="http_header_box">
+                            <el-input v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">
+                                <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput"></el-input>
+                                <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i)"></el-button>
+                            </el-input>
+                        </el-form-item>
+                    </el-tab-pane>
+                    <el-tab-pane label="git" name="6">
+                        <el-form-item label="链接">
+                            <el-select v-model="form.command.git.link_id" placement="请选择链接">
+                                <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="事件">
+                            <div>
+                                <el-button type="text" @click="gitSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
+                            </div>
+                            <div style="overflow-y: auto;max-height: 420px;">
+                                <el-alert v-show="form.command.git.events.length==0" title="未添加事件，请添加。" type="info"></el-alert>
+                                <!--git 事件展示-->
+                                <div v-for="(event,git_index) in form.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <el-row v-html="event.summary" style="min-height: 45px;"></el-row>
+                                    <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="gitSetDel(git_index)"></i>
+                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="gitSetShow(git_index,event)"></i>
+                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
+                                </div>
+                            </div>
+                        </el-form-item>
+                    </el-tab-pane>
+                </el-tabs>
+            </el-form-item>
             
-                    <!-- sql链接源管理弹窗 -->
-                    <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
-                        <my-source></my-source>
-                    </el-drawer>
-                    <!-- 推送设置弹窗 -->
-                    <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
-                        <el-form :model="msgSet" :inline="true" size="mini">
-                            <el-form-item label="当结果">
-                                <el-select v-model="msgSet.data.status" style="width: 90px">
-                                    <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                </el-select>
-                                时
-                            </el-form-item>
-                            <el-form-item label="发送">
-                                <el-select v-model="msgSet.data.msg_id">
-                                    <el-option v-for="(dic_v,dic_k) in dic_msg" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                </el-select>
-                                消息
-                            </el-form-item>
-                            <el-form-item label="并且@用户">
-                                <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
-                                    <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                </el-select>
-                            </el-form-item>
-                        </el-form>
-                        <span slot="footer" class="dialog-footer">
-                            <el-button @click="msgSet.show = false">取 消</el-button>
-                            <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
-                        </span>
-                    </el-dialog>
-                    <!-- 提交审核弹窗 -->
-                    <el-dialog title="提示" :visible.sync="auditor_box.show" width="30%">
-                        <span>审核人</span>
-                        <!-- 这里需要过滤出具有审核权限的人 -->
-                        <el-select v-model="auditor_box.user_id">
-                            <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
-                        </el-select>
-                      <span slot="footer" class="dialog-footer">
-                        <el-button @click="auditedBox('close')">取 消</el-button>
-                        <el-button type="primary" @click="auditedBox('submit')">确 定</el-button>
-                      </span>
-                    </el-dialog>
-                </el-main>`,
+            <el-form-item label-width="50px"  size="mini">
+                <span slot="label" style="white-space: nowrap;">
+                    结果<el-tooltip effect="dark" content="任务结果模板分析，点击查看更多" placement="top-start">
+                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                    </el-tooltip>
+                </span>
+                <el-input type="textarea" v-model="form.after_tmpl" rows="2" placeholder="任务成功后，对结果文本进行模板处理；输出空文本表示通过、非空文本将被认为错误描述。\n支持变量: result·string"></el-input>
+            </el-form-item>
+            <el-form-item label="备注" label-width="50px" size="mini">
+                <el-input v-model="form.remark"></el-input>
+            </el-form-item>
+            <el-form-item label-width="2px">
+                <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
+                <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                    <el-row v-html="msg.descrition"></el-row>
+                    <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
+                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
+                </div>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="configRun()" class="left">执行一下</el-button>
+            <el-button @click="setConfigShow = false">取 消</el-button>
+            <el-button type="success" @click="setCron()" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">保存草稿</el-button>
+            <el-button type="primary" @click="auditedBox('open')" v-if="form.status==1 || form.status==3 || form.status==4 || form.status==6">提交审核</el-button>
+        </div>
+    </el-dialog>
+    <!-- 任务日志弹窗 -->
+    <el-drawer :title="configLog.title" :visible.sync="configLog.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
+        <my-config-log :tags="configLog.tags"></my-config-log>
+    </el-drawer>
+    <!-- 注册任务列表弹窗 -->
+    <el-drawer title="已注册任务" :visible.sync="registerListShow" direction="rtl" size="40%" wrapperClosable="false">
+        <el-table :data="registerList">
+            <el-table-column property="id" label="编号">
+                <template slot-scope="scope">
+                    {{scope.row.id}}/{{scope.row.entry_id}}
+                </template>
+            </el-table-column>
+            <el-table-column property="spec" label="执行时间"></el-table-column>
+            <el-table-column property="update_dt" label="下一次执行"></el-table-column>
+            <el-table-column property="name" label="任务名称"></el-table-column>
+            <el-table-column property="" label="">
+                <template slot-scope="scope">
+                    <el-button type="text" @click="configLogBox(scope.row)">日志</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-drawer>
+    <!-- sql 设置弹窗 -->
+    <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :close-on-click-modal="false">
+        <el-form :model="sqlSet.statement.git" v-if="sqlSet.source=='git'" label-width="70px" size="small">
+            <el-form-item label="连接">
+                <el-select v-model="sqlSet.statement.git.link_id" placement="请选择git链接">
+                    <el-option v-for="(dic_v,dic_k) in dic_git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="仓库空间">
+                <el-input v-model="sqlSet.statement.git.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
+            </el-form-item>
+            <el-form-item label="项目名称">
+                <el-input v-model="sqlSet.statement.git.project" placeholder="仓库路径"></el-input>
+            </el-form-item>
+            <el-form-item label="文件路径">
+                <el-input v-for="(path_v,path_i) in sqlSet.statement.git.path" v-model="sqlSet.statement.git.path[path_i]" placeholder="文件的路径" @input="sqlGitPathInput">
+                    <el-button slot="append" icon="el-icon-delete" @click="sqlGitPathDel(path_i)"></el-button>
+                </el-input>
+            </el-form-item>
+            <el-form-item label="引用">
+                <el-input v-model="sqlSet.statement.git.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
+            </el-form-item>
+            <el-form-item label="批量解析">
+                <el-tooltip class="item" effect="dark" content="文件中sql预警将根据;分号为分隔符进行多条拆分" placement="top-start">
+                  <el-radio v-model="sqlSet.statement.is_batch" label="1">是</el-radio>
+                </el-tooltip>
+                <el-tooltip class="item" effect="dark" content="不拆分sql，单文件为一个独立sql语句" placement="top-start">
+                  <el-radio v-model="sqlSet.statement.is_batch" label="2">否</el-radio>
+                </el-tooltip>
+            </el-form-item>
+        </el-form>
+        
+        <el-form :model="sqlSet.statement.local"  v-if="sqlSet.source=='local'">
+            <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.statement.local"></el-input>
+        </el-form>
+       
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="sqlSet.show = false">取 消</el-button>
+            <el-button type="primary" @click="sqlSetConfirm()">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!-- git 设置弹窗 -->
+    <el-dialog :title="'git设置-'+sqlSet.title" :visible.sync="gitSet.show" :show-close="false" :close-on-click-modal="false">
+        <el-form :model="gitSet.event" label-width="90px" size="small">
+            <el-form-item label="事件">
+                <el-select v-model="gitSet.data.id" placement="请选择事件类型">
+                    <el-option v-for="(dic_v,dic_k) in dic_git_event" :label="dic_v.name" :value="dic_v.id"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-divider><i class="el-icon-setting"></i></el-divider>
+            
+            <div v-if="gitSet.data.id==2"> pr创建 开发中 ...
+                
+            </div>
+            
+            <div v-if="gitSet.data.id==9"> <!-- pr合并 -->
+                <el-form-item>
+                    <el-alert title="合并pr前请确认已完成了审查与测试确认！" type="warning" show-icon :closable="false"></el-alert>
+                </el-form-item>
+                <el-form-item label="仓库空间*">
+                    <el-input v-model="gitSet.data.pr_merge.owner" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-input>
+                </el-form-item>
+                <el-form-item label="项目名称*">
+                    <el-input v-model="gitSet.data.pr_merge.repo" placeholder="仓库路径"></el-input>
+                </el-form-item>
+                <el-form-item label="PR 编号*">
+                    <el-input type="number" v-model="gitSet.data.pr_merge.number" placeholder="本仓库PR的序数"></el-input>
+                </el-form-item>
+                <el-form-item label="commit 标题">
+                    <el-input v-model="gitSet.data.pr_merge.title" placeholder="合并 commit 标题，默认为 !{pr_id} {pr_title}"></el-input>
+                </el-form-item>
+                <el-form-item label="commit 描述">
+                    <el-input type="textarea" v-model="gitSet.data.pr_merge.description" placeholder="合并 commit 描述，默认为 Merge pull request !{pr_id} from {author}/{source_branch}"></el-input>
+                </el-form-item>
+                <el-form-item label="合并方式">
+                    <el-select v-model="gitSet.data.pr_merge.merge_method">
+                        <el-option label="合并分支" value="merge">
+                            <span style="float: left">合并分支</span>
+                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">源分支所有的提交都会合并到目标分支，并产生一个新的提交</span>
+                        </el-option>
+                        <el-option label="扁平化分支" value="squash">
+                            <span style="float: left">扁平化分支</span>
+                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">源分支中的多个提交会打包成一个提交合并到目标分支</span>
+                        </el-option>
+                        <el-option label="变基并合并" value="rebase">
+                            <span style="float: left">变基并合并</span>
+                            <span style="float: right; color: #8492a6; font-size: 13px; padding-left: 26px;">来自源分支的 2 个提交将被重新定位并提交到目标分支。</span>
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="合并选项">
+                    <el-checkbox v-model="gitSet.data.pr_merge.prune_source_branch">合并后删除提交分支</el-checkbox>
+                </el-form-item>
+            </div>
+            <div v-if="gitSet.id==3">
+                待开发...
+            </div>
+        </el-form>
+       
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="gitSet.show = false">取 消</el-button>
+            <el-button type="primary" @click="gitSetConfirm()">确 定</el-button>
+        </span>
+    </el-dialog>
+
+    <!-- sql链接源管理弹窗 -->
+    <el-drawer title="sql链接管理" :visible.sync="sqlSourceBoxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
+        <my-source></my-source>
+    </el-drawer>
+    <!-- 推送设置弹窗 -->
+    <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
+        <el-form :model="msgSet" :inline="true" size="mini">
+            <el-form-item label="当结果">
+                <el-select v-model="msgSet.data.status" style="width: 90px">
+                    <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
+                </el-select>
+                时
+            </el-form-item>
+            <el-form-item label="发送">
+                <el-select v-model="msgSet.data.msg_id">
+                    <el-option v-for="(dic_v,dic_k) in dic_msg" :label="dic_v.name" :value="dic_v.id"></el-option>
+                </el-select>
+                消息
+            </el-form-item>
+            <el-form-item label="并且@用户">
+                <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
+                    <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="msgSet.show = false">取 消</el-button>
+            <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!-- 提交审核弹窗 -->
+    <el-dialog title="提示" :visible.sync="auditor_box.show" width="30%">
+        <span>审核人</span>
+        <!-- 这里需要过滤出具有审核权限的人 -->
+        <el-select v-model="auditor_box.user_id">
+            <el-option v-for="(dic_v,dic_k) in dic_user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+        </el-select>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="auditedBox('close')">取 消</el-button>
+        <el-button type="primary" @click="auditedBox('submit')">确 定</el-button>
+      </span>
+    </el-dialog>
+</el-container>`,
     name: "MyConfig",
     data(){
         return {
+            env: {},
             dic_sql_source:[],
             dic_sql_driver:[],
             dic_user: [],
@@ -484,6 +513,10 @@ var MyConfig = Vue.extend({
             dic_cmd_type: [],
             sys_info:{},
             auth_tags:{},
+            queue:{
+                exec:[], // 执行队列
+                register:[], // 注册队列
+            },
             list: [],
             listPage:{
                 total:0,
@@ -540,7 +573,7 @@ var MyConfig = Vue.extend({
                 user_id: ''
             },
             form:{},
-            hintSpec: "* * * * * *",
+            hintSpec: "* * * * * *   秒 分 时 天 月 星期 描述符",
             labelType: '1',
             // 日期选择器设置
             pickerOptions: {
@@ -566,6 +599,15 @@ var MyConfig = Vue.extend({
         console.log("config mounted")
         this.getList()
         this.auth_tags = cache.getAuthTags()
+        // 添加指定事件监听
+        this.env = cache.getEnv()
+        this.$sse.addEventListener(this.env.env+".exec.queue", this.execQueue)
+        this.$sse.addEventListener(this.env.env+'.register.queue', this.registerQueue)
+    },
+    beforeDestroy(){
+        // 销毁指定事件监听
+        this.$sse.removeEventListener(this.env.env+".exec.queue", this.execQueue)
+        this.$sse.removeEventListener(this.env.env+".register.queue", this.registerQueue)
     },
     watch:{
         "form.spec":{
@@ -887,6 +929,7 @@ var MyConfig = Vue.extend({
                         }
                         // row.status = '5'
                         // row.status_name = '待审核'
+                        this.auditor_box.show = false
                         return this.$message.success(res.message)
                     })
                 })
@@ -1327,38 +1370,58 @@ var MyConfig = Vue.extend({
         },
         // 执行一下
         configRun(){
+            this.$confirm('确认现在就执行任务吗？','提示').then(()=>{
+                // 主要是强制类型
+                let body = copyJSON({
+                    id: this.form.id,
+                    name: this.form.name,
+                    type: Number(this.form.type),
+                    spec: this.form.spec,
+                    protocol: Number(this.form.protocol),
+                    command: this.form.command,
+                    remark: this.form.remark,
+                    after_tmpl: this.form.after_tmpl,
+                    var_fields: this.form.var_fields,
+                    msg_set: this.form.msg_set,
+                })
+                body.command.sql.err_action = Number(body.command.sql.err_action)
+                body.command.sql.interval = Number(body.command.sql.interval)
+                body.command.sql.source.id = Number(body.command.sql.source.id)
+                body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
+                body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
+                body.command.git.link_id = Number(body.command.git.link_id)
 
-            // 主要是强制类型
-            let body = copyJSON({
-                id: this.form.id,
-                name: this.form.name,
-                type: Number(this.form.type),
-                spec: this.form.spec,
-                protocol: Number(this.form.protocol),
-                command: this.form.command,
-                remark: this.form.remark,
-                after_tmpl: this.form.after_tmpl,
-                var_fields: this.form.var_fields,
-                msg_set: this.form.msg_set,
+                api.innerPost("/config/run", body, (res)=>{
+                    if (!res.status){
+                        return this.$message({
+                            message: res.message,
+                            type: 'error',
+                            duration: 6000
+                        })
+                    }
+                    return this.$message.success("ok."+res.data.result)
+                })
             })
-            body.command.sql.err_action = Number(body.command.sql.err_action)
-            body.command.sql.interval = Number(body.command.sql.interval)
-            body.command.sql.source.id = Number(body.command.sql.source.id)
-            body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
-            body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
-            body.command.git.link_id = Number(body.command.git.link_id)
-
-            api.innerPost("/config/run", body, (res)=>{
-                if (!res.status){
-                    return this.$message({
-                        message: res.message,
-                        type: 'error',
-                        duration: 6000
-                    })
-                }
-                return this.$message.success("ok."+res.data.result)
-            })
-        }
+        },
+        // 消息监听处理
+        execQueue(e){
+            console.log("execQueue", e)
+            let data = JSON.parse(e.data)
+            if (!data){
+                this.queue.exec = []
+                return
+            }
+            this.queue.exec = data
+        },
+        registerQueue(e){
+            console.log("registerQueue", e)
+            let data = JSON.parse(e.data)
+            if (!data){
+                this.queue.register = []
+                return
+            }
+            this.queue.register = data
+        },
     }
 })
 

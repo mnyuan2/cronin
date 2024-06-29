@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -48,16 +49,19 @@ func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
 	if err != nil {
 		return nil, errs.New(err, "执行时间格式不规范")
 	}
-	if m.execTime.Unix()+60 < time.Now().Unix() {
-		return nil, errs.New(nil, "执行时间必须大于当前时间")
+	if m.execTime.Unix()-60 < time.Now().Unix() {
+		return nil, errs.New(nil, "执行时间不得小于当前1分钟")
 	}
 
 	return m, nil
 }
 
+// Next 返回下一次执行时间
+//
+//	如果当前时间大于执行时间返回空时间，将不会触发执行；否则将会按返回的时间执行。
 func (m *ScheduleOnce) Next(t time.Time) time.Time {
-	if m.execTime.Unix() < t.Unix() {
-		return t
+	if m.execTime.UnixMilli() < t.UnixMilli() {
+		return time.Time{}
 	}
 	return m.execTime
 }
@@ -69,6 +73,8 @@ type JobConfig struct {
 	ErrorCount   int // 连续错误
 	tracer       trace.Tracer
 	varParams    map[string]any
+	isRun        bool // 是否执行中，false.否、true.是
+	runTime      time.Time
 }
 
 // 任务执行器
@@ -147,11 +153,13 @@ func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 
 // 执行任务
 func (job *JobConfig) Run() {
+	job.isRun = true
+	job.runTime = time.Now()
 	var err errs.Errs
 	var res []byte
-	st := time.Now()
 	ctx, span := job.tracer.Start(context.Background(), "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
+		job.isRun = false
 		if res != nil {
 			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
 		}
@@ -166,7 +174,9 @@ func (job *JobConfig) Run() {
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
 		}
 		span.End()
+		log.Println("任务执行结束", job.conf.Env, job.conf.Name)
 	}()
+	log.Println("任务执行开始", job.conf.Env, job.conf.Name)
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
 		attribute.String("config_name", job.conf.Name),
@@ -194,10 +204,10 @@ func (job *JobConfig) Run() {
 
 	if err != nil {
 		job.ErrorCount++
-		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
+		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
 	} else {
 		job.ErrorCount = 0
-		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
+		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
 	}
 
 	// 连续错误达到5次，任务终止。
@@ -222,9 +232,11 @@ func (job *JobConfig) Run() {
 //
 //	给定 context 的情况下，内部不要开协程，会引发上下文终止的错误
 func (job *JobConfig) Running(ctx context.Context, remark string, params map[string]any) (res []byte, err errs.Errs) {
-	st := time.Now()
+	job.isRun = true
+	job.runTime = time.Now()
 	ctx, span := job.tracer.Start(ctx, "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
+		job.isRun = false
 		if res != nil {
 			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
 		}
@@ -242,6 +254,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		span.AddEvent("", trace.WithAttributes(attribute.Stringer("var_params", bytes.NewBuffer(p))))
 		span.End()
 	}()
+	log.Println("任务执行 开始", job.conf.Name)
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
 		attribute.String("config_name", job.conf.Name),
@@ -266,10 +279,10 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	}
 	if err != nil {
 		job.ErrorCount++
-		job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(st).Seconds())
+		job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
 	} else {
 		job.ErrorCount = 0
-		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(st).Seconds())
+		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
 	}
 	return res, err
 }
@@ -626,7 +639,7 @@ func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc st
 	}
 
 	for _, set := range job.msgSetParse.Set {
-		if set.Status > 0 && set.Status != status {
+		if set.Status != status {
 			continue
 		}
 

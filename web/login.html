@@ -88,6 +88,7 @@
                     if (!res.status){
                         return this.$message.error(res.message)
                     }
+                    cache.delDic() // 清除历史缓存影响
                     cache.setUser(res.data.user)
                     cache.setToken(res.data.token)
                     cache.setMenu(res.data.menus)

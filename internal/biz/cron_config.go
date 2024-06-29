@@ -108,8 +108,50 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 	return resp, err
 }
 
-func (dm *CronConfigService) Get() {
+// 任务详情
+func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.CronConfigDetailReply, err error) {
+	if r.Id <= 0 {
+		return nil, errs.New(nil, "参数未传递")
+	}
 
+	da := data.NewCronConfigData(dm.ctx)
+	one, err := da.GetOne(dm.user.Env, r.Id)
+
+	resp = &pb.CronConfigDetailReply{
+		VarFields: []*pb.KvItem{},
+		Command: &pb.CronConfigCommand{
+			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
+			Rpc:     &pb.CronRpc{Actions: []string{}},
+			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{Path: []string{}}}, Host: &pb.SettingHostSource{}},
+			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
+			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
+			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
+		},
+		MsgSet:       []*pb.CronMsgSet{},
+		TypeName:     models.ConfigTypeMap[one.Type],
+		StatusName:   models.ConfigStatusMap[one.Status],
+		ProtocolName: models.ProtocolMap[one.Protocol],
+	}
+	err = conv.NewMapper().Exclude("VarFields", "Command", "MsgSet").Map(one, resp)
+	if err != nil {
+		return nil, errs.New(err, "系统错误")
+	}
+
+	if er := jsoniter.Unmarshal(one.Command, resp.Command); er != nil {
+		return nil, errs.New(er, "command 解析错误")
+	}
+	if one.MsgSet != nil {
+		if er := jsoniter.Unmarshal(one.MsgSet, &resp.MsgSet); er != nil {
+			return nil, errs.New(er, "msg_set 解析错误")
+		}
+	}
+	if one.VarFields != nil {
+		if er := jsoniter.Unmarshal(one.VarFields, &resp.VarFields); er != nil {
+			return nil, errs.New(er, "var_fields 解析错误")
+		}
+	}
+
+	return resp, err
 }
 
 // 已注册任务列表
