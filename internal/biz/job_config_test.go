@@ -466,12 +466,14 @@ func TestCronJob_Demo(t *testing.T) {
 			时间就是标准年月日时分秒了。
 		验证没有问题
 	*/
-	ti := time.Now().Add(time.Second - 10)
+	ti := time.Now().Add(time.Second * 80)
 
 	s, err := NewScheduleOnce(ti.Format(time.DateTime))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(err.Error())
 	}
+	fmt.Println(s.Next(ti), s.execTime.UnixMilli())
+
 	j := &J{}
 	j.cronId = cronRun.Schedule(s, j)
 	log.Println("等待执行...")

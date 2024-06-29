@@ -75,6 +75,15 @@ func (m *CronSettingData) GetSourceOne(env string, id int) (one *models.CronSett
 	return m.GetOne(w)
 }
 
+// 获得环境列表
+func (m *CronSettingData) GetEnvList() (list []*models.CronSetting, err error) {
+	w := db.NewWhere().Eq("scene", models.SceneEnv).Eq("status", enum.StatusActive)
+	list = []*models.CronSetting{}
+	where, args := w.Build()
+
+	return list, m.db.Where(where, args...).Find(&list).Error
+}
+
 // 获得env信息
 func (m *CronSettingData) GetEnvOne(id int) (one *models.CronSetting, err error) {
 	w := db.NewWhere().Eq("scene", models.SceneEnv).Eq("id", id, db.RequiredOption())

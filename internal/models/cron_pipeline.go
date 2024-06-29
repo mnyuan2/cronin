@@ -34,6 +34,7 @@ type CronPipeline struct {
 	Configs             []byte `json:"configs" gorm:"column:configs;type:json;default:null;comment:任务集合;"` // 存储快照用于展示，执行时要取最新的任务信息
 	ConfigDisableAction int    `json:"config_disable_action" gorm:"column:config_disable_action;type:tinyint(2);default:1;comment:任务停用行为：1.整体停止、2.忽略跳过、3.执行;"`
 	ConfigErrAction     int    `json:"config_err_action" gorm:"column:config_err_action;type:tinyint(2);default:1;comment:任务结果错误行为：1.整体停止、2.忽略跳过"`
+	Interval            int    `json:"interval" gorm:"column:interval;type:int(11);default:0;comment:执行间隔;"`
 	Remark              string `json:"remark" gorm:"column:remark;type:varchar(255);comment:备注;"`
 	Status              int    `json:"status" gorm:"column:status;type:tinyint(2);default:1;comment:状态：1.停止、2.启用、3.完成、4.错误;"`
 	StatusRemark        string `json:"status_remark" gorm:"column:status_remark;type:varchar(255);comment:状态变更描述;"`

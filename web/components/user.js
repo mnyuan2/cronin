@@ -130,7 +130,7 @@ var MyUser = Vue.extend({
                 res.data.roles = ''
                 res.data.role_ids.forEach((id) => {
                     this.dic_role.forEach((item)=>{
-                        if (item.id == 1){
+                        if (item.id == id){
                             res.data.roles += item.name +" "
                         }
                     })

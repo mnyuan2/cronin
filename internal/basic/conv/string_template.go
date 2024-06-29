@@ -6,7 +6,9 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"gitlab.com/metakeule/fmtdate"
+	"net/url"
 	"reflect"
+	"strings"
 	"text/template"
 	"time"
 )
@@ -62,6 +64,12 @@ func DefaultStringTemplate() *StringTemplate {
 				data := map[string]any{}
 				err := jsoniter.UnmarshalFromString(str, &data)
 				return data, err
+			},
+			// encodeURIComponent 遵循 RFC3986 url编码
+			"rawurlencode": func(param string) string {
+				str := url.QueryEscape(param)
+				str = strings.ReplaceAll(str, "+", "%20")
+				return str
 			},
 			// 兼容 null 参数，转换为 nil
 			"null": func() any {

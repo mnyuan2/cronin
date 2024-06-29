@@ -35,6 +35,23 @@ func httpList(ctx *gin.Context) {
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
+// 任务详情
+func httpConfigDetail(ctx *gin.Context) {
+	r := &pb.CronConfigDetailRequest{}
+	if err := ctx.BindQuery(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+
+	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).Detail(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
 // 任务设置
 func httpSet(ctx *gin.Context) {
 	r := &pb.CronConfigSetRequest{}

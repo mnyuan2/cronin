@@ -37,7 +37,7 @@ func UseAuth() gin.HandlerFunc {
 			path += "?auth_type=" + auth_type
 			ctx.Set("auth_type", auth_type) // 业务需要根据这个参数来判断权限
 		}
-		if path == "" {
+		if path == "" || path == "/" {
 			ctx.Next()
 			return
 		}

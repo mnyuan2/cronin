@@ -114,7 +114,6 @@ var MyTrace = Vue.extend({
             }
             api.innerGet("/log/traces", {trace_id: traceId}, (res)=>{
                 if (!res.status){
-                    console.log("log/traces 错误", res)
                     return this.$message.error(res.message);
                 }
                 let list = res.data.list[0].Spans

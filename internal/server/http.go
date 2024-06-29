@@ -2,6 +2,7 @@ package server
 
 import (
 	"cron/internal/basic/config"
+	"cron/internal/basic/sse"
 	"embed"
 	"github.com/gin-gonic/gin"
 	"html/template"
@@ -37,11 +38,14 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/foundation/system_info", routerSystemInfo)
 	r.POST("/foundation/parse_proto", routerParseProto)
+	r.GET("/foundation/events", func(ctx *gin.Context) {
+		sse.Serve().ServeHTTP(ctx.Writer, ctx.Request)
+	})
 
 	r.GET("/config/list", httpList)
+	r.GET("/config/detail", httpConfigDetail)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)
-	r.GET("/config/get")
 	r.POST("/config/run", httpRun)
 	r.GET("/config/register_list", httpRegister)
 	r.GET("/pipeline/list", routerPipelineList)

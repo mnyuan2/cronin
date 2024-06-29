@@ -11,7 +11,7 @@
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/moment.min.js"></script>
     <script src="/static/js/Sortable.min.js"></script>
-
+    <script src="/static/js/eventsource.1.0.31.min.js"></script>
 </head>
 <body>
     <div id="app">
@@ -25,6 +25,7 @@
 <script src="/static/js/home.js?v=[[.version]]"></script>
 <script src="/components/header.js?v=[[.version]]"></script>
 <script src="/components/config.js?v=[[.version]]"></script>
+<script src="/components/config_detail.js?v=[[.version]]"></script>
 <script src="/components/config_form.js?v=[[.version]]"></script>
 <script src="/components/config_select.js?v=[[.version]]"></script>
 <script src="/components/pipeline.js?v=[[.version]]"></script>
@@ -44,6 +45,7 @@
         routes: [
             { path: '/', redirect: '/config'},
             { path: '/config', component: MyConfig},
+            { path: '/config_detail', component: MyConfigDetail},
             { path: '/pipeline', component: MyPipeline},
             {path: '/source', component: MySource},
             {path: '/message_template', component: MyMessageTemplate},
@@ -57,6 +59,11 @@
         ]
     })
     // vue
+    Vue.prototype.$sse = new EventSourcePolyfill("/foundation/events",{
+        headers: {
+            'Authorization': cache.getToken()
+        }
+    })
     const v = new Vue({
         el: '#app',
         router: router,
@@ -64,7 +71,7 @@
             return {
                 dic_env:[],
                 sysInfo:{cmd_name:"",env:"",env_name:"", version:""},
-                env:"" // 手动指定的环境key
+                env:"", // 手动指定的环境key
             };
         },
         beforeCreate(){
@@ -77,6 +84,23 @@
 
             this.getSysInfo() // 同步
             this.getDic() // 同步
+        },
+        mounted(){
+            // SSE 监听注册
+            // open：订阅成功（和后端连接成功）
+            this.$sse.addEventListener("open", function(e) {
+                console.log('open successfully',e)
+            })
+            // error：错误（可能是断开，可能是后端返回的信息）
+            this.$sse.addEventListener("error", function(err) {
+                console.log(err)
+                // 类似的返回信息验证，这里是实例
+                err && err.status === 401 && console.log('not authorized')
+            })
+            // message：后端返回信息，格式可以和后端协商
+            this.$sse.addEventListener("message", function(e) {
+                console.log("message",e)
+            })
         },
         watch:{},
         methods:{
