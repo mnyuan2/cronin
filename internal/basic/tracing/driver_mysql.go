@@ -25,7 +25,7 @@ var gen = &mysqlIDGenerator{}
 // 链路日志收集写入程序
 func MysqlCollectorListen() {
 	mysqlQueue = make(chan models.CronLogSpan, 5000)
-	exec := make(chan byte, 1)
+	exec := make(chan byte, 10)
 	defer close(mysqlQueue)
 	defer close(exec)
 	go func() {
@@ -42,8 +42,8 @@ func MysqlCollectorListen() {
 		index := 1
 		if l == 0 {
 			continue
-		} else if l > 1000 {
-			l = 1000
+		} else if l > 100 {
+			l = 100
 			exec <- 1
 		}
 
@@ -57,7 +57,7 @@ func MysqlCollectorListen() {
 		}
 
 		// 执行写入
-		if err := db.New(context.Background()).CreateInBatches(list, 1000).Error; err != nil {
+		if err := db.New(context.Background()).CreateInBatches(list, 100).Error; err != nil {
 			log.Println("MysqlCollector 日志写入失败，", err.Error())
 		}
 	}

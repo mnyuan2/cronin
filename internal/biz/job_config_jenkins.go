@@ -129,6 +129,7 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 	if queueData.Executable.Number == 0 {
 		return errs.New(er, "工作流程 编号获取失败")
 	}
+	span.AddEvent("", trace.WithAttributes(attribute.Int64("executable.number", int64(queueData.Executable.Number))))
 
 	// 循环轮询任务，直到成功或失败；这里是真的可能很久。
 	for range time.Tick(time.Second * 5) {

@@ -9,7 +9,6 @@ var MyConfigSelect = Vue.extend({
     <el-table :data="list.items" @selection-change="selectedChange">
     <el-table-column type="selection" width="55">
     </el-table-column>
-        <el-table-column prop="id" label="编号"></el-table-column>
         <el-table-column prop="name" label="任务名称"></el-table-column>
         <el-table-column prop="protocol_name" label="协议"></el-table-column>
         <el-table-column prop="remark" label="备注"></el-table-column>

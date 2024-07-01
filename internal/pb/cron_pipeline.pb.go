@@ -25,6 +25,7 @@ type CronPipelineListItem struct {
 	ConfigDisableAction     int                   `json:"config_disable_action"`
 	ConfigDisableActionName string                `json:"config_disable_action_name"`
 	ConfigErrAction         int                   `json:"config_err_action"`
+	Interval                int                   `json:"interval"`
 	TopNumber               int                   `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber          int                   `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt                string                `json:"update_dt"`
@@ -47,6 +48,7 @@ type CronPipelineSetRequest struct {
 	Configs             []*CronConfigListItem `json:"configs"`               // 任务集合
 	ConfigDisableAction int                   `json:"config_disable_action"` //
 	ConfigErrAction     int                   `json:"config_err_action"`     //
+	Interval            int                   `json:"interval"`              // 执行间隔
 	Status              int                   `json:"status"`                // 状态
 	Remark              string                `json:"remark"`                // 备注
 	VarParams           string                `json:"var_params"`            // 变量参数

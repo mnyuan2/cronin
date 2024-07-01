@@ -110,12 +110,18 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 
 	d.Name = r.Name
 	d.Spec = r.Spec
+	d.Interval = r.Interval
 	d.Remark = r.Remark
 	d.VarParams = r.VarParams
 	d.ConfigIds, _ = jsoniter.Marshal(r.ConfigIds)
 	d.Configs, _ = jsoniter.Marshal(r.Configs)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.Type = r.Type
+	if d.Status != enum.StatusDisable { // 编辑后，单子都是草稿
+		d.Status = enum.StatusDisable
+		d.StatusRemark = "编辑"
+		d.StatusDt = time.Now().Format(time.DateTime)
+	}
 	if r.Type == models.TypeCycle {
 		if _, err = secondParser.Parse(d.Spec); err != nil {
 			return nil, fmt.Errorf("时间格式不规范，%s", err.Error())

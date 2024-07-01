@@ -7,7 +7,9 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"gitlab.com/metakeule/fmtdate"
+	"net/url"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"text/template"
@@ -196,7 +198,7 @@ func TestTemplateJsonResult(t *testing.T) {
 
 func TestFuncs(t *testing.T) {
 	// 我希望获得30天前的时间，假设语法 {{}}
-	const tmpl = "Now: {{ Now }} \n\r {{date `YYYY-MM-DD` (time `-720h`)}}"
+	const tmpl = "Now: {{ Now }} \n\r {{date `YYYY-MM-DD` (time `-720h`)}} \n\r {{rawurlencode (date `YYYY-MM-DD hh:mm:ss` (time `-23h`))}}"
 	temp := template.Must(template.New("test").Funcs(template.FuncMap{
 		"Now": func() time.Time { return time.Now() },
 		"null": func() any {
@@ -241,6 +243,11 @@ func TestFuncs(t *testing.T) {
 			date = fmtdate.Format(*format, t)
 			return date, err
 		},
+		"rawurlencode": func(param string) string {
+			str := url.QueryEscape(param)
+			str = strings.ReplaceAll(str, "+", "%20")
+			return str
+		},
 	}).Parse(tmpl))
 
 	buf := bytes.NewBuffer([]byte{})
@@ -250,4 +257,16 @@ func TestFuncs(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println(buf.String())
+}
+
+func TestName(t *testing.T) {
+	str := "http://abc.com"
+	//str := "Valid_Address123"
+	// 定义匹配规则的正则表达式
+	re := regexp.MustCompile(`^[a-zA-Z][\w-]{1,}[a-zA-Z0-9]$`)
+
+	// 使用正则表达式进行匹配
+	is := re.MatchString(str)
+	fmt.Println("结果", is)
+
 }

@@ -1,207 +1,230 @@
 var MyPipeline = Vue.extend({
-    template: `<el-main>
-                    <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
-<!--                        <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>-->
-<!--                        <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>-->
-                        <div style="float: right">
-                            <el-button type="text" @click="formBox(0)">添加流水线</el-button>
-<!--                            <el-button type="text" @click="getRegisterList()">已注册任务</el-button>-->
+    template: `<el-container>
+        <!--边栏-->
+    <el-aside width="240px" style="padding-top: 10px">
+        <el-card class="aside-card">
+            <div slot="header">
+                <span class="h3">执行任务</span>
+            </div>
+            <ol>
+                <li v-for="item in queue.exec">
+                    <p style="margin: 0;">{{item.name}}</p>
+                    <p style="margin: 0;color: #909399;line-height: 100%;font-size: 12px;">({{durationTransform(item.duration, 's')}})</p>
+                </li>
+            </ul>
+            <div v-show="!queue.exec.length">-</div>
+        </el-card>
+        <el-card class="aside-card">
+            <div slot="header">
+                <span class="h3">注册任务</span>
+            </div>
+            <ol>
+                <li v-for="item in queue.register">
+                    <p style="margin: 0;">{{item.name}}</p>
+<!--                    <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:'config'}}" style="color: #606266">{{item.name}}</router-link>-->
+                </li>
+            </ol>
+            <div v-show="!queue.register.length">-</div>
+        </el-card>
+    </el-aside>
+    <!--主内容-->
+    <el-main>
+        <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
+    <!--                        <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>-->
+    <!--                        <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>-->
+            <div style="float: right">
+                <el-button type="text" @click="formBox(0)">添加流水线</el-button>
+    <!--                            <el-button type="text" @click="getRegisterList()">已注册任务</el-button>-->
+            </div>
+        </el-menu>
+        <el-table :data="list.items">
+            <el-table-column prop="" label="成功率" width="80">
+                <template slot-scope="scope">
+                    <el-tooltip placement="top-start">
+                        <div slot="content">{{scope.row.topRatio}}%<br/>近期{{scope.row.top_number}}次执行，{{scope.row.top_error_number}}次失败。</div>
+                        <i :class="getTopIcon(scope.row.top_number, scope.row.topRatio)"></i>
+                    </el-tooltip>
+                </template>
+            </el-table-column>
+            <el-table-column prop="spec" label="执行时间" width="160"></el-table-column>
+            <el-table-column prop="name" label="任务名称"></el-table-column>
+            <el-table-column prop="remark" label="备注"></el-table-column>
+            <el-table-column prop="" label="状态" width="70">
+                <template slot-scope="scope">
+                    <el-tooltip placement="top-start">
+                        <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
+                        <span :class="statusClass(scope.row.status)">{{scope.row.status_name}}</span>
+                    </el-tooltip>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="{row}">
+                    <el-button type="text" @click="formBox(row)">编辑</el-button>
+                    <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4) && auth_tags.config_submit">提交审核</el-button>
+                    <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5 && auth_tags.config_audit">通过</el-button>
+                    <el-button type="text" @click="rejectBox(row)" v-if="row.status==5 && auth_tags.config_audit">驳回</el-button>
+                    <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6) && auth_tags.config_submit">激活</el-button>
+                    <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2 && auth_tags.config_submit">停用</el-button>
+                    <el-button type="text" @click="configLogBox(row.id, row.name)">日志</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                :current-page.sync="list.page.page"
+                :page-size="list.page.size"
+                layout="total, prev, pager, next"
+                :total="list.page.total">
+        </el-pagination>
+        
+        
+        <!-- 流水线设置表单 :before-close="configLogBox(0)" -->
+        <el-drawer :title="form.boxTitle" :visible.sync="form.boxShow" size="60%" wrapperClosable="false">
+            <el-form :model="form">
+                <el-form-item label="名称*" label-width="76px">
+                    <el-input v-model="form.data.name"></el-input>
+                </el-form-item>
+    <!--                            <el-form-item label="类型*" label-width="76px">-->
+    <!--                                <el-radio v-model="form.type" label="1">周期</el-radio>-->
+    <!--                                <el-radio v-model="form.type" label="2">单次</el-radio>-->
+    <!--                            </el-form-item>-->
+    
+                <el-form-item label="时间*" label-width="76px">
+                    <el-input v-show="form.data.type==1" v-model="form.data.spec" :placeholder="form.hintSpec"></el-input>
+                    <el-date-picker 
+                        style="width: 100%"
+                        v-show="form.data.type==2" 
+                        v-model="form.data.spec" 
+                        value-format="yyyy-MM-dd HH:mm:ss"
+                        type="datetime" 
+                        placeholder="选择运行时间" 
+                        :picker-options="form.pickerOptions">
+                    </el-date-picker>
+                </el-form-item>
+                <el-form-item prop="plate" label-width="76px">
+                    <span slot="label" style="white-space: nowrap;">
+                        参数实现
+                        <el-tooltip effect="dark" content="实现的参数会传入设置过参数的任务中，点击查看更多" placement="top-start">
+                            <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                        </el-tooltip>
+                    </span>
+                    <el-input type="textarea" v-model="form.data.var_params" placeholder="变量参数实现 json 格式"></el-input>
+                </el-form-item>
+                
+                <el-form-item label="任务" label-width="76px">
+                    <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
+                    <div id="config-selected-box" class="sort-drag-box">
+                        <div class="item-drag" v-for="(conf,conf_index) in form.data.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                            <i class="el-icon-more-outline drag"></i>
+                            <el-tag type="info">{{conf.type_name}}</el-tag>-
+                            <el-tag>{{conf.name}}</el-tag>-
+                            <el-tag type="info">{{conf.protocol_name}}</el-tag>
+                            <el-tag>{{conf.status_name}}</el-tag>
+                            <el-divider direction="vertical"></el-divider>
+                            (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.value" placement="top-start">
+                                <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}</code>
+                            </el-tooltip>)
+                            <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
                         </div>
-                    </el-menu>
-                    <el-table :data="list.items">
-                        <el-table-column prop="id" label="编号"></el-table-column>
-                        <el-table-column prop="" label="执行成功率">
-                            <template slot-scope="scope">
-                                <el-tooltip placement="top-start">
-                                    <div slot="content">{{scope.row.topRatio}}%<br/>近期{{scope.row.top_number}}次执行，{{scope.row.top_error_number}}次失败。</div>
-                                    <i :class="getTopIcon(scope.row.top_number, scope.row.topRatio)"></i>
-                                </el-tooltip>
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="spec" label="执行时间"></el-table-column>
-                        <el-table-column prop="name" label="任务名称"></el-table-column>
-                        <el-table-column prop="remark" label="备注"></el-table-column>
-                        <el-table-column prop="" label="状态">
-                            <template slot-scope="scope">
-                                <el-tooltip placement="top-start">
-                                    <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
-                                    <span :class="statusClass(scope.row.status)">{{scope.row.status_name}}</span>
-                                </el-tooltip>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="操作">
-                            <template slot-scope="{row}">
-                                <el-button type="text" @click="formBox(row)">编辑</el-button>
-                                <el-button type="text" @click="changeStatus(row, 5, '提交审核')" v-if="sys_info.is_audited && (row.status==1 || row.status==3 || row.status==6 || row.status==4) && auth_tags.config_submit">提交审核</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2, '通过')" v-if="row.status==5 && auth_tags.config_audit">通过</el-button>
-                                <el-button type="text" @click="rejectBox(row)" v-if="row.status==5 && auth_tags.config_audit">驳回</el-button>
-                                <el-button type="text" @click="changeStatus(row, 2, '激活')" v-if="!sys_info.is_audited && (row.status==1 || row.status==3 || row.status==4 || row.status==6) && auth_tags.config_submit">激活</el-button>
-                                <el-button type="text" @click="changeStatus(row, 1, '停用')" v-if="row.status==2 && auth_tags.config_submit">停用</el-button>
-                                <el-button type="text" @click="configLogBox(row.id, row.name)">日志</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                    <el-pagination
-                            @size-change="handleSizeChange"
-                            @current-change="handleCurrentChange"
-                            :current-page.sync="list.page.page"
-                            :page-size="list.page.size"
-                            layout="total, prev, pager, next"
-                            :total="list.page.total">
-                    </el-pagination>
-                    
-                    
-                    <!-- 流水线设置表单 :before-close="configLogBox(0)" -->
-                    <el-drawer :title="form.boxTitle" :visible.sync="form.boxShow" size="60%" wrapperClosable="false">
-                        <el-form :model="form">
-                            <el-form-item label="名称*" label-width="76px">
-                                <el-input v-model="form.data.name"></el-input>
-                            </el-form-item>
-<!--                            <el-form-item label="类型*" label-width="76px">-->
-<!--                                <el-radio v-model="form.type" label="1">周期</el-radio>-->
-<!--                                <el-radio v-model="form.type" label="2">单次</el-radio>-->
-<!--                            </el-form-item>-->
-            
-                            <el-form-item label="时间*" label-width="76px">
-                                <el-input v-show="form.data.type==1" v-model="form.data.spec" :placeholder="form.hintSpec"></el-input>
-                                <el-date-picker 
-                                    style="width: 100%"
-                                    v-show="form.data.type==2" 
-                                    v-model="form.data.spec" 
-                                    value-format="yyyy-MM-dd HH:mm:ss"
-                                    type="datetime" 
-                                    placeholder="选择运行时间" 
-                                    :picker-options="form.pickerOptions">
-                                </el-date-picker>
-                            </el-form-item>
-                            <el-form-item prop="plate" label-width="76px">
-                                <span slot="label" style="white-space: nowrap;">
-                                    参数实现
-                                    <el-tooltip effect="dark" content="实现的参数会传入设置过参数的任务中，点击查看更多" placement="top-start">
-                                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
-                                    </el-tooltip>
-                                </span>
-                                <el-input type="textarea" v-model="form.data.var_params" placeholder="变量参数实现 json 格式"></el-input>
-                            </el-form-item>
-                            
-                            <el-form-item label="任务" label-width="76px">
-                                <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
-                                <div id="config-selected-box" class="sort-drag-box">
-                                    <div class="item-drag" v-for="(conf,conf_index) in form.data.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                        <i class="el-icon-more-outline drag"></i>
-                                        <el-tag type="info">{{conf.type_name}}</el-tag>-
-                                        <el-tag>{{conf.name}}</el-tag>-
-                                        <el-tag type="info">{{conf.protocol_name}}</el-tag>
-                                        <el-tag>{{conf.status_name}}</el-tag>
-                                        <el-divider direction="vertical"></el-divider>
-                                        (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.value" placement="top-start">
-                                            <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}</code>
-                                        </el-tooltip>)
-                                        <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
-                                    </div>
-                                </div>
-                            </el-form-item>
-                            
-                            <el-form-item label="任务停用" label-width="76px">
-                                <el-tooltip class="item" effect="dark" content="存在停止、错误状态任务时流水线整体停止" placement="top-start">
-                                    <el-radio v-model="form.data.config_disable_action" label="1">停止</el-radio>
-                                </el-tooltip>
-                                <el-tooltip class="item" effect="dark" content="跳过停用、错误状态任务" placement="top-start">
-                                    <el-radio v-model="form.data.config_disable_action" label="2">跳过</el-radio>
-                                </el-tooltip>
-                                <el-tooltip class="item" effect="dark" content="执行停用、错误状态任务" placement="top-start">
-                                    <el-radio v-model="form.data.config_disable_action" label="3">执行</el-radio>
-                                </el-tooltip>
-                            </el-form-item>
-                            <el-form-item label="任务错误" label-width="76px">
-                                <el-tooltip class="item" effect="dark" content="任务结果错误时停止流水线" placement="top-start">
-                                    <el-radio v-model="form.data.config_err_action" label="1">停止</el-radio>
-                                </el-tooltip>
-                                <el-tooltip class="item" effect="dark" content="任务结果错误时跳过继续执行" placement="top-start">
-                                    <el-radio v-model="form.data.config_err_action" label="2">跳过</el-radio>
-                                </el-tooltip>
-                            </el-form-item>
-                            
-                            <el-form-item label="备注"  label-width="76px">
-                                <el-input v-model="form.data.remark"></el-input>
-                            </el-form-item>
-                            <el-form-item  label-width="76px">
-                                <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
-                                <div v-for="(msg,msg_index) in form.data.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <el-row v-html="msg.descrition"></el-row>
-                                    <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
-                                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
-                                </div>
-                            </el-form-item>
-                        </el-form>
-                        <div>
-<!--                            <el-button @click="configRun()" class="left" v-show="form.type==1">执行一下</el-button>-->
-                            <el-button size="small" @click="formBox(-1)">取 消</el-button>
-                            <el-button type="primary" size="small" @click="submitForm()">确 定</el-button>
-                        </div>
-                    </el-drawer>
-                    <!-- 任务日志弹窗 -->
-                    <el-drawer :title="log.title" :visible.sync="log.show" direction="rtl" size="40%" wrapperClosable="false" > <!-- :before-close="configLogBox(0)"-->
-                        <my-config-log :tags="log.tags"></my-config-log>
-                    </el-drawer>
-                    <!-- 注册任务列表弹窗 -->
-                    <el-drawer title="已注册任务" :visible.sync="register.boxShow" direction="rtl" size="40%" wrapperClosable="false">
-                        <el-table :data="register.items">
-                            <el-table-column property="id" label="编号"></el-table-column>
-                            <el-table-column property="spec" label="执行时间"></el-table-column>
-                            <el-table-column property="update_dt" label="下一次执行"></el-table-column>
-                            <el-table-column property="name" label="任务名称"></el-table-column>
-                            <el-table-column property="" label="">
-                                <template slot-scope="scope">
-                                    <el-button type="text" @click="configLogBox(scope.row.id, scope.row.name)">日志</el-button>
-                                </template>
-                            </el-table-column>
-                        </el-table>
-                    </el-drawer>
-            
-                    <!-- 任务选择弹窗 -->
-                    <el-dialog title="任务选择" :visible.sync="config.boxShow" width="60%" top="10vh" class="config-select-wrap">
-                        <my-config-select ref="selection"></my-config-select>
-                        <div slot="footer" class="dialog-footer">
-                            <a href="/index#/config" target="_blank" class="el-button el-button--text left">管理任务</a>
-                            <el-button size="medium" @click="configSelectBox('close')">关闭</el-button>
-                            <el-button size="medium" type="primary" @click="configSelectBox('confirm')" :disabled="config.running">添加</el-button>
-                        </div>
-                    </el-dialog>
-                    <!-- 推送设置弹窗 -->
-                    <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
-                        <el-form :model="msgSet" :inline="true" size="mini">
-                            <el-form-item label="当">
-                                <el-select v-model="msgSet.data.status" style="width: 90px">
-                                    <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                </el-select>
-                                时
-                            </el-form-item>
-                            <el-form-item label="发送">
-                                <el-select v-model="msgSet.data.msg_id">
-                                    <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                </el-select>
-                                消息
-                            </el-form-item>
-                            <el-form-item label="并且@用户">
-                                <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
-                                    <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
-                                </el-select>
-                            </el-form-item>
-                        </el-form>
-                        <span slot="footer" class="dialog-footer">
-                            <el-button @click="msgSet.show = false">取 消</el-button>
-                            <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
-                        </span>
-                    </el-dialog>
-                </el-main>`,
+                    </div>
+                </el-form-item>
+                
+                <el-form-item label="执行间隔" label-width="76px">
+                    <el-input type="number" v-model="form.data.interval" placeholder="单个任务完成后，等待间隔时间">
+                        <span slot="append">s/秒</span>
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="任务停用" label-width="76px">
+                    <el-tooltip class="item" effect="dark" content="存在停止、错误状态任务时流水线整体停止" placement="top-start">
+                        <el-radio v-model="form.data.config_disable_action" label="1">停止</el-radio>
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="跳过停用、错误状态任务" placement="top-start">
+                        <el-radio v-model="form.data.config_disable_action" label="2">跳过</el-radio>
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="执行停用、错误状态任务" placement="top-start">
+                        <el-radio v-model="form.data.config_disable_action" label="3">执行</el-radio>
+                    </el-tooltip>
+                </el-form-item>
+                <el-form-item label="任务错误" label-width="76px">
+                    <el-tooltip class="item" effect="dark" content="任务结果错误时停止流水线" placement="top-start">
+                        <el-radio v-model="form.data.config_err_action" label="1">停止</el-radio>
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="任务结果错误时跳过继续执行" placement="top-start">
+                        <el-radio v-model="form.data.config_err_action" label="2">跳过</el-radio>
+                    </el-tooltip>
+                </el-form-item>
+                
+                <el-form-item label="备注"  label-width="76px">
+                    <el-input v-model="form.data.remark"></el-input>
+                </el-form-item>
+                <el-form-item  label-width="76px">
+                    <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
+                    <div v-for="(msg,msg_index) in form.data.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                        <el-row v-html="msg.descrition"></el-row>
+                        <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
+                        <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
+                    </div>
+                </el-form-item>
+            </el-form>
+            <div>
+    <!--                            <el-button @click="configRun()" class="left" v-show="form.type==1">执行一下</el-button>-->
+                <el-button size="small" @click="formBox(-1)">取 消</el-button>
+                <el-button type="primary" size="small" @click="submitForm()">确 定</el-button>
+            </div>
+        </el-drawer>
+        <!-- 任务日志弹窗 -->
+        <el-drawer :title="log.title" :visible.sync="log.show" direction="rtl" size="40%" wrapperClosable="false" > <!-- :before-close="configLogBox(0)"-->
+            <my-config-log :tags="log.tags"></my-config-log>
+        </el-drawer>
+    
+        <!-- 任务选择弹窗 -->
+        <el-dialog title="任务选择" :visible.sync="config.boxShow" width="60%" top="10vh" class="config-select-wrap">
+            <my-config-select ref="selection"></my-config-select>
+            <div slot="footer" class="dialog-footer">
+                <a href="/index#/config" target="_blank" class="el-button el-button--text left">管理任务</a>
+                <el-button size="medium" @click="configSelectBox('close')">关闭</el-button>
+                <el-button size="medium" type="primary" @click="configSelectBox('confirm')" :disabled="config.running">添加</el-button>
+            </div>
+        </el-dialog>
+        <!-- 推送设置弹窗 -->
+        <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false">
+            <el-form :model="msgSet" :inline="true" size="mini">
+                <el-form-item label="当">
+                    <el-select v-model="msgSet.data.status" style="width: 90px">
+                        <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
+                    </el-select>
+                    时
+                </el-form-item>
+                <el-form-item label="发送">
+                    <el-select v-model="msgSet.data.msg_id">
+                        <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
+                    </el-select>
+                    消息
+                </el-form-item>
+                <el-form-item label="并且@用户">
+                    <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
+                        <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="msgSet.show = false">取 消</el-button>
+                <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
+            </span>
+        </el-dialog>
+    </el-main>
+</el-container>
+`,
     name: "MyPipeline",
     data(){
         return {
+            env: {},
             dic:{
                 user: [],
                 msg: [],
             },
+            sys_info:{},
             auth_tags:{},
             labelType: '2',
             // 列表数据
@@ -219,10 +242,10 @@ var MyPipeline = Vue.extend({
                 },
                 request: false, // 请求中标志
             },
-            // 已注册任务
-            register:{
-                items:[],
-                boxShow: false,
+            // 队列
+            queue:{
+                exec:[], // 执行队列
+                register:[], // 注册队列
             },
             // 表单
             form:{
@@ -265,11 +288,23 @@ var MyPipeline = Vue.extend({
     created(){
         this.form.data = this.initFormData()
         this.getDic()
+        api.systemInfo((res)=>{
+            this.sys_info = res;
+        })
     },
     // 模块初始化
     mounted(){
         this.getList()
         this.auth_tags = cache.getAuthTags()
+        // 添加指定事件监听
+        this.env = cache.getEnv()
+        this.$sse.addEventListener(this.env.env+".exec.queue", this.execQueue)
+        this.$sse.addEventListener(this.env.env+'.register.queue', this.registerQueue)
+    },
+    beforeDestroy(){
+        // 销毁指定事件监听
+        this.$sse.removeEventListener(this.env.env+".exec.queue", this.execQueue)
+        this.$sse.removeEventListener(this.env.env+".register.queue", this.registerQueue)
     },
     watch:{
         "form.spec":{
@@ -360,6 +395,7 @@ var MyPipeline = Vue.extend({
                 configs:data.configs,
                 remark: data.remark,
                 msg_set: data.msg_set,
+                interval: Number(data.interval),
                 config_disable_action: Number(data.config_disable_action),
                 config_err_action: Number(data.config_err_action),
             }
@@ -370,6 +406,9 @@ var MyPipeline = Vue.extend({
                     data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
                 }
             })
+            if (body.interval < 0){
+                body.interval = 0
+            }
 
             api.innerPost("/pipeline/set", body, (res)=>{
                 if (!res.status){
@@ -389,7 +428,9 @@ var MyPipeline = Vue.extend({
                 configs:[], // 任务集合
                 config_disable_action: '1',
                 config_err_action: '1',
-                msg_set: []
+                interval: '',
+                msg_set: [],
+                status: '1',
             }
         },
         // 编辑弹窗
@@ -485,15 +526,6 @@ var MyPipeline = Vue.extend({
             }).catch(() => {});
         },
 
-        getRegisterList(){
-            this.register.boxShow = true;
-            api.innerGet("/pipeline/register_list", {}, (res)=>{
-                if (!res.status){
-                    return this.$message.error(res.message);
-                }
-                this.register.items = res.data.list;
-            })
-        },
         // 成功率图标
         getTopIcon(total, ratio){
             // 没有执行
@@ -558,7 +590,7 @@ var MyPipeline = Vue.extend({
             this.$confirm('确认删除推送配置','提示',{
                 type:'warning',
             }).then(()=>{
-                this.form.msg_set.splice(index, 1);
+                this.form.data.msg_set.splice(index, 1);
             })
 
         },
@@ -671,6 +703,25 @@ var MyPipeline = Vue.extend({
             }).then(() => {
                 this.form.data.configs.splice(idx, 1);
             }).catch(() => {/*取消*/});
+        },
+        // 消息监听处理
+        execQueue(e){
+            console.log("execQueue", e)
+            let data = JSON.parse(e.data)
+            if (!data){
+                this.queue.exec = []
+                return
+            }
+            this.queue.exec = data
+        },
+        registerQueue(e){
+            console.log("registerQueue", e)
+            let data = JSON.parse(e.data)
+            if (!data){
+                this.queue.register = []
+                return
+            }
+            this.queue.register = data
         },
     }
 })

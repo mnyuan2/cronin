@@ -29,7 +29,7 @@ func (m *CronPipelineData) ListPage(where *db.Where, page, size int, list interf
 func (m *CronPipelineData) Set(data *models.CronPipeline) error {
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	if data.Id > 0 {
-		return m.db.Where("id=?", data.Id).Omit("status", "status_remark", "status_dt", "entry_id", "env").Updates(data).Error
+		return m.db.Where("id=?", data.Id).Omit("entry_id", "env").Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
 		return m.db.Omit("status_dt").Create(data).Error

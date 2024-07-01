@@ -280,7 +280,9 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 	roleRequest := &pb.AuthListRequest{
 		RoleIds: []int{},
 	}
-	conv.NewStr().Slice(user.RoleIds, &roleRequest.RoleIds)
+	if err := conv.NewStr().Slice(user.RoleIds, &roleRequest.RoleIds); err != nil {
+		return nil, errors.New("角色信息错误，" + err.Error())
+	}
 	authList, err := NewRoleService(dm.ctx).AuthList(roleRequest)
 	if err != nil {
 		return nil, err

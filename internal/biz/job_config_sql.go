@@ -36,7 +36,10 @@ func (job *JobConfig) sqlFunc(ctx context.Context) (err errs.Errs) {
 func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "exec-"+r.Driver)
 	defer func() {
-		if err != nil {
+		if er := util.PanicInfo(recover()); er != "" {
+			span.SetStatus(tracing.StatusError, "执行异常")
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
+		} else if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
 			span.AddEvent("执行错误", trace.WithAttributes(attribute.String("error.object", err.Error())))
 		} else {

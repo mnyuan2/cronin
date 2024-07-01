@@ -6,7 +6,9 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/sse"
 	"cron/internal/basic/tracing"
+	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -19,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -83,12 +86,85 @@ func (dm *TaskService) Init() (err error) {
 }
 
 // 注册任务监视器
-func (dm *TaskService) sysRegisterMonitor() {
+func (dm *TaskService) RegisterMonitor() {
 	// 检测系统任务是否正常
 	// 系统任务包含：定时删除日志、注册任务有效性检查。
 	//cronDb := data.NewCronConfigData(context.Background())
 	//w := db.NewWhere().Eq("status", enum.StatusActive)
 	//total, err = cronDb.GetList(w, 1, pageSize, &list)
+
+	/*
+		监听所有执行中的任务
+			给每一个任务单独开一个事件。
+				监听某个具体执行的任务
+				任务完成之后主销事件
+					需要确定一下客户端监听未注册事件的情况。
+	*/
+
+	_db := db.New(context.Background())
+	envs := []*models.CronSetting{}
+	mu := sync.Mutex{} // 互斥锁
+	// 10分钟更新一次环境信息
+	go func() {
+		list := []*models.CronSetting{}
+		_db.Raw("SELECT id, name FROM `cron_setting` WHERE scene=? and status=?", models.SceneEnv, enum.StatusActive).Find(&list)
+		mu.Lock()
+		envs = list
+		mu.Unlock()
+		time.Sleep(time.Minute * 10)
+	}()
+
+	for {
+		curTime := time.Now()
+		list := dm.cron.Entries()
+		execList := map[string][]*dtos.ExecQueueItem{}
+		registerList := map[string][]*dtos.ExecQueueItem{}
+		for _, v := range list {
+			c, ok := v.Job.(*JobConfig)
+			if !ok {
+				c2, ok := v.Job.(*JobPipeline)
+				if !ok {
+					continue
+				}
+				c = c2.GetConf()
+			}
+			// 区分环境
+			if c.isRun == true {
+				execList[c.conf.Env] = append(execList[c.conf.Env], &dtos.ExecQueueItem{
+					RefId:    c.conf.Id,
+					EntryId:  c.conf.EntryId,
+					Name:     c.conf.Name,
+					Duration: curTime.Sub(c.runTime).Seconds(),
+				})
+			}
+			registerList[c.conf.Env] = append(registerList[c.conf.Env], &dtos.ExecQueueItem{
+				RefId:   c.conf.Id,
+				EntryId: c.conf.EntryId,
+				Name:    c.conf.Name,
+			})
+		}
+		// 执行发送
+		// 没有任务还是要发送空数据，不然客户端也不知道上一次的任务是否完成。
+		for _, v := range envs {
+			// 执行队列
+			execItem := append(execList[""], execList[v.Name]...)
+			if len(execItem) > 0 {
+				b, _ := jsoniter.MarshalToString(execItem)
+				sse.Serve().SendEventMessage(v.Name+".exec.queue", b)
+			} else {
+				sse.Serve().SendEventMessage(v.Name+".exec.queue", `[]`)
+			}
+			// 注册队列
+			registerItem := append(registerList[""], registerList[v.Name]...)
+			if len(registerItem) > 0 {
+				b, _ := jsoniter.MarshalToString(registerItem)
+				sse.Serve().SendEventMessage(v.Name+".register.queue", b)
+			} else {
+				sse.Serve().SendEventMessage(v.Name+".register.queue", `[]`)
+			}
+		}
+		time.Sleep(time.Second * 5) // 延迟
+	}
 }
 
 // 添加任务
