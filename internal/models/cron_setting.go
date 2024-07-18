@@ -26,6 +26,7 @@ const (
 	SceneHostSource    = "host_source"    // 主机 连接
 	SceneEnv           = "env"            // 程序环境
 	SceneMsg           = "msg"            // 消息推送
+	ScenePreference    = "preference"     // 使用偏好
 )
 
 const EnvDefault = "public" // 默认环境 是不可以删除的

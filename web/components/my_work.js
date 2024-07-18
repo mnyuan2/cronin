@@ -55,6 +55,7 @@ var MyWork = Vue.extend({
     created(){},
     // 模块初始化
     mounted(){
+        document.title = '我的工作';
         this.getTables()
     },
     // 具体方法

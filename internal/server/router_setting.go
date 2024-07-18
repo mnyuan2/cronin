@@ -69,3 +69,23 @@ func routerSqlPing(ctx *gin.Context) {
 	rep, err := biz.NewSettingSqlService(ctx.Request.Context(), user).Ping(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+// 偏好设置
+func routerPreferenceSet(ctx *gin.Context) {
+	r := &pb.SettingPreferenceSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+
+	rep, err := biz.NewSettingService(ctx.Request.Context()).PreferenceSet(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 偏好获取
+func routerPreferenceGet(ctx *gin.Context) {
+	r := &pb.SettingPreferenceGetRequest{}
+
+	rep, err := biz.NewSettingService(ctx.Request.Context()).PreferenceGet(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

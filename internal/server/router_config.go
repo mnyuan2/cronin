@@ -7,17 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 查看已注册任务
-func httpRegister(ctx *gin.Context) {
-	user, err := GetUser(ctx)
-	if err != nil {
-		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
-		return
-	}
-	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).RegisterList(nil)
-	NewReply(ctx).SetReply(rep, err).RenderJson()
-}
-
 // 任务列表
 func httpList(ctx *gin.Context) {
 	r := &pb.CronConfigListRequest{Ids: []int{}}

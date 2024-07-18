@@ -10,16 +10,64 @@ body{
     padding: 0;
     border: 0;
 }
-h3,h2,h4{
+h3,h2,h4,.h3{
     font-size: 120%;
     font-weight: 400;
     color: #1f2f3d;
+}
+.h3{
+    font-size: 22px;
 }
 p{
     font-size: 14px;
     color: #444950;
     line-height: 1.5em;
     margin-top: 0;
+}
+code {
+    font-size: 87.5%;
+    color: #e83e8c;
+    word-wrap: break-word;
+}
+button{
+    cursor: pointer;
+}
+.el-button--mini, .el-button--mini.is-round {
+    padding: 4px 15px;
+}
+.b{
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    height: 24px;
+    line-height: 24px !important;
+    padding: 0 8px;
+    border: 1px solid #E8EAEE;
+    background-color: #F1F2F4;
+    border-radius: 4px;
+    outline: unset !important;
+    margin: 0 6px;
+    font-size: 12px;
+    font-weight: normal;
+}
+.info-2{
+    color: #C0C4CC;
+}
+.stop{
+    margin: 0 4px;
+    float: right;
+    cursor: pointer;
+    color: #F56C6C;
+}
+i.hover{
+    border-radius: 4px;
+    padding: 2px;
+    cursor: pointer;
+    color: #909399;
+}
+i.hover:hover{
+    border: 1px solid #e9e9eb;
+    background: #f4f4f5;
 }
 .el-menu--horizontal>.el-menu-item,
 .el-submenu{
@@ -87,6 +135,21 @@ p{
     text-decoration: auto;
     color: #303133;
 }
+.el-header .icon .el-submenu__title{
+    padding:0;
+}
+.el-header .item{
+    padding: 0 10px;
+}
+.el-header .item .el-submenu__title{
+    padding:0;
+}
+.el-header .el-divider--horizontal{
+    margin: 0;
+}
+.el-header .el-submenu .el-menu-item{
+    min-width: 130px;
+}
 .el-menu--popup {
     min-width: 120px;
 }
@@ -139,8 +202,13 @@ i.el-alert__icon{
     padding: 0px 0 8px;
     overflow: auto;
 }
+/*.aside-card a{*/
+/*    text-decoration:none;*/
+/*    outline: none;*/
+/*}*/
 .aside-card ol{
     margin: 0;
+    padding-left: 30px;
 }
 .aside-card ol li{
     margin: 3px 0;
@@ -150,6 +218,10 @@ i.el-alert__icon{
 }
 
 /*任务表单弹窗*/
+.pipeline-form{
+    padding: 0 10px 10px 10px;
+    color: #606266;
+}
 .config-form-box .el-dialog__header{
     padding: 14px 20px 10px;
 }
@@ -169,6 +241,10 @@ i.el-alert__icon{
 .config-form-box .el-tabs--border-card>.el-tabs__content .el-form-item{
     margin: 6px 0;
     overflow: hidden;
+}
+.config-form .el-dialog__footer,
+.pipeline-form .el-dialog__footer{
+    padding: 10px 0 10px 0;
 }
 .http_header_box .el-input-group__prepend,
 .http_header_box .el-input-group__append,
@@ -202,7 +278,17 @@ i.el-alert__icon{
 .el-dropdown-link{
     cursor: pointer;
 }
-
+.el-autocomplete{
+    width: 100%;
+}
+/* 任务表单 sql 展示 */
+.sql-show-warp{
+    overflow-y: auto;
+    max-height: 360px;
+}
+.sql-show-warp a{
+    margin: 0 4px 0 4px;
+}
 
 /* 日志 */
 .config-log {}
@@ -351,6 +437,9 @@ i.el-alert__icon{
 b code{
     font-weight: normal;
 }
+pre code, .sql-show-warp code{
+    color: #606266;
+}
 
 .my-work .header{
     border-bottom: 1px solid #f5f5f5;
@@ -378,7 +467,8 @@ b code{
     position: relative;
     overflow: auto;
 }
-.my-role .footer{
+.my-role .footer,
+.my-setting .footer{
     position: fixed;
     bottom: 0;
     z-index: 1;
@@ -390,4 +480,91 @@ b code{
 .active{
     background: #f0f7ff;
     color: #409eff;
+}
+/* 设置页面 */
+.my-setting .setting-wrap{
+    position: relative;
+    overflow-y: auto;
+    padding-bottom: 20px;
+}
+.my-setting .setting-wrap form{
+    max-width: 800px;
+}
+.my-setting .setting-wrap .el-card__header{
+    padding: 4px 20px;
+}
+.my-setting .setting-wrap th{
+    background: #f5f7fa;
+    padding: 0;
+}
+/* 详情页面 */
+#config-detail pre{
+    background-color: #f8f9fa;
+    padding: 10px;
+}
+#config-detail .el-aside{
+    width: 321px;
+    padding: 70px 0 10px 10px;
+}
+#config-detail .el-aside .el-descriptions-item__label{
+    width: 64px;
+}
+#config-detail .el-aside .b{
+    margin: 0;
+}
+
+#config-detail .el-descriptions__title p{
+    margin: 0;
+    font-weight: 200;
+    font-size: 13px;
+    color: #909399;
+}
+#config-detail .detail .el-form-item{
+    margin: 0;
+}
+#config-detail .el-descriptions__header{
+    margin-bottom: 10px;
+}
+
+/* 状态弹窗 */
+/*.status-change-warp .el-dialog__header{*/
+/*    display: none;*/
+/*}*/
+.status-change-warp .el-dialog__header{
+    padding: 10px 20px 5px;
+    overflow: hidden;
+}
+.status-change-warp .el-dialog__body{
+    padding: 0;
+    border-top: 1px solid #e4e7ed;
+}
+.status-change-warp .el-dialog__body .el-tabs__nav-wrap.is-left{
+    padding: 26px 0 20px 14px;
+    background-color: #fafafb;
+    min-height: 280px;
+}
+.status-change-warp .is-active button{
+    border-color: #409EFF;
+    color: #409EFF;
+}
+.status-change-warp .el-dialog__body .el-tabs__nav-wrap.is-left button{
+    width: 100%;
+}
+.status-change-warp .el-dialog__body .el-tabs__content{
+    min-height: 320px;
+}
+.status-change-warp .el-dialog__body .el-tab-pane{
+    padding: 30px 30px 68px 20px;
+    overflow: auto;
+    box-sizing: border-box;
+    height: 100%;
+}
+.status-change-warp form .el-form-item__label{
+    text-align: left;
+}
+.status-change-warp .status-change-footer{
+    position: absolute;
+    bottom: 20px;
+    margin: 0;
+    right: 20px;
 }

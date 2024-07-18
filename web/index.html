@@ -29,6 +29,7 @@
 <script src="/components/config_form.js?v=[[.version]]"></script>
 <script src="/components/config_select.js?v=[[.version]]"></script>
 <script src="/components/pipeline.js?v=[[.version]]"></script>
+<script src="/components/pipeline_form.js?v=[[.version]]"></script>
 <script src="/components/config_log.js?v=[[.version]]"></script>
 <script src="/components/trace.js?v=[[.version]]"></script>
 <script src="/components/source.js?v=[[.version]]"></script>
@@ -39,6 +40,8 @@
 <script src="/components/my_work.js?v=[[.version]]"></script>
 <script src="/components/role.js?v=[[.version]]"></script>
 <script src="/components/var_params.js?v=[[.version]]"></script>
+<script src="/components/setting.js?v=[[.version]]"></script>
+<script src="/components/status_change.js?v=[[.version]]"></script>
 <script>
     // 路由
     const router = new VueRouter({
@@ -56,10 +59,11 @@
             {path: '/logs', component: MyConfigLog},
             {path: '/trace', component: MyTrace},
             {path: '/var_params', component: MyVarParams},
+            {path: '/setting', component: MySetting},
         ]
     })
     // vue
-    Vue.prototype.$sse = new EventSourcePolyfill("/foundation/events",{
+    Vue.prototype.$sse = new EventSourcePolyfill("/job/events",{
         headers: {
             'Authorization': cache.getToken()
         }

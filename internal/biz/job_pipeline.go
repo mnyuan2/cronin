@@ -13,6 +13,7 @@ import (
 	"cron/internal/pb"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"log"
@@ -74,13 +75,8 @@ func (job *JobPipeline) parse(conf *models.CronPipeline) error {
 // 执行任务
 func (job *JobPipeline) Run() {
 	var err errs.Errs
-	//var res []byte
-	job.conf.isRun = true
-	job.conf.runTime = time.Now()
-	ctx, span := job.tracer.Start(context.Background(), "job-pipeline", trace.WithAttributes(attribute.Int("ref_id", job.pipeline.Id)))
-	log.Println("流水线 开始", job.conf.conf.Name)
+	ctx1, span := job.tracer.Start(context.Background(), "job-pipeline", trace.WithAttributes(attribute.Int("ref_id", job.pipeline.Id)))
 	defer func() {
-		log.Println("流水线 结束", job.conf.conf.Name)
 		job.conf.isRun = false
 		status, remark := 0, ""
 		//if res != nil {
@@ -98,25 +94,30 @@ func (job *JobPipeline) Run() {
 			span.SetStatus(tracing.StatusOk, "")
 			status, remark = models.ConfigStatusFinish, "SUCCESS"
 		}
-
+		rawId := cron.EntryID(job.pipeline.EntryId)
+		e := cronRun.Entry(rawId)
+		if e.ID == rawId {
+			cronRun.Remove(e.ID)
+		}
+		job.pipeline.EntryId = 0
 		job.pipeline.Status = status
-		if er := data.NewCronPipelineData(ctx).ChangeStatus(job.pipeline, remark); er != nil {
+		if er := data.NewCronPipelineData(ctx1).ChangeStatus(job.pipeline, remark); er != nil {
 			log.Println(attribute.String("error.object", "完成状态写入失败"+er.Error()))
 		}
 		span.End()
 	}()
+	if job.conf.isRun {
+		err = errs.New(nil, "任务正在进行中，跳过")
+		return
+	}
+	ctx, cancel := context.WithCancelCause(ctx1)
+	job.conf.ctxCancel = cancel
+	job.conf.isRun = true
+	job.conf.runTime = time.Now()
 	span.SetAttributes(
 		attribute.String("env", job.pipeline.Env),
 		attribute.String("component", "pipeline"),
 	)
-
-	//e := cronRun.Entry(cron.EntryID(job.pipeline.EntryId))
-	//cronRun.Remove(cron.EntryID(job.pipeline.EntryId))
-	//job.pipeline.EntryId = 0
-	//if e.ID == 0 {
-	//	span.SetStatus(tracing.StatusError, "重复执行？")
-	//	return
-	//}
 
 	// 欢迎语
 	job.conf.messagePush(ctx, 0, "开始", nil, 0)
@@ -180,7 +181,9 @@ func (job *JobPipeline) Run() {
 			}
 		}
 		if job.pipeline.Interval > 0 {
-			time.Sleep(time.Duration(job.pipeline.Interval) * time.Second)
+			if err = job.conf.Sleep(ctx, time.Duration(job.pipeline.Interval)*time.Second); err != nil {
+				return
+			}
 		}
 	}
 	// 结束语
@@ -189,5 +192,6 @@ func (job *JobPipeline) Run() {
 }
 
 func (job *JobPipeline) GetConf() *JobConfig {
+	job.conf.conf.EntryId = job.pipeline.EntryId
 	return job.conf
 }

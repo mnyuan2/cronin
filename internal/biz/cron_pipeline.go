@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/auth"
 	"cron/internal/basic/config"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
@@ -56,7 +57,7 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, 7)
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, "pipeline")
 	}
 
 	for _, item := range resp.List {
@@ -65,14 +66,23 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 		item.MsgSet = []*pb.CronMsgSet{}
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ConfigDisableActionName = models.DisableActionMap[item.ConfigDisableAction]
-		if err = jsoniter.Unmarshal(item.ConfigIdsStr, &item.ConfigIds); err != nil {
-			fmt.Println("	", err.Error())
+		if item.ConfigIdsStr != nil {
+			if err = jsoniter.Unmarshal(item.ConfigIdsStr, &item.ConfigIds); err != nil {
+				fmt.Println("	", err.Error())
+			}
 		}
-		if err = jsoniter.Unmarshal(item.ConfigsStr, &item.Configs); err != nil {
-			fmt.Println("	", err.Error())
+		if item.ConfigsStr != nil {
+			if err = jsoniter.Unmarshal(item.ConfigsStr, &item.Configs); err != nil {
+				fmt.Println("	", err.Error())
+			}
 		}
-		if err = jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); err != nil {
-			fmt.Println("	", err.Error())
+		if item.MsgSetStr != nil {
+			if err = jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); err != nil {
+				fmt.Println("	", err.Error())
+			}
+		}
+		if item.HandleUserStr != nil {
+			conv.NewStr().Slice(string(item.HandleUserStr), &item.HandleUserIds)
 		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
@@ -161,6 +171,100 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	}, err
 }
 
+// 任务执行
+func (dm *CronPipelineService) Run(r *pb.CronPipelineRunRequest) (resp *pb.CronPipelineRunReply, err error) {
+	//conf := &models.CronPipeline{
+	//	Id:        r.Id,
+	//	Env:       dm.user.Env,
+	//	Name:      r.Name,
+	//	Type:      r.Type,
+	//	Protocol:  r.Protocol,
+	//	AfterTmpl: r.AfterTmpl,
+	//}
+	//conf.Command, err = jsoniter.Marshal(r.Command)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if r.MsgSet != nil {
+	//	if conf.MsgSet, err = jsoniter.Marshal(r.MsgSet); err != nil {
+	//		return nil, errs.New(err, "消息设置序列化错误")
+	//	}
+	//}
+	//if r.VarFields != nil {
+	//	if conf.VarFields, err = jsoniter.Marshal(r.VarFields); err != nil {
+	//		return nil, errs.New(err, "字段设置序列化错误")
+	//	}
+	//}
+	//res, err := NewJobPipeline(conf).Running(dm.ctx, "手动执行", map[string]any{})
+	//if err != nil {
+	return nil, err
+	//}
+	//return &pb.CronPipelineRunReply{Result: string(res)}, nil
+}
+
+// 流水线详情
+func (dm *CronPipelineService) Detail(r *pb.CronPipelineDetailRequest) (resp *pb.CronPipelineDetailReply, err error) {
+	if r.Id == 0 {
+		return nil, errs.New(nil, "参数未传递")
+	}
+
+	one := &models.CronPipeline{}
+	if r.Id < 0 {
+		list := cronRun.Entries()
+		for _, v := range list {
+			c, ok := v.Job.(*JobPipeline)
+			if !ok {
+				continue
+			}
+			if c.conf.conf.Id == r.Id {
+				one = c.pipeline
+			}
+		}
+	} else {
+		one, err = data.NewCronPipelineData(dm.ctx).GetOne(dm.user.Env, r.Id)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if one.Id == 0 {
+		return nil, errs.New(nil, "未找到任务信息")
+	}
+
+	resp = &pb.CronPipelineDetailReply{
+		ConfigIds:     []int{},
+		Configs:       []*pb.CronConfigListItem{},
+		MsgSet:        []*pb.CronMsgSet{},
+		HandleUserIds: []int{},
+	}
+	err = conv.NewMapper().Exclude("ConfigIds", "Configs", "MsgSet", "HandleUserIds").Map(one, resp)
+	if err != nil {
+		return nil, errs.New(err, "系统错误")
+	}
+
+	resp.StatusName = models.ConfigStatusMap[resp.Status]
+	resp.ConfigDisableActionName = models.DisableActionMap[resp.ConfigDisableAction]
+	if one.ConfigIds != nil {
+		if err = jsoniter.Unmarshal(one.ConfigIds, &resp.ConfigIds); err != nil {
+			fmt.Println("	", err.Error())
+		}
+	}
+	if one.Configs != nil {
+		if err = jsoniter.Unmarshal(one.Configs, &resp.Configs); err != nil {
+			fmt.Println("	", err.Error())
+		}
+	}
+	if resp.MsgSet != nil {
+		if err = jsoniter.Unmarshal(one.MsgSet, &resp.MsgSet); err != nil {
+			fmt.Println("	", err.Error())
+		}
+	}
+	if one.HandleUserIds != "" {
+		conv.NewStr().Slice(one.HandleUserIds, &resp.HandleUserIds)
+	}
+
+	return resp, err
+}
+
 // 任务状态变更
 func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusRequest) (resp *pb.CronPipelineChangeStatusReply, err error) {
 	// 同一个任务，这里要加请求锁
@@ -173,19 +277,45 @@ func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusReques
 		return nil, fmt.Errorf("状态相等")
 	}
 
-	if conf.Status == models.ConfigStatusActive && r.Status == models.ConfigStatusDisable { // 启用 到 停用 要关闭执行中的对应任务；
+	switch r.Status {
+	case models.ConfigStatusAudited: // 待审核
+		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject && conf.Status != models.ConfigStatusFinish && conf.Status != models.ConfigStatusError {
+			return nil, fmt.Errorf("错误状态请求")
+		}
+	case models.ConfigStatusDisable: // 草稿、停用
 		NewTaskService(config.MainConf()).DelPipeline(conf)
 		conf.EntryId = 0
-	} else if conf.Status != models.ConfigStatusActive && r.Status == models.ConfigStatusActive { // 停用 到 启用 要把任务注册；
+
+	case models.ConfigStatusActive: // 激活、通过
+		if conf.Status != models.ConfigStatusDisable &&
+			conf.Status != models.ConfigStatusAudited &&
+			conf.Status != models.ConfigStatusReject &&
+			conf.Status != models.ConfigStatusFinish &&
+			conf.Status != models.ConfigStatusError {
+			return nil, fmt.Errorf("不支持的状态变更操作")
+		}
+		conf.AuditUserId = dm.user.UserId
 		if err = NewTaskService(config.MainConf()).AddPipeline(conf); err != nil {
 			return nil, err
 		}
-	} else {
+
+	case models.ConfigStatusReject: // 驳回
+		if conf.Status != models.ConfigStatusAudited {
+			return nil, fmt.Errorf("不支持的状态变更操作")
+		}
+		conf.AuditUserId = dm.user.UserId
+
+	default:
 		return nil, fmt.Errorf("错误状态请求")
 	}
+	statusRemark := "视图操作" + models.ConfigStatusMap[r.Status]
+	if r.StatusRemark != "" {
+		statusRemark = r.StatusRemark
+	}
 
+	conf.HandleUserIds, _ = conv.Int64s().Join(r.HandleUserIds) // 可以为空
 	conf.Status = r.Status
-	if err = da.ChangeStatus(conf, "视图操作"+models.ConfigStatusMap[r.Status]); err != nil {
+	if err = da.ChangeStatus(conf, statusRemark); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
 		return nil, err
 	}

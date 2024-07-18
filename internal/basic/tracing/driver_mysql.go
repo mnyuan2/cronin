@@ -18,7 +18,7 @@ import (
 
 //const DriverMysql = attribute.String("driver", "mysql")
 
-// 收集队列
+// 写入收集队列
 var mysqlQueue chan models.CronLogSpan
 var gen = &mysqlIDGenerator{}
 
@@ -206,7 +206,7 @@ type MysqlSpan struct {
 	logs []*MysqlSpanLog
 }
 
-// SpanContext 返回一个空的span上下文
+// SpanContext 返回span上下文
 func (s *MysqlSpan) SpanContext() trace.SpanContext { return s.sc }
 
 // IsRecording always returns false.

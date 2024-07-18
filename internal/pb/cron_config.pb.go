@@ -78,10 +78,10 @@ type CronConfigListItem struct {
 	VarFieldsStr   []byte             `json:"-" gorm:"column:var_fields;"`
 	CommandStr     []byte             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
 	MsgSetStr      []byte             `json:"-" gorm:"column:msg_set;"`
+	HandleUserStr  []byte             `json:"-" gorm:"column:handle_user_ids;"`
 	CreateUserId   int                `json:"create_user_id"`
 	CreateUserName string             `json:"create_user_name" gorm:"-"`
-	StatusUserId   int                `json:"status_user_id"`
-	StatusUserName string             `json:"status_user_name" gorm:"-"`
+	HandleUserIds  []int              `json:"handle_user_ids" gorm:"-"` // 处理人
 }
 
 type CronConfigDetailRequest struct {
@@ -104,12 +104,14 @@ type CronConfigDetailReply struct {
 	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string             `json:"update_dt"`
+	CreateDt       string             `json:"create_dt"`
 	AfterTmpl      string             `json:"after_tmpl"` // 结果模板
 	VarFields      []*KvItem          `json:"var_fields"` // 定义变量参数
 	Command        *CronConfigCommand `json:"command"`
 	MsgSet         []*CronMsgSet      `json:"msg_set"`
 	CreateUserId   int                `json:"create_user_id"`
-	StatusUserId   int                `json:"status_user_id"`
+	AuditUserId    int                `json:"audit_user_id"`
+	HandleUserIds  []int              `json:"handle_user_ids"` // 处理人
 }
 
 // 任务设置
@@ -123,10 +125,10 @@ type CronConfigSetRequest struct {
 	VarFields     []*KvItem          `json:"var_fields"`         // 定义变量参数
 	Command       *CronConfigCommand `json:"command,omitempty"`  // 命令
 	Status        int                `json:"status"`             // 状态
-	StatusRemark  string             `json:"status_remark"`
-	AuditorUserId int                `json:"auditor_user_id"`
-	Remark        string             `json:"remark"`  // 备注
-	MsgSet        []*CronMsgSet      `json:"msg_set"` // 消息设置
+	StatusRemark  string             `json:"status_remark"`      // （审核时）状态备注
+	HandleUserIds []int              `json:"handle_user_ids"`    // 处理人
+	Remark        string             `json:"remark"`             // 备注
+	MsgSet        []*CronMsgSet      `json:"msg_set"`            // 消息设置
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`
