@@ -13,6 +13,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"strconv"
 )
 
 func (job *JobConfig) gitFunc(ctx context.Context, r *pb.CronGit) (resp []byte, err errs.Errs) {
@@ -129,12 +130,17 @@ func (job *JobConfig) PRMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEv
 		job.handlerLog("PRMerge", h, err)
 	}()
 
+	num, er := strconv.Atoi(r.Number)
+	if er != nil {
+		return nil, errs.New(er, "pr编号输入有误")
+	}
+
 	request := &gitee.PullsMergeRequest{
 		BaseRequest: gitee.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Repo,
 		},
-		Number:            r.Number,
+		Number:            int32(num),
 		MergeMethod:       r.MergeMethod,
 		PruneSourceBranch: r.PruneSourceBranch,
 		Title:             r.Title,

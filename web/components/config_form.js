@@ -208,7 +208,7 @@ var MyConfigForm = Vue.extend({
                                 <el-alert v-show="form.command.git.events.length==0" title="未添加事件，请添加。" type="info"></el-alert>
                                 <!--git 事件展示-->
                                 <div v-for="(event,git_index) in form.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <el-row v-html="event.summary" style="min-height: 45px;"></el-row>
+                                    <el-row v-html="event.desc" style="min-height: 45px;"></el-row>
                                     <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="gitSetDel(git_index)"></i>
                                     <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="gitSetShow(git_index,event)"></i>
                                     <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
@@ -313,7 +313,7 @@ var MyConfigForm = Vue.extend({
                     <el-autocomplete v-model="gitSet.data.pr_merge.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.pr_merge.owner)" placeholder="仓库路径"></el-autocomplete>
                 </el-form-item>
                 <el-form-item label="PR 编号*">
-                    <el-input type="number" v-model="gitSet.data.pr_merge.number" placeholder="本仓库PR的序数"></el-input>
+                    <el-input v-model="gitSet.data.pr_merge.number" placeholder="本仓库PR的序数"></el-input>
                 </el-form-item>
                 <el-form-item label="commit 标题">
                     <el-input v-model="gitSet.data.pr_merge.title" placeholder="合并 commit 标题，默认为 !{pr_id} {pr_title}"></el-input>
@@ -474,7 +474,7 @@ var MyConfigForm = Vue.extend({
                             pr_merge: {
                                 owner: this.preference.git.owner ?? '', // 空间
                                 repo: this.preference.git.repo ?? '', // 仓库
-                                number: null,
+                                number: '',
                                 title: "",
                                 description: "",
                                 merge_method: "merge",
@@ -891,7 +891,7 @@ var MyConfigForm = Vue.extend({
                 if (this.gitSet.data.pr_merge.merge_method == ""){
                     return this.$message.error("合并方式不得为空")
                 }
-                this.gitSet.data.pr_merge.number = Number(this.gitSet.data.pr_merge.number)
+                // this.gitSet.data.pr_merge.number = Number(this.gitSet.data.pr_merge.number)
             }else{
                 return this.$message.error("未选择有效事件");
             }
@@ -1021,14 +1021,14 @@ var MyConfigForm = Vue.extend({
             let right = '</span>'
             switch (data.id){
                 case 2:
-                    data.summary = '完善中...'
+                    data.desc = '完善中...'
                     break
                 case 9:
-                    data.summary = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-paperclip"></i></a> ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right}/pulls/${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${data.pr_merge.prune_source_branch===true?left+'删除提交分支'+right:''}`+
+                    data.desc = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-paperclip"></i></a> ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right}/pulls/${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${data.pr_merge.prune_source_branch===true?left+'删除提交分支'+right:''}`+
                         `<br><i style="margin-left: 3em;"></i><b>${data.pr_merge.title}</b> ${data.pr_merge.description}`
                     break
                 default:
-                    data.summary = '未支持的事件类型'
+                    data.desc = '未支持的事件类型'
             }
             return data
         },

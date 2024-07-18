@@ -109,7 +109,7 @@ var MyConfigDetail = Vue.extend({
                     </div>
                     
                     <div v-if="detail.protocol_name == 'sql'">
-                        <el-row>驱动<b class="b">{{detail.command.sql.driver}}</b> 链接<b class="b">{{dic.sql_source.filter((item)=>{return detail.command.sql.source.id == item.id})[0].name}}</b> 执行<b class="b">{{detail.command.sql.origin}}</b>语句：</el-row>
+                        <el-row>驱动<b class="b">{{detail.command.sql.driver}}</b> 链接<b class="b">{{getEnumName(dic.sql_source, detail.command.sql.source.id)}}</b> 执行<b class="b">{{detail.command.sql.origin}}</b>语句：</el-row>
                         <div class="sql-show-warp">
                             <!--本地sql展示-->
                             <div v-if="detail.command.sql.origin == 'local'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='local' || statement.type==''" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
@@ -127,7 +127,7 @@ var MyConfigDetail = Vue.extend({
                     
                     <div v-if="detail.protocol_name == 'jenkins'">
                         <div>
-                            资源<b class="b">{{detail.command.jenkins.source.id ? dic.jenkins_source.filter((item)=>{return detail.command.jenkins.source.id == item.id})[0].name : ''}}</b>
+                            资源<b class="b">{{getEnumName(dic.jenkins_source, detail.command.jenkins.source.id)}}</b>
                             项目<b class="b">{{detail.command.jenkins.name}}</b>
                             参数：
                         </div>
@@ -137,24 +137,13 @@ var MyConfigDetail = Vue.extend({
                     </div>
                     
                     <div v-if="detail.protocol_name == 'git'">
-                        <el-form-item label="链接">
-                            <el-select v-model="detail.command.git.link_id" placement="请选择链接">
-                                <el-option v-for="(dic_v,dic_k) in dic.git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
-                            </el-select>
-                        </el-form-item>
-                        <el-form-item label="事件">
-                            <div>
-                                <el-button type="text" @click="gitSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
+                        <el-row>链接 <b class="b">{{getEnumName(dic.git_source, detail.command.git.link_id)}}</b> 事件</el-row>
+                        <div style="overflow-y: auto;max-height: 420px;">
+                            <div v-for="(event,git_index) in detail.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                <el-row v-html="event.desc" style="min-height: 45px;"></el-row>
+                                <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
                             </div>
-                            <div style="overflow-y: auto;max-height: 420px;">
-                                <el-alert v-show="detail.command.git.events.length==0" title="未添加事件，请添加。" type="info"></el-alert>
-                                <!--git 事件展示-->
-                                <div v-for="(event,git_index) in detail.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                    <el-row v-html="event.summary" style="min-height: 45px;"></el-row>
-                                    <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
-                                </div>
-                            </div>
-                        </el-form-item>
+                        </div>
                     </div>
                     
                     <div v-if="detail.protocol_name == 'pipeline'">
@@ -165,8 +154,8 @@ var MyConfigDetail = Vue.extend({
                                 <b class="b">{{conf.protocol_name}}</b>
                                 <el-button plain size="mini" round>{{conf.status_name}}</el-button>
                                 <el-divider direction="vertical"></el-divider>
-                                (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.value" placement="top-start">
-                                    <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}</code>
+                                (<el-tooltip v-for="(var_p,var_i) in detail.var_fields" effect="dark" :content="var_p.remark" placement="top-start">
+                                    <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}<span class="info-2">={{var_p.value}}</span></code>
                                 </el-tooltip>)
                             </div>
                         </div>
@@ -214,7 +203,13 @@ var MyConfigDetail = Vue.extend({
                 show:false,
                 detail:{},
                 type: '',
-            }
+            },
+            // 合并类型
+            gitMergeTypeList: {
+                "merge":"合并分支",
+                "squash":"扁平化分支",
+                "rebase":"变基并合并"
+            },
         }
     },
     // 模块初始化
@@ -255,6 +250,11 @@ var MyConfigDetail = Vue.extend({
                         res.data.command.sql.statement.forEach((item)=>{
                             item = this.sqlGitBuildDesc(item)
                         })
+                    }
+                    if (res.data.command.git){
+                        for (let i in res.data.command.git.events){
+                            res.data.command.git.events[i] = this.gitBuildDesc(res.data.command.git.events[i])
+                        }
                     }
                 }else if (this.req.type === 'pipeline'){
                     res.data.protocol_name = 'pipeline'
@@ -374,6 +374,21 @@ var MyConfigDetail = Vue.extend({
             }
 
             console.log("sql描述",data.git.descrition)
+            return data
+        },
+        // 构建 git 描述
+        gitBuildDesc(data){
+            switch (data.id){
+                case 2:
+                    data.desc = '完善中...'
+                    break
+                case 9:
+                    data.desc = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-paperclip"></i></a><b class="b">${data.pr_merge.owner}/${data.pr_merge.repo}</b>/pulls/<b class="b">${data.pr_merge.number}</b> <b class="b">${this.gitMergeTypeList[data.pr_merge.merge_method]}</b>  ${data.pr_merge.prune_source_branch===true?'<b class="b">删除提交分支</b>':''}`+
+                        `<br><i style="margin-left: 3em;"></i><b>${data.pr_merge.title}</b> ${data.pr_merge.description}`
+                    break
+                default:
+                    data.desc = '未支持的事件类型'
+            }
             return data
         },
         editOpen(){

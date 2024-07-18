@@ -3,6 +3,7 @@ var MyVarParams = Vue.extend({
         <el-row>
             <h3>模板变量的作用</h3>
             <p>在流水线使用的过程中，经常会出现创建重复的组件任务，而唯一不同的就是其中的参数名称。为了提高任务组件的复用性特引入了模板语法。</p>
+            <p>Golang <a target="_blank" href="https://juejin.cn/post/6844903762901860360">text/template</a></p>
         </el-row>
         
         <el-row>
@@ -26,7 +27,9 @@ var MyVarParams = Vue.extend({
                 <ul>
                     <li><b>len</b> &nbsp; 返回一个字符串、数组、切片、映射或通道的长度。</li>
                     <li><b>index</b> &nbsp; 返回一个字符串、数组或切片中指定位置的元素。</li>
-                    <li><b>printf</b> &nbsp; 根据格式字符串输出格式化的字符串。</li>
+                    <li><b>printf</b> &nbsp; 根据格式字符串输出格式化的字符串。
+                        <ul><li>示例：<code>[[printf \`%v\` "666"]]</code> 输出 <code>666</code></li></ul>
+                    </li>
                     <li><b>range</b> &nbsp; 遍历一个数组、切片、映射或通道，并输出其中的每个元素。</li>
                     <li><b>with</b> &nbsp; 设置当前上下文中的变量。</li>
                 </ul>

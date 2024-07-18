@@ -50,10 +50,14 @@ var MyConfig = Vue.extend({
             </el-table-column>
             <el-table-column prop="spec" label="执行时间" v-show="labelType!=5" width="160"></el-table-column>
             <el-table-column prop="name" label="任务名称">
-                <template slot-scope="{row}">
-                    <router-link :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline">{{row.name}}</router-link>
-                    <span v-show="row.option.name.mouse" style="margin-left: 4px"><i class="el-icon-edit hover" @click="setShow(row)"></i></span>
-                </template>
+                <div slot-scope="{row}" class="abc" style="display: flex;">
+                    <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+                        <router-link :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                    </span>
+                    <span v-show="row.option.name.mouse" style="margin-left: 4px;">
+                        <i  class="el-icon-edit hover" @click="setShow(row)"></i>
+                    </span>
+                </div>
             </el-table-column>
             <el-table-column prop="protocol_name" label="协议" width="80"></el-table-column>
             <el-table-column prop="" label="状态" width="100">
@@ -65,7 +69,7 @@ var MyConfig = Vue.extend({
                 </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注"></el-table-column>
-            <el-table-column prop="handle_user_names" label="处理人"></el-table-column>
+            <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
         </el-table>
         <el-pagination
                 @size-change="handleSizeChange"

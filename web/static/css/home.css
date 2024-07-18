@@ -64,9 +64,10 @@ i.hover{
     padding: 2px;
     cursor: pointer;
     color: #909399;
+    border: 1px solid #f5f7fa;
 }
 i.hover:hover{
-    border: 1px solid #e9e9eb;
+    border-color: #e9e9eb;
     background: #f4f4f5;
 }
 .el-menu--horizontal>.el-menu-item,

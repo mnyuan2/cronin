@@ -50,10 +50,14 @@ var MyPipeline = Vue.extend({
             </el-table-column>
             <el-table-column prop="spec" label="执行时间" width="160"></el-table-column>
             <el-table-column prop="name" label="任务名称">
-                <template slot-scope="{row}">
-                    <router-link :to="{path:'/config_detail',query:{id:row.id, type:'pipeline'}}" class="el-link el-link--primary is-underline">{{row.name}}</router-link>
-                    <span v-show="row.option.name.mouse" style="margin-left: 4px"><i class="el-icon-edit hover" @click="setShow(row)"></i></span>
-                </template>
+                <div slot-scope="{row}" style="display: flex;">
+                    <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+                        <router-link :to="{path:'/config_detail',query:{id:row.id, type:'pipeline'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                    </span>
+                    <span v-show="row.option.name.mouse" style="margin-left: 4px;">
+                        <i  class="el-icon-edit hover" @click="setShow(row)"></i>
+                    </span>
+                </div>
             </el-table-column>
             <el-table-column prop="" label="状态" width="100">
                 <template slot-scope="scope">

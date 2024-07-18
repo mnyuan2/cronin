@@ -41,8 +41,8 @@ var MyPipelineForm = Vue.extend({
                         <b class="b">{{conf.protocol_name}}</b>
                         <el-button plain round size="mini" disabled>{{conf.status_name}}</el-button>
                         <el-divider direction="vertical"></el-divider>
-                        (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.value" placement="top-start">
-                            <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}</code>
+                        (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.remark" placement="top-start">
+                            <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}<span class="info-2">={{var_p.value}}</span></code>
                         </el-tooltip>)
                         <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
                     </div>

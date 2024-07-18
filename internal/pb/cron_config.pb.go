@@ -31,7 +31,7 @@ type GitEventPRMerge struct {
 	Owner string `json:"owner"` // 空间地址
 	Repo  string `json:"repo"`  // 项目名称（仓库路径）
 	// 第几个PR，即本仓库PR的序数
-	Number int32 `json:"number"`
+	Number string `json:"number"`
 	// 可选。合并PR的方法，merge（合并所有提交）、squash（扁平化分支合并）和rebase（变基并合并）。默认为merge。
 	MergeMethod string `json:"merge_method"`
 	// 可选。合并PR后是否删除源分支，默认false（不删除）

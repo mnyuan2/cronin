@@ -268,6 +268,7 @@ const Enum ={
 function statusTypeName(status){
     switch (Number(status)) {
         case Enum.StatusDisable:
+            return 'info';
         case Enum.StatusActive:
         case Enum.StatusAudited:
             return 'primary';
@@ -277,6 +278,19 @@ function statusTypeName(status){
         case Enum.StatusError:
             return 'warning';
     }
+}
+
+/**
+ * 获得枚举名称
+ * ~~~
+ * 用于枚举id转名称
+ * ~~~
+ * @param enumList
+ * @param id
+ */
+function getEnumName(enumList, id){
+    let data = enumList.filter((item)=>{return id == item.id})
+    return data.length ? data[0].name : ''
 }
 
 /**
