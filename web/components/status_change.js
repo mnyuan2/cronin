@@ -1,7 +1,7 @@
 var MyStatusChange = Vue.extend({
     template: `<el-dialog :title="info.name" :visible.sync="request.show" :show-close="false" class="status-change-warp" width="540px">
         <el-tabs tab-position="left">
-            <el-tab-pane v-if="info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError">
+            <el-tab-pane v-if="(info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError) && (($auth_tag.config_status && type=='config') || ($auth_tag.pipeline_status && type=='pipeline'))">
                 <span slot="label" ><el-button plain size="mini" round>待审核</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -15,7 +15,7 @@ var MyStatusChange = Vue.extend({
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
-            <el-tab-pane v-if="info.status==Enum.StatusAudited">
+            <el-tab-pane v-if="info.status==Enum.StatusAudited && (($auth_tag.config_audit && type=='config') || ($auth_tag.pipeline_audit && type=='pipeline'))">
                 <span slot="label"><el-button plain size="mini" round>驳回</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -32,7 +32,7 @@ var MyStatusChange = Vue.extend({
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
-            <el-tab-pane v-if="info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError || info.status==Enum.StatusAudited">
+            <el-tab-pane v-if="(info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError || info.status==Enum.StatusAudited) && (($auth_tag.config_audit && type=='config') || ($auth_tag.pipeline_audit && type=='pipeline'))">
                 <span slot="label"><el-button plain size="mini" round>{{info.status==Enum.StatusAudited ?'通过':'激活'}}</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -100,7 +100,6 @@ var MyStatusChange = Vue.extend({
     },
     // 模块初始化
     created(){
-        console.log("状态变更 start2",this.detail)
     },
     // 模块初始化
     mounted(){
@@ -115,7 +114,7 @@ var MyStatusChange = Vue.extend({
             this.type = this.request.type
         }
         this.getDicSqlSource()
-        console.log("状态变更 start",this.request)
+        console.log("状态变更 start",this.request, this.$auth_tag)
     },
 
     // 具体方法

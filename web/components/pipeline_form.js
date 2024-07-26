@@ -34,16 +34,24 @@ var MyPipelineForm = Vue.extend({
             <el-form-item label="任务" label-width="76px">
                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
                 <div id="config-selected-box" class="sort-drag-box">
-                    <div class="item-drag" v-for="(conf,conf_index) in form.configs" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                    <div class="item-drag"  
+                        v-for="(conf,conf_index) in form.configs" 
+                        style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;"
+                        @mouseover="configDetailPanel(conf, true)"
+                        @mouseout="configDetailPanel(conf, false)"
+                    >
                         <i class="el-icon-more-outline drag"></i>
                         <b class="b">{{conf.type_name}}</b>-
                         <b>{{conf.name}}</b>-
                         <b class="b">{{conf.protocol_name}}</b>
-                        <el-button plain round size="mini" disabled>{{conf.status_name}}</el-button>
+                        <el-button :type="statusTypeName(conf.status)" size="mini" plain round disabled>{{conf.status_name}}</el-button>
                         <el-divider direction="vertical"></el-divider>
                         (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.remark" placement="top-start">
                             <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}<span class="info-2">={{var_p.value}}</span></code>
                         </el-tooltip>)
+                        <span style="margin-left: 4px;" v-show="conf.view_panel">
+                            <i class="el-icon-view hover" @click="configDetailBox(conf)"></i>
+                        </span>
                         <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
                     </div>
                 </div>
@@ -89,12 +97,12 @@ var MyPipelineForm = Vue.extend({
         <div class="el-dialog__footer">
 <!--            <el-button @click="configRun()" class="left" size="small">执行一下</el-button>-->
             <el-button size="small" @click="close()">取 消</el-button>
-            <el-button type="primary" size="small" @click="submitForm()" v-if="form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject">保存草稿</el-button>
+            <el-button type="primary" size="small" @click="submitForm()" v-if="(form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject) && $auth_tag.pipeline_set">保存草稿</el-button>
         </div>
         
         <!-- 任务选择弹窗 -->
         <el-dialog title="任务选择" :visible.sync="config.boxShow" width="60%" top="10vh" class="config-select-wrap" :modal="false">
-            <my-config-select ref="selection"></my-config-select>
+            <my-config-select v-if="config.boxShow" ref="selection"></my-config-select>
             <div slot="footer" class="dialog-footer">
                 <a href="/index#/config" target="_blank" class="el-button el-button--text left">管理任务</a>
                 <el-button size="medium" @click="configSelectBox('close')">关闭</el-button>
@@ -126,6 +134,9 @@ var MyPipelineForm = Vue.extend({
                 <el-button @click="msgSet.show = false">取 消</el-button>
                 <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
             </span>
+        </el-dialog>
+        <el-dialog title="任务详情" :visible.sync="config_detail.show" :close-on-click-modal="false" class="config-form-box" :modal="false">
+            <my-config-form v-if="config_detail.show" :request="{detail:config_detail.detail,disabled:true}" @close="configDetailBox()"></my-config-form>
         </el-dialog>
     </div>`,
 
@@ -165,6 +176,11 @@ var MyPipelineForm = Vue.extend({
                 boxShow:false,
                 running: false,// 执行中
             },
+            // 任务详情
+            config_detail:{
+                show:false,
+                detail:{}
+            },
             // 消息设置弹窗
             msgSet:{
                 show: false, // 是否显示
@@ -193,9 +209,7 @@ var MyPipelineForm = Vue.extend({
             }
         }
     },
-    // 模块初始化
-    mounted(){
-        this.getDic()
+    created(){
         this.getPreference()
         console.log("请求数据",this.request)
         if (this.request.detail !== undefined && this.request.detail.id > 0){
@@ -203,6 +217,10 @@ var MyPipelineForm = Vue.extend({
         }else{
             this.form = this.addData()
         }
+    },
+    // 模块初始化
+    mounted(){
+        this.getDic()
         this.configSort()
 
     },
@@ -233,6 +251,7 @@ var MyPipelineForm = Vue.extend({
             for (let i=0; i<row.configs.length;i++){
                 let config = configList[row.configs[i].id]
                 if (config != undefined){
+                    row.configs[i].view_panel = false
                     row.configs[i].name = config.name
                     row.configs[i].type_name = config.type_name
                     row.configs[i].status_name = config.status_name
@@ -269,7 +288,7 @@ var MyPipelineForm = Vue.extend({
             }
             data.configs.forEach(function (item,index) {
                 body.config_ids.push(item.id)
-                data.configs[index].status = Number(data.configs[index].status)
+                // data.configs[index].status = Number(data.configs[index].status)
                 if (data.configs[index].command.sql != null){
                     data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
                 }
@@ -370,9 +389,13 @@ var MyPipelineForm = Vue.extend({
             }else if (e == 'close'){ // 关闭
                 this.config.boxShow = false
             }else if (e == 'confirm'){ // 提交
-                console.log("选中元素",this.$refs.selection.selected)
+                console.log("选中元素",)
                 this.config.running = true
-                this.form.configs.push(...this.$refs.selection.selected)
+                this.$refs.selection.selected.forEach((item)=>{
+                    temp = copyJSON(item)
+                    temp.view_panel = false
+                    this.form.configs.push(temp)
+                })
                 this.config.boxShow = false
                 this.config.running = false
             }
@@ -394,6 +417,18 @@ var MyPipelineForm = Vue.extend({
 
                 })
             })
+        },
+        configDetailPanel(detail,show=false){
+            detail.view_panel = show === true
+        },
+        configDetailBox(detail=null){
+            if (!detail){
+                this.config_detail.show =false
+                this.config_detail.detail = {}
+                return
+            }
+            this.config_detail.show = true
+            this.config_detail.detail = detail
         },
         removeAt(idx) {
             this.$confirm('确定移除任务', '提示', {

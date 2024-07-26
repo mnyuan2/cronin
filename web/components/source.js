@@ -6,7 +6,7 @@ var MySource = Vue.extend({
             <el-menu-item index="13" :disabled="list.request">git</el-menu-item>
             <el-menu-item index="14" :disabled="list.request">主机</el-menu-item>
             <div style="float: right">
-                <el-button type="text" @click="initForm(true)">新增链接</el-button>
+                <el-button type="text" @click="initForm(true)" v-if="$auth_tag.source_set">新增链接</el-button>
             </div>
         </el-menu>
         
@@ -22,7 +22,7 @@ var MySource = Vue.extend({
             <el-table-column label="操作">
                 <template slot-scope="scope">
                     <el-button plain @click="initForm(true, scope.row)">编辑</el-button>
-                    <el-button plain @click="deleteSource(scope.row.id)">删除</el-button>
+                    <el-button plain @click="deleteSource(scope.row.id)" v-if="$auth_tag.source_status">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
@@ -105,7 +105,7 @@ var MySource = Vue.extend({
             <div slot="footer" class="dialog-footer">
                 <el-button @click="pingForm()" style="float: left;">连接测试</el-button>
                 <el-button @click="initForm(false,'-')">取 消</el-button>
-                <el-button type="primary" @click="submitForm()">确 定</el-button>
+                <el-button type="primary" @click="submitForm()" v-if="$auth_tag.source_set">确 定</el-button>
             </div>
         </el-dialog>
     </el-main>`,
@@ -136,6 +136,7 @@ var MySource = Vue.extend({
     },
     // 模块初始化
     created(){
+        setDocumentTitle('链接管理')
         this.initForm(false,"-")
     },
     // 模块初始化

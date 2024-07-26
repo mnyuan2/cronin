@@ -8,9 +8,9 @@ var MyHeader = Vue.extend({
                           text-color="#fff"
                           active-text-color="#66b1ff">
                           <el-menu-item index="/" style="font-weight: 500;font-size: 110%;">cronin</el-menu-item>
-                          <el-menu-item index="/config">任务</el-menu-item>
-                          <el-menu-item index="/pipeline">流水线</el-menu-item>
-                          <el-menu-item index="/source">连接</el-menu-item>
+                          <el-menu-item index="/config" v-if="$auth_tag.config_list">任务</el-menu-item>
+                          <el-menu-item index="/pipeline" v-if="$auth_tag.pipeline_list">流水线</el-menu-item>
+                          <el-menu-item index="/source" v-if="$auth_tag.source_list">连接</el-menu-item>
                           <!--右导航-->
                           <el-menu-item-group class="group-right">
                               <el-menu-item>
@@ -20,7 +20,7 @@ var MyHeader = Vue.extend({
                                     </span>
                                     <el-dropdown-menu slot="dropdown">
                                         <el-dropdown-item v-for="(dic_v,dic_k) in dic_envs" :command="dic_v.key" :disabled="sys_info.env==dic_v.key">{{dic_v.name}}</el-dropdown-item>
-                                        <el-dropdown-item command="envBoxDisplay" divided>管理环境</el-dropdown-item>
+                                        <el-dropdown-item command="envBoxDisplay" divided v-if="$auth_tag.env_list">管理环境</el-dropdown-item>
                                     </el-dropdown-menu>
                                 </el-dropdown>
                               </el-menu-item>
@@ -33,9 +33,9 @@ var MyHeader = Vue.extend({
                               </el-submenu>
                               <el-submenu popper-class="submenu" index="setting" class="icon">
                                 <template slot="title"><i class="el-icon-more" title="设置及其他"></template>
-                                <el-menu-item index="/message_template">通知</el-menu-item>
-                                <el-menu-item index="/users">人员</el-menu-item>
-                                <el-menu-item index="/role">权限</el-menu-item>
+                                <el-menu-item index="/message_template" v-if="$auth_tag.message_list">通知</el-menu-item>
+                                <el-menu-item index="/users" v-if="$auth_tag.user_list">人员</el-menu-item>
+                                <el-menu-item index="/role" v-if="$auth_tag.role_list">权限</el-menu-item>
                                 <el-menu-item index="/setting">设置</el-menu-item>
                                 <el-divider></el-divider>
                                 <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>

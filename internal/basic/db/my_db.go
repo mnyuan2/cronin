@@ -47,7 +47,7 @@ func (gdb *MyDB) Paginate(out interface{}, page int, pageSize int, tableName str
 		txDb = txDb.Order(orderBy)
 	}
 
-	if err = txDb.Offset(int(offset)).Limit(int(pageSize)).Find(out).Error; err != nil {
+	if err = txDb.Offset(int(offset)).Limit(int(pageSize)).Scan(out).Error; err != nil {
 		return 0, err
 	}
 	return

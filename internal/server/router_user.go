@@ -13,7 +13,12 @@ func routerUserList(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewUserService(ctx.Request.Context()).List(r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewUserService(ctx.Request.Context(), user).List(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -31,15 +36,10 @@ func routerUserSet(ctx *gin.Context) {
 		return
 	}
 
-	// 这里有三种情况：add.新增、edit.编辑所有、olay.编辑自己
+	// 这里有三种情况：set.新增、olay.编辑自己
 	authType := ctx.GetString("auth_type")
-	if authType == "add" { // 新增
-		if r.Id > 0 {
-			NewReply(ctx).SetError(pb.ParamError, "权限与操作不匹配").RenderJson()
-			return
-		}
-	} else if authType == "edit" { // 编辑
-		if r.Id <= 0 {
+	if authType == "set" { // 新增/编辑
+		if r.Id == user.UserId {
 			NewReply(ctx).SetError(pb.ParamError, "权限与操作不匹配").RenderJson()
 			return
 		}
@@ -49,7 +49,7 @@ func routerUserSet(ctx *gin.Context) {
 			return
 		}
 	}
-	rep, err := biz.NewUserService(ctx.Request.Context()).Set(r)
+	rep, err := biz.NewUserService(ctx.Request.Context(), user).Set(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -60,7 +60,12 @@ func routerUserDetail(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewUserService(ctx.Request.Context()).Detail(r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewUserService(ctx.Request.Context(), user).Detail(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -71,12 +76,12 @@ func routerUserChangePassword(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	//user, err := GetUser(ctx)
-	//if err != nil {
-	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
-	//	return
-	//}
-	rep, err := biz.NewUserService(ctx.Request.Context()).ChangePassword(r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewUserService(ctx.Request.Context(), user).ChangePassword(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -87,12 +92,12 @@ func routerUserChangeStatus(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	//user, err := GetUser(ctx)
-	//if err != nil {
-	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
-	//	return
-	//}
-	rep, err := biz.NewUserService(ctx.Request.Context()).ChangeStatus(r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewUserService(ctx.Request.Context(), user).ChangeStatus(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -103,12 +108,12 @@ func routerUserChangeAccount(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	//user, err := GetUser(ctx)
-	//if err != nil {
-	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
-	//	return
-	//}
-	rep, err := biz.NewUserService(ctx.Request.Context()).ChangeAccount(r)
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewUserService(ctx.Request.Context(), user).ChangeAccount(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
@@ -119,6 +124,6 @@ func routerUserLogin(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewUserService(ctx.Request.Context()).Login(r)
+	rep, err := biz.NewUserService(ctx.Request.Context(), nil).Login(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

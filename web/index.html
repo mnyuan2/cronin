@@ -68,6 +68,16 @@
             'Authorization': cache.getToken()
         }
     })
+    Vue.prototype.$auth_tag = cache.getAuthTags()
+    // 复制文本到剪切板
+    Vue.prototype.copyToClipboard = function (title, text) {
+        navigator.clipboard.writeText(text).then(()=> {
+            this.$message.success(title+' 已复制到剪贴板')
+        }).catch((err)=> {
+            this.$message.warning(title+' 复制失败: '+err.toString())
+        });
+    }
+
     const v = new Vue({
         el: '#app',
         router: router,

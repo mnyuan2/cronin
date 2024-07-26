@@ -1,7 +1,7 @@
 package pb
 
 type WorkTableRequest struct {
-	Status int `json:"status" form:"status"`
+	Tab string `json:"tab" form:"tab"`
 }
 type WorkTableReply struct {
 	List []*WorkTableItem `json:"list"`
@@ -10,6 +10,6 @@ type WorkTableReply struct {
 type WorkTableItem struct {
 	Env      string `json:"env"`
 	EnvTitle string `json:"env_title"`
-	JoinType string `json:"join_type"`
+	Type     string `json:"type"`
 	Total    int64  `json:"total"`
 }

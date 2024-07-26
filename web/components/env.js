@@ -1,6 +1,6 @@
 var MyEnv = Vue.extend({
     template: `<div>
-        <el-button type="primary" plain @click="initForm(true)" style="margin-left: 20px">新增环境</el-button>
+        <el-button type="primary" plain @click="initForm(true)" style="margin-left: 20px" v-if="$auth_tag.env_set">新增环境</el-button>
         
         <el-table :data="list">
             <el-table-column property="name" label="key"></el-table-column>
@@ -14,12 +14,10 @@ var MyEnv = Vue.extend({
             <el-table-column property="update_dt" label="更新时间"></el-table-column>
             <el-table-column label="操作">
                 <template slot-scope="{row}">
-                    <el-button type="text" @click="initForm(true, row)">编辑</el-button>
-                    <el-button type="text" @click="changeStatus(row, 2)" v-if="row.status!=2">激活</el-button>
-                    <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2">停用</el-button>
-                    <el-button type="text" @click="deleteEnv(row.id)" v-if="row.status!=2">删除</el-button>
-                    
-                    
+                    <el-button type="text" @click="initForm(true, row)" v-if="$auth_tag.env_set">编辑</el-button>
+                    <el-button type="text" @click="changeStatus(row, 2)" v-if="row.status!=2 && $auth_tag.env_status">激活</el-button>
+                    <el-button type="text" @click="changeStatus(row, 1)" v-if="row.status==2 && $auth_tag.env_status">停用</el-button>
+                    <el-button type="text" @click="deleteEnv(row.id)" v-if="row.status!=2 && $auth_tag.env_status">删除</el-button>
                 </template>
                 
             </el-table-column>

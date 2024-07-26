@@ -1,6 +1,6 @@
 var MyConfigForm = Vue.extend({
     template: `<div class="config-form">
-    <el-form :model="form">
+    <el-form :model="form" :disabled="request.disabled">
             <el-form-item label="名称*" label-width="50px">
                 <el-input v-model="form.name"></el-input>
             </el-form-item>
@@ -240,17 +240,17 @@ var MyConfigForm = Vue.extend({
             </el-form-item>
     </el-form>
     <div class="el-dialog__footer">
-        <el-button @click="configRun()" class="left">执行一下</el-button>
+        <el-button @click="configRun()" class="left" v-if="!request.disabled">执行一下</el-button>
         <el-button @click="close(false)">取 消</el-button>
-        <el-button type="success" @click="setCron()" v-if="form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject">保存草稿</el-button>
+        <el-button type="success" @click="setCron()" v-if="(form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject) && $auth_tag.config_set && !request.disabled">保存草稿</el-button>
     </div>
     
     <!-- sql链接源管理弹窗 -->
-    <el-drawer title="链接管理" :visible.sync="source.boxShow" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
+    <el-drawer title="链接管理" :visible.sync="source.boxShow && !request.disabled" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
         <my-sql-source></my-sql-source>
     </el-drawer>
     <!-- sql 设置弹窗 -->
-    <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show" :show-close="false" :modal="false" :close-on-click-modal="false">
+    <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show && !request.disabled" :show-close="false" :modal="false" :close-on-click-modal="false">
         <el-form :model="sqlSet.statement.git" v-if="sqlSet.source=='git'" label-width="70px" size="small">
             <el-form-item label="连接">
                 <el-select v-model="sqlSet.statement.git.link_id" placement="请选择git链接">
@@ -292,7 +292,7 @@ var MyConfigForm = Vue.extend({
         </span>
     </el-dialog>
     <!-- git 设置弹窗 -->
-    <el-dialog :title="'git设置-'+sqlSet.title" :visible.sync="gitSet.show" :modal="false" :show-close="false" :close-on-click-modal="false">
+    <el-dialog :title="'git设置-'+sqlSet.title" :visible.sync="gitSet.show && !request.disabled" :modal="false" :show-close="false" :close-on-click-modal="false">
         <el-form :model="gitSet.event" label-width="90px" size="small">
             <el-form-item label="事件">
                 <el-select v-model="gitSet.data.id" placement="请选择事件类型">
@@ -352,7 +352,7 @@ var MyConfigForm = Vue.extend({
         </span>
     </el-dialog>
     <!-- 推送设置弹窗 -->
-    <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false" :modal="false">
+    <el-dialog title="推送设置" :visible.sync="msgSet.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
         <el-form :model="msgSet" :inline="true" size="mini">
             <el-form-item label="当结果">
                 <el-select v-model="msgSet.data.status" style="width: 90px">
@@ -381,7 +381,8 @@ var MyConfigForm = Vue.extend({
     name: "MyConfigForm",
     props: {
         request:{
-            detail:Object // 详情对象
+            detail:Object, // 详情对象
+            disabled: Boolean, // 禁用标识（仅查看）（而且无法触发任何二次弹窗）
         }
     },
     data(){
@@ -642,7 +643,9 @@ var MyConfigForm = Vue.extend({
         },
         // 添加/编辑 任务
         setCron(afterCall){
-            if (this.form.name == ''){
+            if (this.request.disabled){
+                return
+            }else if (this.form.name == ''){
                 return this.$message.error('请输入任务名称')
             }else if (this.form.spec == '' && this.form.type != 5){
                 return this.$message.error('请输入任务执行时间')
@@ -843,6 +846,9 @@ var MyConfigForm = Vue.extend({
         },
         // 删除sql元素
         sqlSetDel(index){
+            if (this.request.disabled){
+                return
+            }
             if (index === "" || index == null || isNaN(index)){
                 console.log('sqlSetDel', index)
                 return this.$message.error("索引位标志异常");
@@ -908,6 +914,9 @@ var MyConfigForm = Vue.extend({
         },
         // git 删除元素
         gitSetDel(index){
+            if (this.request.disabled){
+                return
+            }
             if (index === "" || index == null || isNaN(index)){
                 console.log('gitSetDel', index)
                 return this.$message.error("索引位标志异常");
@@ -941,6 +950,9 @@ var MyConfigForm = Vue.extend({
             this.msgSet.data = oldData
         },
         msgSetDel(index){
+            if (this.request.disabled){
+                return
+            }
             if (index === "" || index == null || isNaN(index)){
                 console.log('msgSetDel', index)
                 return this.$message.error("索引位标志异常");
@@ -1009,7 +1021,7 @@ var MyConfigForm = Vue.extend({
                 if (item == ''){
                     return
                 }
-                data.git.descrition += `<div style="margin: 0;padding: 0 0 0 30px;"><a href="https://gitee.com/${data.git.owner}/${data.git.project}/blob/${data.git.ref}/${item}" target="_blank" title="点击 查看文件详情"><i class="el-icon-paperclip"></i></a><code>${item}</code></div>`
+                data.git.descrition += `<div style="margin: 0;padding: 0 0 0 30px;"><a href="https://gitee.com/${data.git.owner}/${data.git.project}/blob/${data.git.ref}/${item}" target="_blank" title="点击 查看文件详情"><i class="el-icon-connection"></i></a><code>${item}</code></div>`
             })
 
             console.log("sql描述",data.git.descrition)
@@ -1024,7 +1036,7 @@ var MyConfigForm = Vue.extend({
                     data.desc = '完善中...'
                     break
                 case 9:
-                    data.desc = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-paperclip"></i></a> ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right}/pulls/${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${data.pr_merge.prune_source_branch===true?left+'删除提交分支'+right:''}`+
+                    data.desc = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right}/pulls/${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${data.pr_merge.prune_source_branch===true?left+'删除提交分支'+right:''}`+
                         `<br><i style="margin-left: 3em;"></i><b>${data.pr_merge.title}</b> ${data.pr_merge.description}`
                     break
                 default:

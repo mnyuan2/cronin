@@ -1,7 +1,7 @@
 var MyConfig = Vue.extend({
     template: `<el-container>
     <!--边栏-->
-    <el-aside width="240px" style="padding-top: 10px">
+    <el-aside style="padding-top: 10px">
         <el-card class="aside-card">
             <div slot="header">
                 <span class="h3">执行任务</span>
@@ -36,9 +36,39 @@ var MyConfig = Vue.extend({
             <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>
             <el-menu-item index="5" :disabled="listRequest">组件任务</el-menu-item>
             <div style="float: right">
-                <el-button type="text" @click="setShow()">添加任务</el-button>
+                <el-button type="text" @click="setShow()" v-if="$auth_tag.config_set">添加任务</el-button>
             </div>
         </el-menu>
+        <el-row>
+            <el-form :inline="true" :model="listParam" size="small" class="search-form">
+                <el-form-item label="名称">
+                    <el-input v-model="listParam.name" placeholder="搜索名称"></el-input>
+                </el-form-item>
+                <el-form-item label="协议">
+                    <el-select v-model="listParam.protocol" placeholder="所有" multiple>
+                        <el-option v-for="item in dic.protocol" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="listParam.status" placeholder="所有" multiple>
+                        <el-option v-for="item in dic.config_status" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="处理人">
+                    <el-select v-model="listParam.handle_user_ids" placeholder="所有" multiple>
+                        <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="创建人">
+                    <el-select v-model="listParam.create_user_ids" placeholder="所有" multiple>
+                        <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="getList">查询</el-button>
+                </el-form-item>
+            </el-form>
+        </el-row>
         <el-table :data="list" @cell-mouse-enter="listTableCellMouse" @cell-mouse-leave="listTableCellMouse">
             <el-table-column prop="" label="成功率" width="80">
                 <template slot-scope="scope">
@@ -54,8 +84,9 @@ var MyConfig = Vue.extend({
                     <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
                         <router-link :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
                     </span>
-                    <span v-show="row.option.name.mouse" style="margin-left: 4px;">
-                        <i  class="el-icon-edit hover" @click="setShow(row)"></i>
+                    <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
+                        <i  class="el-icon-edit hover" @click="setShow(row)" title="编辑"></i>
+                        <i class="el-icon-notebook-2 hover" @click="configLogBox(row)" title="日志"></i>
                     </span>
                 </div>
             </el-table-column>
@@ -70,6 +101,7 @@ var MyConfig = Vue.extend({
             </el-table-column>
             <el-table-column prop="remark" label="备注"></el-table-column>
             <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
+            <el-table-column prop="create_user_name" label="创建人" width="80"></el-table-column>
         </el-table>
         <el-pagination
                 @size-change="handleSizeChange"
@@ -86,26 +118,8 @@ var MyConfig = Vue.extend({
         <my-config-form v-if="add_box.show" :request="{detail:add_box.detail}" @close="formClose"></my-config-form>
     </el-dialog>
     <!-- 任务日志弹窗 -->
-<!--    <el-drawer :title="configLog.title" :visible.sync="configLog.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">-->
-<!--        <my-config-log :tags="configLog.tags"></my-config-log>-->
-<!--    </el-drawer>-->
-    <!-- 注册任务列表弹窗 -->
-    <el-drawer title="已注册任务" :visible.sync="registerListShow" direction="rtl" size="40%" wrapperClosable="false">
-        <el-table :data="registerList">
-            <el-table-column property="id" label="编号">
-                <template slot-scope="scope">
-                    {{scope.row.id}}/{{scope.row.entry_id}}
-                </template>
-            </el-table-column>
-            <el-table-column property="spec" label="执行时间"></el-table-column>
-            <el-table-column property="update_dt" label="下一次执行"></el-table-column>
-            <el-table-column property="name" label="任务名称"></el-table-column>
-            <el-table-column property="" label="">
-                <template slot-scope="scope">
-                    <el-button type="text" @click="configLogBox(scope.row)">日志</el-button>
-                </template>
-            </el-table-column>
-        </el-table>
+    <el-drawer :title="config_log_box.title" :visible.sync="config_log_box.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
+        <my-config-log :tags="config_log_box.tags"></my-config-log>
     </el-drawer>
     <my-status-change v-if="status_box.show" :request="status_box" @close="statusShow"></my-status-change>
 
@@ -114,15 +128,19 @@ var MyConfig = Vue.extend({
     data(){
         return {
             env: {},
-            dic_sql_source:[],
-            dic_sql_driver:[],
-            dic_user: [],
-            dic_msg: [],
-            dic_jenkins_source: [],
-            dic_git_source: [],
-            dic_git_event:[],
-            dic_host_source: [],
-            dic_cmd_type: [],
+            dic:{
+                config_status:[],
+                user:[],
+                protocol: [],
+            },
+            // dic_sql_source:[],
+            // dic_sql_driver:[],
+            // dic_msg: [],
+            // dic_jenkins_source: [],
+            // dic_git_source: [],
+            // dic_git_event:[],
+            // dic_host_source: [],
+            // dic_cmd_type: [],
             sys_info:{},
             auth_tags:{},
             queue:{
@@ -139,12 +157,17 @@ var MyConfig = Vue.extend({
                 type: 1,
                 page: 1,
                 size: 15,
+                protocol: [],
+                status: [],
+                handle_user_ids:[],
+                create_user_ids:[],
+                name: '',
             },
             listRequest: false, // 请求中标志
-            configLog:{
+            config_log_box:{
                 show: false,
-                id: 0,
-                title:""
+                title:'',
+                tags: {},
             },
             registerList: [],
             registerListShow: false,
@@ -202,16 +225,15 @@ var MyConfig = Vue.extend({
     },
     // 模块初始化
     created(){
-        document.title = '任务管理';
+        setDocumentTitle('任务管理')
         api.systemInfo((res)=>{
             this.sys_info = res;
         })
         this.getDicSqlSource()
-        console.log("config created")
+        this.loadParams(getHashParams(window.location.hash))
     },
     // 模块初始化
     mounted(){
-        console.log("config mounted")
         this.getList()
         this.auth_tags = cache.getAuthTags()
         // 添加指定事件监听
@@ -227,11 +249,23 @@ var MyConfig = Vue.extend({
 
     // 具体方法
     methods:{
+        loadParams(param){
+            if (typeof param !== 'object'){return}
+            if (param.type){this.listParam.type = Number(param.type)}
+            if (param.page){this.listParam.page = Number(param.page)}
+            if (param.size){this.listParam.size = Number(param.size)}
+            if (param.name){this.listParam.name = param.name.toString()}
+            if (param.protocol){this.listParam.protocol = param.protocol.map(Number)}
+            if (param.status){this.listParam.status = param.status.map(Number)}
+            if (param.handle_user_ids){this.listParam.handle_user_ids = param.handle_user_ids.map(Number)}
+            if (param.create_user_ids){this.listParam.create_user_ids = param.create_user_ids.map(Number)}
+        },
         // 任务列表
         getList(){
             if (this.listRequest){
                 return this.$message.info('请求执行中,请稍等.');
             }
+            replaceHash('/config', this.listParam)
             this.listRequest = true
             api.innerGet("/config/list", this.listParam, (res)=>{
                 this.listRequest = false
@@ -254,7 +288,7 @@ var MyConfig = Vue.extend({
                     let handle_user_names = ''
                     if (res.data.list[i].handle_user_ids){
                         res.data.list[i].handle_user_ids.forEach((id)=>{
-                            this.dic_user.forEach((item)=>{
+                            this.dic.user.forEach((item)=>{
                                 if (item.id == id){
                                     handle_user_names += item.name+','
                                 }
@@ -262,6 +296,12 @@ var MyConfig = Vue.extend({
                         })
                         res.data.list[i].handle_user_names = handle_user_names.substring(0,handle_user_names.length-1)
                     }
+                    // 创建人
+                    this.dic.user.forEach((item)=>{
+                        if (item.id == res.data.list[i].create_user_id){
+                            res.data.list[i].create_user_name = item.name
+                        }
+                    })
                     // 前端用设置
                     res.data.list[i].option = {
                         name:{
@@ -282,6 +322,8 @@ var MyConfig = Vue.extend({
         },
         handleClickTypeLabel(tab, event) {
             this.listParam.type = tab
+            this.listParam.page = 1
+            this.listParam.total = 0
             this.getList()
         },
 
@@ -480,22 +522,18 @@ var MyConfig = Vue.extend({
         //         this.getDicSqlSource() // 关闭弹窗要重载枚举
         //     }
         // },
-        // configLogBox(item){
-        //     let tags = {ref_id:item.id, component:"job"}
-        //     if (item.protocol == 99){
-        //         tags.component = 'pipeline'
-        //     }
-        //     this.configLog.id = item.id
-        //     this.configLog.tags = tags
-        //     this.configLog.title = item.name+' 日志'
-        //     this.configLog.show = true
-        // },
-        // configLogBoxClose(done){
-        //     this.configLog.show = false;
-        //     this.configLog.id = 0;
-        //     this.configLog.title = ' 日志'
-        //     this.configLog.tags = {}
-        // },
+        configLogBox(item){
+            let tags = {ref_id:item.id, component:"config"}
+            this.config_log_box.tags = tags
+            this.config_log_box.title = item.name+' 日志'
+            this.config_log_box.show = true
+        },
+        configLogBoxClose(done){
+            this.config_log_box.show = false;
+            this.config_log_box.id = 0;
+            this.config_log_box.title = ' 日志'
+            this.config_log_box.tags = {}
+        },
         // sql设置弹窗
         // sqlSetShow(index, oldData){
         //     if (index === "" || index == null || isNaN(index)){
@@ -766,7 +804,7 @@ var MyConfig = Vue.extend({
         //             data.summary = '完善中...'
         //             break
         //         case 9:
-        //             data.summary = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-paperclip"></i></a> ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right}/pulls/${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${data.pr_merge.prune_source_branch===true?left+'删除提交分支'+right:''}`+
+        //             data.summary = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> ${left}${data.pr_merge.owner}/${data.pr_merge.repo}${right}/pulls/${left}${data.pr_merge.number}${right} ${left}${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}${right}  ${data.pr_merge.prune_source_branch===true?left+'删除提交分支'+right:''}`+
         //                 `<br><i style="margin-left: 3em;"></i><b>${data.pr_merge.title}</b> ${data.pr_merge.description}`
         //             break
         //         default:
@@ -790,26 +828,31 @@ var MyConfig = Vue.extend({
         // 枚举
         getDicSqlSource(){
             let types = [
-                Enum.dicSqlSource,
-                Enum.dicSqlDriver,
-                Enum.dicJenkinsSource,
-                Enum.dicGitSource,
-                Enum.dicGitEvent,
-                Enum.dicHostSource,
-                Enum.dicCmdType,
+                // Enum.dicSqlSource,
+                // Enum.dicSqlDriver,
+                Enum.dicConfigStatus,
+                Enum.dicProtocolType,
+                // Enum.dicJenkinsSource,
+                // Enum.dicGitSource,
+                // Enum.dicGitEvent,
+                // Enum.dicHostSource,
+                // Enum.dicCmdType,
                 Enum.dicUser,
-                Enum.dicMsg
+                // Enum.dicMsg
             ]
             api.dicList(types,(res) =>{
-                this.dic_sql_source = res[Enum.dicSqlSource]
-                this.dic_jenkins_source = res[Enum.dicJenkinsSource]
-                this.dic_git_source =res[Enum.dicGitSource]
-                this.dic_git_event = res[Enum.dicGitEvent]
-                this.dic_host_source =res[Enum.dicHostSource]
-                this.dic_user = res[Enum.dicUser]
-                this.dic_msg = res[Enum.dicMsg]
-                this.dic_cmd_type = res[Enum.dicCmdType]
-                this.dic_sql_driver = res[Enum.dicSqlDriver]
+                // this.dic_sql_source = res[Enum.dicSqlSource]
+                // this.dic_jenkins_source = res[Enum.dicJenkinsSource]
+                // this.dic_git_source =res[Enum.dicGitSource]
+                // this.dic_git_event = res[Enum.dicGitEvent]
+                // this.dic_host_source =res[Enum.dicHostSource]
+                this.dic.user = res[Enum.dicUser]
+                // this.dic_msg = res[Enum.dicMsg]
+                // this.dic_cmd_type = res[Enum.dicCmdType]
+                // this.dic_sql_driver = res[Enum.dicSqlDriver]
+                this.dic.config_status = res[Enum.dicConfigStatus]
+                this.dic.protocol = res[Enum.dicProtocolType]
+
             })
         },
         // 停止执行任务
@@ -823,7 +866,7 @@ var MyConfig = Vue.extend({
         },
         // 消息监听处理
         execQueue(e){
-            console.log("execQueue", e)
+            // console.log("execQueue", e)
             let data = JSON.parse(e.data)
             if (!data){
                 this.queue.exec = []
@@ -832,7 +875,7 @@ var MyConfig = Vue.extend({
             this.queue.exec = data
         },
         registerQueue(e){
-            console.log("registerQueue", e)
+            // console.log("registerQueue", e)
             let data = JSON.parse(e.data)
             if (!data){
                 this.queue.register = []

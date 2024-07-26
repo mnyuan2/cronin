@@ -1,6 +1,6 @@
 var MyMessageTemplate = Vue.extend({
     template: `<el-main>
-        <el-button type="text" @click="initForm(true)">新增模板</el-button>
+        <el-button type="text" @click="initForm(true)" v-if="$auth_tag.message_set">新增模板</el-button>
         <el-table :data="list">
             <el-table-column property="title" label="模板名称"></el-table-column>
             <el-table-column property="sort" label="排序"></el-table-column>
@@ -8,7 +8,7 @@ var MyMessageTemplate = Vue.extend({
             <el-table-column label="操作">
                 <template slot-scope="scope">
                     <el-button plain @click="initForm(true, scope.row)">编辑</el-button>
-                    <el-button plain @click="deleteSqlSource(scope.row.id)">删除</el-button>
+                    <el-button plain @click="deleteSqlSource(scope.row.id)" v-if="$auth_tag.message_set">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
@@ -46,9 +46,9 @@ var MyMessageTemplate = Vue.extend({
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button @click="runForm()" style="float: left;">发送测试</el-button>
+                <el-button @click="runForm()" style="float: left;" v-if="$auth_tag.message_set">发送测试</el-button>
                 <el-button @click="initForm(false,'-')">取 消</el-button>
-                <el-button type="primary" @click="submitForm()">确 定</el-button>
+                <el-button type="primary" @click="submitForm()" v-if="$auth_tag.message_set">确 定</el-button>
             </div>
         </el-dialog>
     </el-main>`,
@@ -74,11 +74,11 @@ var MyMessageTemplate = Vue.extend({
     },
     // 模块初始化
     created(){
+        setDocumentTitle('消息模板')
         this.initForm(false,"-")
     },
     // 模块初始化
     mounted(){
-        console.log("sql_source mounted")
         this.getList()
     },
 

@@ -1,6 +1,6 @@
 var MyUsers = Vue.extend({
     template: `<el-main>
-        <el-button type="text" @click="addBox(true)">添加用户</el-button>
+        <el-button type="text" @click="addBox(true)" v-if="$auth_tag.user_add">添加用户</el-button>
         <el-table :data="list">
             <el-table-column property="sort" label="序号"></el-table-column>
             <el-table-column property="username" label="用户名"></el-table-column>
@@ -62,6 +62,7 @@ var MyUsers = Vue.extend({
     },
     // 模块初始化
     created(){
+        setDocumentTitle('用户')
         this.addBox(false)
     },
     // 模块初始化

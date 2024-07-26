@@ -17,14 +17,15 @@ import (
 )
 
 type UserService struct {
-	db  *db.MyDB
-	ctx context.Context
-	//user *auth.UserToken
+	db   *db.MyDB
+	ctx  context.Context
+	user *auth.UserToken
 }
 
-func NewUserService(ctx context.Context) *UserService {
+func NewUserService(ctx context.Context, user *auth.UserToken) *UserService {
 	return &UserService{
-		ctx: ctx,
+		ctx:  ctx,
+		user: user,
 	}
 }
 
@@ -61,9 +62,6 @@ func (dm *UserService) Set(r *pb.UserSetRequest) (resp *pb.UserSetReply, err err
 	if r.Username == "" {
 		return nil, errors.New("名称不得为空")
 	}
-	if len(r.RoleIds) == 0 {
-		return nil, errors.New("角色为必填")
-	}
 	r.Account = strings.ToUpper(strings.TrimSpace(r.Account))
 
 	one := &models.CronUser{}
@@ -90,23 +88,40 @@ func (dm *UserService) Set(r *pb.UserSetRequest) (resp *pb.UserSetReply, err err
 	one.Username = r.Username
 	one.Mobile = r.Mobile
 	one.Sort = r.Sort
-	roleIds, _ := conv.Int64s().Join(r.RoleIds)
-	if one.RoleIds != roleIds { // 校验数据
-		roles, err := data.NewCronAuthRoleData(dm.ctx).
-			GetList(db.NewWhere().In("id", r.RoleIds).Eq("status", enum.StatusActive))
-		if err != nil {
-			return nil, err
+
+	// 仅管理员可以编辑角色
+	role, ok := cache.Get(fmt.Sprintf("user_role_%v", dm.user.UserId)).([]int)
+	if !ok {
+		return nil, errors.New("用户角色信息异常")
+	}
+	isAdmin := false
+	for _, roleId := range role {
+		if roleId == 1 {
+			isAdmin = true
 		}
-		rolesMap := map[int]int{}
-		for _, role := range roles {
-			rolesMap[role.Id] = role.Id
+	}
+	if one.Id <= 0 || isAdmin {
+		if len(r.RoleIds) == 0 {
+			return nil, errors.New("角色为必填")
 		}
-		for _, id := range r.RoleIds {
-			if _, ok := rolesMap[id]; !ok {
-				return nil, errors.New("角色信息有误！")
+		roleIds, _ := conv.Int64s().Join(r.RoleIds)
+		if one.RoleIds != roleIds { // 校验数据
+			roles, err := data.NewCronAuthRoleData(dm.ctx).
+				GetList(db.NewWhere().In("id", r.RoleIds).Eq("status", enum.StatusActive))
+			if err != nil {
+				return nil, err
 			}
+			rolesMap := map[int]int{}
+			for _, role := range roles {
+				rolesMap[role.Id] = role.Id
+			}
+			for _, id := range r.RoleIds {
+				if _, ok := rolesMap[id]; !ok {
+					return nil, errors.New("角色信息有误！")
+				}
+			}
+			one.RoleIds = roleIds
 		}
-		one.RoleIds = roleIds
 	}
 
 	// 执行写入
@@ -270,6 +285,7 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 			StatusName: enum.StatusMap[user.Status],
 			UpdateDt:   user.UpdateDt,
 			CreateDt:   user.CreateDt,
+			RoleIds:    []int{},
 		},
 		Menus: []*pb.AuthListItem{},
 	}
@@ -283,6 +299,7 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 	if err := conv.NewStr().Slice(user.RoleIds, &roleRequest.RoleIds); err != nil {
 		return nil, errors.New("角色信息错误，" + err.Error())
 	}
+	resp.User.RoleIds = roleRequest.RoleIds
 	authList, err := NewRoleService(dm.ctx).AuthList(roleRequest)
 	if err != nil {
 		return nil, err
@@ -295,6 +312,6 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 
 	// 缓存用户信息
 	cache.Add(fmt.Sprintf("user_menu_%v", resp.User.Id), menusMap)
-
+	cache.Add(fmt.Sprintf("user_role_%v", resp.User.Id), resp.User.RoleIds)
 	return resp, err
 }

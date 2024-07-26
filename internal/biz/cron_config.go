@@ -12,6 +12,7 @@ import (
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -38,7 +39,14 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		Eq("type", r.Type).
 		Eq("env", dm.user.Env, db.RequiredOption()).
 		In("id", r.Ids).
-		Eq("status", r.Status)
+		In("protocol", r.Protocol).
+		In("status", r.Status).
+		In("create_user_id", r.CreateUserIds).
+		FindInSet("handle_user_ids", r.HandleUserIds).
+		Like("name", r.Name)
+	if r.CreateOrHandleUserId > 0 {
+		w.Raw("(create_user_id IN (?) OR FIND_IN_SET(?,handle_user_ids))", r.CreateOrHandleUserId, r.CreateOrHandleUserId)
+	}
 	if w.Len() == 0 {
 		return nil, errs.New(nil, "未指定查询条件")
 	}
@@ -228,7 +236,7 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 
 // 任务配置
 func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfigSetResponse, err error) {
-
+	g := data.NewChangeLogHandle(dm.user)
 	d := &models.CronConfig{}
 	if r.Id > 0 {
 		da := data.NewCronConfigData(dm.ctx)
@@ -239,9 +247,12 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if d.Status == enum.StatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
+		g.SetType(models.LogTypeUpdateDiy).OldConfig(*d)
 	} else {
+		g.SetType(models.LogTypeCreate).OldConfig(*d)
 		d.Env = dm.user.Env
 		d.CreateUserId = dm.user.UserId
+		d.CreateUserName = dm.user.UserName
 	}
 
 	if r.Type == models.TypeCycle {
@@ -328,13 +339,22 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
+	d.VarFieldsHash = fmt.Sprintf("%x", md5.Sum(d.VarFields))
+	d.CommandHash = fmt.Sprintf("%x", md5.Sum(d.Command))
+	d.MsgSetHash = fmt.Sprintf("%x", md5.Sum(d.MsgSet))
 	err = data.NewCronConfigData(dm.ctx).Set(d)
 	if err != nil {
 		return nil, err
 	}
+
+	err = data.NewCronChangeLogData(dm.ctx).Write(g.NewConfig(*d))
+	if err != nil {
+		log.Println("变更日志写入错误", err.Error())
+	}
+
 	return &pb.CronConfigSetResponse{
 		Id: d.Id,
-	}, err
+	}, nil
 }
 
 // 任务状态变更

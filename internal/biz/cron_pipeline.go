@@ -33,7 +33,16 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 	if r.Type == 0 {
 		r.Type = models.TypeOnce
 	}
-	w := db.NewWhere().Eq("type", r.Type).Eq("env", dm.user.Env, db.RequiredOption()).Eq("status", r.Status)
+	w := db.NewWhere().
+		Eq("type", r.Type).
+		Eq("env", dm.user.Env, db.RequiredOption()).
+		In("status", r.Status).
+		In("create_user_id", r.CreateUserIds).
+		FindInSet("handle_user_ids", r.HandleUserIds).
+		Like("name", r.Name)
+	if r.CreateOrHandleUserId > 0 {
+		w.Raw("(create_user_id IN (?) OR FIND_IN_SET(?,handle_user_ids))", r.CreateOrHandleUserId, r.CreateOrHandleUserId)
+	}
 	// 构建查询条件
 	if r.Page <= 1 {
 		r.Page = 1
