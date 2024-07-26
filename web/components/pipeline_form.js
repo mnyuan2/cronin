@@ -210,19 +210,18 @@ var MyPipelineForm = Vue.extend({
         }
     },
     created(){
+        this.getDic()
         this.getPreference()
-        console.log("请求数据",this.request)
+
+    },
+    // 模块初始化
+    mounted(){
         if (this.request.detail !== undefined && this.request.detail.id > 0){
             this.form = this.editData(this.request.detail)
         }else{
             this.form = this.addData()
         }
-    },
-    // 模块初始化
-    mounted(){
-        this.getDic()
         this.configSort()
-
     },
     // 具体方法
     methods:{

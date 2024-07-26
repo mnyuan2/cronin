@@ -11,8 +11,11 @@ import (
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"crypto/md5"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"log"
+	"strings"
 	"time"
 )
 
@@ -104,7 +107,7 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 
 // 任务配置
 func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronPipelineSetReply, err error) {
-
+	g := data.NewChangeLogHandle(dm.user)
 	d := &models.CronPipeline{}
 	if r.Id > 0 {
 		da := data.NewCronPipelineData(dm.ctx)
@@ -115,7 +118,9 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 		if d.Status == enum.StatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
+		g.SetType(models.LogTypeUpdateDiy).OldPipeline(*d)
 	} else {
+		g.SetType(models.LogTypeCreate).OldPipeline(*d)
 		d.Status = enum.StatusDisable
 		d.Env = dm.user.Env
 	}
@@ -135,6 +140,7 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	d.ConfigIds, _ = jsoniter.Marshal(r.ConfigIds)
 	d.Configs, _ = jsoniter.Marshal(r.Configs)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
+	d.MsgSetHash = fmt.Sprintf("%x", md5.Sum(d.MsgSet))
 	d.Type = r.Type
 	if d.Status != enum.StatusDisable { // 编辑后，单子都是草稿
 		d.Status = enum.StatusDisable
@@ -175,6 +181,11 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	if err != nil {
 		return nil, err
 	}
+	err = data.NewCronChangeLogData(dm.ctx).Write(g.NewPipeline(*d))
+	if err != nil {
+		log.Println("变更日志写入错误", err.Error())
+	}
+
 	return &pb.CronPipelineSetReply{
 		Id: d.Id,
 	}, err
@@ -285,6 +296,28 @@ func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusReques
 	if conf.Status == r.Status {
 		return nil, fmt.Errorf("状态相等")
 	}
+	g := data.NewChangeLogHandle(dm.user).SetType(models.LogTypeUpdateDiy).OldPipeline(*conf)
+	// 校验处理人
+	if len(r.HandleUserIds) > 0 {
+		users, err := data.NewCronUserData(dm.ctx).GetList(db.NewWhere().In("id", r.HandleUserIds))
+		if err != nil {
+			return nil, fmt.Errorf("审核人信息有误")
+		}
+		if len(users) != len(r.HandleUserIds) {
+			return nil, fmt.Errorf("审核人信息有误！")
+		}
+		ids := make([]int, len(users))
+		names := make([]string, len(users))
+		for i, user := range users {
+			ids[i] = user.Id
+			names[i] = user.Username
+		}
+		conf.HandleUserIds, _ = conv.Int64s().Join(ids)
+		conf.HandleUserNames = strings.Join(names, ",")
+	} else {
+		conf.HandleUserIds = ""
+		conf.HandleUserNames = ""
+	}
 
 	switch r.Status {
 	case models.ConfigStatusAudited: // 待审核
@@ -304,6 +337,7 @@ func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusReques
 			return nil, fmt.Errorf("不支持的状态变更操作")
 		}
 		conf.AuditUserId = dm.user.UserId
+		conf.AuditUserName = dm.user.UserName
 		if err = NewTaskService(config.MainConf()).AddPipeline(conf); err != nil {
 			return nil, err
 		}
@@ -313,6 +347,7 @@ func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusReques
 			return nil, fmt.Errorf("不支持的状态变更操作")
 		}
 		conf.AuditUserId = dm.user.UserId
+		conf.AuditUserName = dm.user.UserName
 
 	default:
 		return nil, fmt.Errorf("错误状态请求")
@@ -322,11 +357,14 @@ func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusReques
 		statusRemark = r.StatusRemark
 	}
 
-	conf.HandleUserIds, _ = conv.Int64s().Join(r.HandleUserIds) // 可以为空
 	conf.Status = r.Status
 	if err = da.ChangeStatus(conf, statusRemark); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
 		return nil, err
+	}
+	err = data.NewCronChangeLogData(dm.ctx).Write(g.NewPipeline(*conf))
+	if err != nil {
+		log.Println("变更日志写入错误", err.Error())
 	}
 	return &pb.CronPipelineChangeStatusReply{}, nil
 }

@@ -368,6 +368,29 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 	if conf.Status == r.Status {
 		return nil, fmt.Errorf("状态相等")
 	}
+	g := data.NewChangeLogHandle(dm.user).SetType(models.LogTypeUpdateDiy).OldConfig(*conf)
+	// 校验处理人
+	if len(r.HandleUserIds) > 0 {
+		users, err := data.NewCronUserData(dm.ctx).GetList(db.NewWhere().In("id", r.HandleUserIds))
+		if err != nil {
+			return nil, fmt.Errorf("审核人信息有误")
+		}
+		if len(users) != len(r.HandleUserIds) {
+			return nil, fmt.Errorf("审核人信息有误！")
+		}
+		ids := make([]int, len(users))
+		names := make([]string, len(users))
+		for i, user := range users {
+			ids[i] = user.Id
+			names[i] = user.Username
+		}
+		conf.HandleUserIds, _ = conv.Int64s().Join(ids)
+		conf.HandleUserNames = strings.Join(names, ",")
+	} else {
+		conf.HandleUserIds = ""
+		conf.HandleUserNames = ""
+	}
+
 	switch r.Status {
 	case models.ConfigStatusAudited: // 待审核
 		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject && conf.Status != models.ConfigStatusFinish && conf.Status != models.ConfigStatusError {
@@ -397,11 +420,13 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 			}
 		}
 		conf.AuditUserId = dm.user.UserId
+		conf.AuditUserName = dm.user.UserName
 	case models.ConfigStatusReject: // 驳回
 		if conf.Status != models.ConfigStatusAudited {
 			return nil, fmt.Errorf("不支持的状态变更操作")
 		}
 		conf.AuditUserId = dm.user.UserId
+		conf.AuditUserName = dm.user.UserName
 	default:
 		return nil, fmt.Errorf("错误状态请求")
 	}
@@ -411,11 +436,14 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 		statusRemark = r.StatusRemark
 	}
 
-	conf.HandleUserIds, _ = conv.Int64s().Join(r.HandleUserIds) // 可以为空
 	conf.Status = r.Status
 	if err = da.ChangeStatus(conf, statusRemark); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）
 		return nil, err
+	}
+	err = data.NewCronChangeLogData(dm.ctx).Write(g.NewConfig(*conf))
+	if err != nil {
+		log.Println("变更日志写入错误", err.Error())
 	}
 	return &pb.CronConfigSetResponse{
 		Id: conf.Id,

@@ -8,8 +8,8 @@ const (
 
 var LogTypeMap = map[int]string{
 	LogTypeCreate:    "新增数据",
-	LogTypeUpdateDiy: "手动更新",
-	LogTypeUpdateSys: "系统更新",
+	LogTypeUpdateDiy: "手动变更",
+	LogTypeUpdateSys: "系统变更",
 }
 
 // 变更日志
