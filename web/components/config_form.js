@@ -593,6 +593,7 @@ var MyConfigForm = Vue.extend({
             if (form.command.sql.driver == ""){ // 历史数据兼容
                 form.command.sql = this.initFormData().command.sql
             }
+            form.command.sql.err_action = form.command.sql.err_action.toString()
             if (form.command.sql.source.id == 0){
                 form.command.sql.source.id = ""
             }
