@@ -84,7 +84,7 @@ func CheckSql(sql *pb.CronSql) error {
 			if item.Git.Project == "" {
 				return errors.New("未设置 sql 语句 项目名称")
 			}
-			if len(item.Git.Path) <= 1 {
+			if len(item.Git.Path) < 1 {
 				return errors.New("未设置 sql 语句 文件路径")
 			}
 			for i, path := range item.Git.Path {
@@ -188,7 +188,7 @@ func CheckGit(c *pb.CronGit) error {
 			if e.PRMerge.Repo == "" {
 				return errors.New("git 项目名称 未设置")
 			}
-			if e.PRMerge.Number == 0 {
+			if e.PRMerge.Number == "" {
 				return errors.New("git 仓库PR的序数为必填")
 			}
 			if e.PRMerge.MergeMethod == "" {

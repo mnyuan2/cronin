@@ -64,23 +64,34 @@ func (m *Str) Slice(val string, out interface{}) (err error) {
 	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Slice {
 		return errors.New("请指定切片指针out")
 	}
-
-	vtk := t.Elem().Elem().Kind()
-	v := reflect.ValueOf(out).Elem()
-	var itemVal interface{}
-	for _, item := range strings.Split(val, m.sep) {
-		switch vtk {
-		case reflect.String:
-			itemVal = val
-		case reflect.Int, reflect.Int32:
-			itemVal, err = strconv.Atoi(item)
-			if err != nil {
-				return err
-			}
-		default:
-			return errors.New("out 不支持的元素类型")
+	// 元素格式转换
+	var itemVal func(v string) (reflect.Value, error)
+	switch t.Elem().Elem().Kind() {
+	case reflect.String:
+		itemVal = func(v string) (reflect.Value, error) {
+			return reflect.ValueOf(v), nil
 		}
-		v = reflect.Append(v, reflect.ValueOf(itemVal))
+	case reflect.Int:
+		itemVal = func(v string) (reflect.Value, error) {
+			val, err := strconv.Atoi(v)
+			return reflect.ValueOf(val), err
+		}
+	case reflect.Int32:
+		itemVal = func(v string) (reflect.Value, error) {
+			val, err := strconv.Atoi(v)
+			return reflect.ValueOf(int32(val)), err
+		}
+	default:
+		return errors.New("out 不支持的元素类型")
+	}
+
+	v := reflect.ValueOf(out).Elem()
+	for _, item := range strings.Split(val, m.sep) {
+		value, err := itemVal(item)
+		if err != nil {
+			return err
+		}
+		v = reflect.Append(v, value)
 	}
 
 	reflect.ValueOf(out).Elem().Set(v)

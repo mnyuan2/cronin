@@ -114,6 +114,7 @@ var MySource = Vue.extend({
     data(){
         return {
             dic_sql_type:[],
+            dic_sql_driver:[],
             list:{
                 labelIndex: '11',
                 items: [],
@@ -139,8 +140,8 @@ var MySource = Vue.extend({
     },
     // 模块初始化
     mounted(){
-        this.getList()
         this.getDicList()
+        this.getList()
     },
 
     // 具体方法

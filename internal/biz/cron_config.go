@@ -65,7 +65,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, 7)
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, "config")
 	}
 
 	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicUser)
@@ -87,7 +87,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
 		item.CreateUserName = dicUserMap[item.CreateUserId]
-		item.StatusUserName = dicUserMap[item.StatusUserId]
+		item.HandleUserIds = []int{}
 		if er := jsoniter.Unmarshal(item.CommandStr, item.Command); er != nil {
 			log.Println("	command 解析错误", item.Id, er.Error())
 		}
@@ -98,6 +98,9 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		}
 		if item.VarFieldsStr != nil {
 			_ = jsoniter.Unmarshal(item.VarFieldsStr, &item.VarFields)
+		}
+		if item.HandleUserStr != nil {
+			conv.NewStr().Slice(string(item.HandleUserStr), &item.HandleUserIds)
 		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
@@ -110,12 +113,28 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 
 // 任务详情
 func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.CronConfigDetailReply, err error) {
-	if r.Id <= 0 {
+	if r.Id == 0 {
 		return nil, errs.New(nil, "参数未传递")
 	}
 
-	da := data.NewCronConfigData(dm.ctx)
-	one, err := da.GetOne(dm.user.Env, r.Id)
+	one := &models.CronConfig{}
+	if r.Id < 0 {
+		list := cronRun.Entries()
+		for _, v := range list {
+			c, ok := v.Job.(*JobConfig)
+			if !ok {
+				continue
+			}
+			if c.conf.Id == r.Id {
+				one = c.conf
+			}
+		}
+	} else {
+		one, err = data.NewCronConfigData(dm.ctx).GetOne(dm.user.Env, r.Id)
+	}
+	if one.Id == 0 {
+		return nil, errs.New(nil, "未找到任务信息")
+	}
 
 	resp = &pb.CronConfigDetailReply{
 		VarFields: []*pb.KvItem{},
@@ -127,12 +146,13 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
 			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
 		},
-		MsgSet:       []*pb.CronMsgSet{},
-		TypeName:     models.ConfigTypeMap[one.Type],
-		StatusName:   models.ConfigStatusMap[one.Status],
-		ProtocolName: models.ProtocolMap[one.Protocol],
+		MsgSet:        []*pb.CronMsgSet{},
+		TypeName:      models.ConfigTypeMap[one.Type],
+		StatusName:    models.ConfigStatusMap[one.Status],
+		ProtocolName:  models.ProtocolMap[one.Protocol],
+		HandleUserIds: []int{},
 	}
-	err = conv.NewMapper().Exclude("VarFields", "Command", "MsgSet").Map(one, resp)
+	err = conv.NewMapper().Exclude("VarFields", "Command", "MsgSet", "HandleUserIds").Map(one, resp)
 	if err != nil {
 		return nil, errs.New(err, "系统错误")
 	}
@@ -149,6 +169,9 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 		if er := jsoniter.Unmarshal(one.VarFields, &resp.VarFields); er != nil {
 			return nil, errs.New(er, "var_fields 解析错误")
 		}
+	}
+	if one.HandleUserIds != "" {
+		conv.NewStr().Slice(one.HandleUserIds, &resp.HandleUserIds)
 	}
 
 	return resp, err
@@ -301,7 +324,6 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Protocol = r.Protocol
 	d.Remark = r.Remark
 	d.Type = r.Type
-	d.StatusUserId = dm.user.UserId
 	d.AfterTmpl = r.AfterTmpl
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
@@ -326,13 +348,12 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 	if conf.Status == r.Status {
 		return nil, fmt.Errorf("状态相等")
 	}
-	conf.StatusUserId = dm.user.UserId
 	switch r.Status {
 	case models.ConfigStatusAudited: // 待审核
-		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject {
+		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject && conf.Status != models.ConfigStatusFinish && conf.Status != models.ConfigStatusError {
 			return nil, fmt.Errorf("错误状态请求")
 		}
-		conf.StatusUserId = r.AuditorUserId // 待审核可以指定操作人
+		//conf.StatusUserId = r.AuditorUserId // 待审核可以指定操作人
 	case models.ConfigStatusDisable: // 草稿、停用
 		if conf.Type != models.TypeModule {
 			if conf.Status == models.ConfigStatusActive { // 启用 到 停用 要关闭执行中的对应任务；
@@ -355,10 +376,12 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 				}
 			}
 		}
+		conf.AuditUserId = dm.user.UserId
 	case models.ConfigStatusReject: // 驳回
 		if conf.Status != models.ConfigStatusAudited {
 			return nil, fmt.Errorf("不支持的状态变更操作")
 		}
+		conf.AuditUserId = dm.user.UserId
 	default:
 		return nil, fmt.Errorf("错误状态请求")
 	}
@@ -368,6 +391,7 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 		statusRemark = r.StatusRemark
 	}
 
+	conf.HandleUserIds, _ = conv.Int64s().Join(r.HandleUserIds) // 可以为空
 	conf.Status = r.Status
 	if err = da.ChangeStatus(conf, statusRemark); err != nil {
 		// 前面操作了任务，这里失败了；要将任务进行反向操作（回滚）（并附带两条对应日志）

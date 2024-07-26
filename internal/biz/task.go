@@ -53,13 +53,14 @@ func (dm *TaskService) Init() (err error) {
 			if err := dm.AddConfig(conf); err != nil {
 				conf.EntryId = 0
 				conf.Status = models.ConfigStatusError
-				cronDb.ChangeStatus(conf, "初始化注册错误")
+				cronDb.ChangeStatus(conf, "初始化 "+err.Error())
 			} else {
 				cronDb.SetEntryId(conf)
 			}
 		}
 	}
 
+	pageSize, total = 500, int64(500)
 	pipeineData := data.NewCronPipelineData(context.Background())
 	for page := 1; total >= int64(pageSize*page); page++ {
 		list := []*models.CronPipeline{}
@@ -72,7 +73,7 @@ func (dm *TaskService) Init() (err error) {
 			if err := dm.AddPipeline(conf); err != nil {
 				conf.EntryId = 0
 				conf.Status = models.ConfigStatusError
-				pipeineData.ChangeStatus(conf, "初始化注册错误")
+				pipeineData.ChangeStatus(conf, "初始化 "+err.Error())
 			} else {
 				pipeineData.SetEntryId(conf)
 			}
@@ -121,17 +122,20 @@ func (dm *TaskService) RegisterMonitor() {
 		registerList := map[string][]*dtos.ExecQueueItem{}
 		for _, v := range list {
 			c, ok := v.Job.(*JobConfig)
+			refType := "config"
 			if !ok {
 				c2, ok := v.Job.(*JobPipeline)
 				if !ok {
 					continue
 				}
 				c = c2.GetConf()
+				refType = "pipeline"
 			}
 			// 区分环境
 			if c.isRun == true {
 				execList[c.conf.Env] = append(execList[c.conf.Env], &dtos.ExecQueueItem{
 					RefId:    c.conf.Id,
+					RefType:  refType,
 					EntryId:  c.conf.EntryId,
 					Name:     c.conf.Name,
 					Duration: curTime.Sub(c.runTime).Seconds(),
@@ -139,6 +143,7 @@ func (dm *TaskService) RegisterMonitor() {
 			}
 			registerList[c.conf.Env] = append(registerList[c.conf.Env], &dtos.ExecQueueItem{
 				RefId:   c.conf.Id,
+				RefType: refType,
 				EntryId: c.conf.EntryId,
 				Name:    c.conf.Name,
 			})
@@ -276,6 +281,11 @@ func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 			Url:    dm.conf.Http.Local() + "/log/del",
 			Body:   fmt.Sprintf(`{"retention":"%s"}`, dm.conf.Task.LogRetention),
 		},
+		Rpc:     &pb.CronRpc{},
+		Cmd:     &pb.CronCmd{},
+		Sql:     &pb.CronSql{},
+		Jenkins: &pb.CronJenkins{},
+		Git:     &pb.CronGit{},
 	}
 	// 启用了账号时，构建token header
 	if config.MainConf().User.AdminAccount != "" {

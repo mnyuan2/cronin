@@ -60,7 +60,7 @@ func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
 //
 //	如果当前时间大于执行时间返回空时间，将不会触发执行；否则将会按返回的时间执行。
 func (m *ScheduleOnce) Next(t time.Time) time.Time {
-	if m.execTime.UnixMilli() < t.UnixMilli() {
+	if m.execTime.UnixNano() < t.UnixNano() {
 		return time.Time{}
 	}
 	return m.execTime
@@ -75,6 +75,7 @@ type JobConfig struct {
 	varParams    map[string]any
 	isRun        bool // 是否执行中，false.否、true.是
 	runTime      time.Time
+	ctxCancel    context.CancelCauseFunc // 上下文取消
 }
 
 // 任务执行器
@@ -153,11 +154,9 @@ func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 
 // 执行任务
 func (job *JobConfig) Run() {
-	job.isRun = true
-	job.runTime = time.Now()
 	var err errs.Errs
 	var res []byte
-	ctx, span := job.tracer.Start(context.Background(), "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
+	ctx1, span := job.tracer.Start(context.Background(), "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
 		job.isRun = false
 		if res != nil {
@@ -173,25 +172,46 @@ func (job *JobConfig) Run() {
 			span.SetStatus(tracing.StatusError, "执行异常")
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
 		}
+		// 移除任务
+		remark := ""
+		if job.ErrorCount >= 10 {
+			job.conf.Status = models.ConfigStatusError
+			remark = "最大重试次数"
+		} else if err != nil && err.Code() == errs.SysError.String() {
+			job.conf.Status = models.ConfigStatusError
+			remark = err.Desc() + "."
+		} else if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
+			job.conf.Status = models.ConfigStatusFinish
+			remark = "执行完成"
+		}
+		if remark != "" {
+			rawId := cron.EntryID(job.conf.EntryId)
+			e := cronRun.Entry(rawId)
+			if e.ID == rawId {
+				cronRun.Remove(e.ID)
+			}
+			job.conf.EntryId = 0
+			if er := data.NewCronConfigData(ctx1).ChangeStatus(job.conf, remark); er != nil {
+				span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", "完成状态写入失败"+er.Error())))
+			}
+		}
 		span.End()
-		log.Println("任务执行结束", job.conf.Env, job.conf.Name)
 	}()
-	log.Println("任务执行开始", job.conf.Env, job.conf.Name)
+	if job.isRun {
+		err = errs.New(nil, "任务正在进行中，跳过")
+		return
+	}
+	ctx, cancel := context.WithCancelCause(ctx1)
+	job.ctxCancel = cancel
+	job.isRun = true
+	job.runTime = time.Now()
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
 		attribute.String("config_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
-		attribute.String("component", "job"),
+		attribute.String("component", "config"),
 	)
 
-	if job.conf.Type == models.TypeOnce { // 单次任务，自行移除
-		e := cronRun.Entry(cron.EntryID(job.conf.EntryId))
-		cronRun.Remove(cron.EntryID(job.conf.EntryId))
-		if e.ID == 0 {
-			span.SetStatus(tracing.StatusError, "重复执行？")
-			return
-		}
-	}
 	param, err := job.ParseParams(nil)
 	if err = job.Parse(param); err != nil {
 		return
@@ -208,23 +228,6 @@ func (job *JobConfig) Run() {
 	} else {
 		job.ErrorCount = 0
 		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
-	}
-
-	// 连续错误达到5次，任务终止。
-	if job.ErrorCount >= 20 || (err != nil && err.Code() == errs.SysError.String()) {
-		cronRun.Remove(cron.EntryID(job.conf.EntryId))
-		job.conf.Status = models.ConfigStatusError
-		job.conf.EntryId = 0
-		if er := data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行失败"); er != nil {
-			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", "任务状态写入失败"+er.Error())))
-		}
-	} else if job.conf.Type == models.TypeOnce { // 单次执行完毕后，状态也要更新
-		cronRun.Remove(cron.EntryID(job.conf.EntryId))
-		job.conf.Status = models.ConfigStatusFinish
-		job.conf.EntryId = 0
-		if er := data.NewCronConfigData(ctx).ChangeStatus(job.conf, "执行完成"); er != nil {
-			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", "完成状态写入失败"+er.Error())))
-		}
 	}
 }
 
@@ -259,7 +262,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		attribute.String("env", job.conf.Env),
 		attribute.String("config_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
-		attribute.String("component", "job"),
+		attribute.String("component", "config"),
 		attribute.String("remark", remark),
 	)
 
@@ -285,6 +288,15 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
 	}
 	return res, err
+}
+
+// 停止任务，Run 执行时有效
+func (job *JobConfig) Stop(ctx context.Context, remark string) error {
+	if !job.isRun {
+		return nil
+	}
+	job.ctxCancel(errors.New(remark))
+	return nil
 }
 
 func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
@@ -326,6 +338,20 @@ func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) errs.Errs {
 		}
 	}
 	return nil
+}
+
+// 等待
+func (job *JobConfig) Sleep(ctx context.Context, duration time.Duration) errs.Errs {
+	select {
+	case <-ctx.Done():
+		err := context.Cause(ctx)
+		if err == nil {
+			err = ctx.Err()
+		}
+		return errs.New(err, "上下文完成")
+	case <-time.After(duration):
+		return nil
+	}
 }
 
 // http 执行函数
@@ -371,7 +397,6 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		span.End()
 	}()
 	span.SetAttributes(attribute.String("component", r.Type))
-
 	//确认数据来源
 	statement := ""
 	if r.Origin == "git" {

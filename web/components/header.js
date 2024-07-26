@@ -24,25 +24,24 @@ var MyHeader = Vue.extend({
                                     </el-dropdown-menu>
                                 </el-dropdown>
                               </el-menu-item>
-                              <el-submenu popper-class="submenu" index="setting">
-                                <template slot="title">设置<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
-                                <el-menu-item index="/message_template">通知</el-menu-item>
-                                <el-menu-item index="/users">人员</el-menu-item>
-                                <el-menu-item index="/role">权限</el-menu-item>
-                              </el-submenu>
-                              <el-submenu popper-class="submenu" index="about">
-                                <template slot="title">关于<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
-                                <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>
-                                <el-menu-item><a href="https://gitee.com/mnyuan/cronin/" target="_blank">Gitee <i class="el-icon-star-off" style="vertical-align: initial;font-size: 15px;"></i></a></el-menu-item>
-                                <el-menu-item><a href="https://gitee.com/mnyuan/cronin/issues/new" target="_blank">反馈</a></el-menu-item>
-                                <el-menu-item disabled>cronin {{sys_info.version}}</el-menu-item>
-                              </el-submenu>  
-                              <el-menu-item index="/my/work">我的工作</el-menu-item>
-                              <el-submenu popper-class="submenu" index="user">
+                              <el-menu-item index="/my/work" class="item" title="我的待办工作">工作</el-menu-item>
+                              <el-submenu popper-class="submenu" index="user" class="item">
                                 <template slot="title">{{user.username}}<i class="el-submenu__icon-arrow el-icon-arrow-down"></template>
                                 <el-menu-item :index="'/user?data_id='+user.id">账号信息</el-menu-item>
                                 <el-divider style="margin: 0"></el-divider>
                                 <el-menu-item @click="logout">退出登录</el-menu-item>
+                              </el-submenu>
+                              <el-submenu popper-class="submenu" index="setting" class="icon">
+                                <template slot="title"><i class="el-icon-more" title="设置及其他"></template>
+                                <el-menu-item index="/message_template">通知</el-menu-item>
+                                <el-menu-item index="/users">人员</el-menu-item>
+                                <el-menu-item index="/role">权限</el-menu-item>
+                                <el-menu-item index="/setting">设置</el-menu-item>
+                                <el-divider></el-divider>
+                                <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>
+                                <el-menu-item><a href="https://gitee.com/mnyuan/cronin/" target="_blank">Gitee <i class="el-icon-star-off" style="vertical-align: initial;font-size: 15px;"></i></a></el-menu-item>
+                                <el-menu-item><a href="https://gitee.com/mnyuan/cronin/issues/new" target="_blank">反馈</a></el-menu-item>
+                                <el-menu-item disabled>cronin {{sys_info.version}}</el-menu-item>
                               </el-submenu>
                           </el-menu-item-group>
                         </el-menu>
