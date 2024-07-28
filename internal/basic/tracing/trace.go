@@ -21,7 +21,7 @@ var (
 )
 
 // 工厂模式
-// 假设我只支持内部驱动，先完成再增加
+// 假设我只支持内部驱动，先完成再完善
 func Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	conf := trace.NewTracerConfig(opts...)
 	set := conf.InstrumentationAttributes()

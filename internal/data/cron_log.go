@@ -40,18 +40,18 @@ func (m *CronLogData) GetList(where *db.Where, page, size int, list interface{})
 }
 
 // 统计配置置顶的错误数
-func (m *CronLogData) SumConfTopError(env string, confId []int, startTime, endTime time.Time, maxNumber int) (list map[int]*SumConfTop, err error) {
+func (m *CronLogData) SumConfTopError(env string, confId []int, startTime, endTime time.Time, component string) (list map[int]*SumConfTop, err error) {
 	sql := `SELECT
 	a.ref_id conf_id, count(*) total_number, sum(a.status=1) error_number
 FROM
 	cron_log_span as a
 WHERE
-	  a.env = ? AND a.ref_id IN ? AND a.timestamp between ? and ?
+	  a.env = ? AND a.ref_id IN ? AND a.timestamp between ? and ? and json_search(tags_key,'one','component') = json_search(tags_val,'one',?) 
 GROUP BY a.ref_id;`
 
 	temps := []*SumConfTop{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Raw(sql, env, confId, startTime.UnixMicro(), endTime.UnixMicro()).Find(&temps).Error
+	err = m.db.Raw(sql, env, confId, startTime.UnixMicro(), endTime.UnixMicro(), component).Find(&temps).Error
 	if err != nil {
 		return list, err
 	}

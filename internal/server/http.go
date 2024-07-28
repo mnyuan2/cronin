@@ -38,19 +38,24 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/foundation/dic_gets", routerDicGets)
 	r.GET("/foundation/system_info", routerSystemInfo)
 	r.POST("/foundation/parse_proto", routerParseProto)
-	r.GET("/foundation/events", func(ctx *gin.Context) {
-		sse.Serve().ServeHTTP(ctx.Writer, ctx.Request)
-	})
 
 	r.GET("/config/list", httpList)
 	r.GET("/config/detail", httpConfigDetail)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)
 	r.POST("/config/run", httpRun)
-	r.GET("/config/register_list", httpRegister)
+
 	r.GET("/pipeline/list", routerPipelineList)
+	r.GET("/pipeline/detail", httpPipelineDetail)
 	r.POST("/pipeline/set", routerPipelineSet)
 	r.POST("/pipeline/change_status", routerPipelineChangeStatus)
+	r.POST("/pipeline/run", routerPipelineRun)
+
+	r.GET("/job/events", func(ctx *gin.Context) {
+		sse.Serve().ServeHTTP(ctx.Writer, ctx.Request)
+	})
+	r.GET("/job/list", httpRegister)
+	r.POST("/job/stop", httpJobStop)
 
 	r.GET("/work/table", routerWorkTable)
 
@@ -70,6 +75,8 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/setting/message_list", routerMessageList)
 	r.POST("/setting/message_set", routerMessageSet)
 	r.POST("/setting/message_run", routerMessageRun)
+	r.POST("/setting/preference_set", routerPreferenceSet)
+	r.GET("/setting/preference_get", routerPreferenceGet)
 
 	r.GET("/user/list", routerUserList)
 	r.POST("/user/set", routerUserSet)

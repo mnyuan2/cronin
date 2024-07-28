@@ -163,3 +163,33 @@ type SettingMessageSetReply struct {
 type SettingMessageRunReply struct {
 	Result string `json:"result"`
 }
+
+// 使用习惯设置
+type SettingPreferenceSetRequest struct {
+	Pipeline *SettingPreferencePipeline `json:"pipeline"`
+	Git      *SettingPreferenceGit      `json:"git"`
+}
+type SettingPreferencePipeline struct {
+	Interval            int `json:"interval"`
+	ConfigDisableAction int `json:"config_disable_action"`
+}
+type SettingPreferenceGit struct {
+	OwnerRepo []*SettingPreferenceGitOwner `json:"owner_repo"`
+	Owner     string                       `json:"owner"`
+	Repo      string                       `json:"repo"`
+}
+type SettingPreferenceGitOwner struct {
+	Owner string                      `json:"owner"`
+	Repos []*SettingPreferenceGitRepo `json:"repos"`
+}
+type SettingPreferenceGitRepo struct {
+	Name string `json:"name"`
+}
+type SettingPreferenceSetReply struct{}
+
+// 使用习惯获取
+type SettingPreferenceGetRequest struct{}
+type SettingPreferenceGetReply struct {
+	Pipeline *SettingPreferencePipeline `json:"pipeline"`
+	Git      *SettingPreferenceGit      `json:"git"`
+}

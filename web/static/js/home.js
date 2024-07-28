@@ -168,18 +168,23 @@ function copyJSON(data) {
  * ~~~
  * 元素最后一行非空追加行
  * ~~~
- * @param e 变化值
- * @param index 变化行号
- * @param arr 原数据
+ * @param {string|number} e 变化值
+ * @param {number} index 变化行号
+ * @param {array} arr 原数据
+ * @param {object} item 追加的元素，默认{}空对象
  */
-function inputChangeArrayPush(e, index, arr){
+function inputChangeArrayPush(e, index, arr, item){
     // console.log(e, index, arr,"-->", arr.length)
     if (e == ""){
         return
     }
-    if (arr.length-1 <= index){
-        arr.push({}) // 追加空元素
+    if (item == null){
+        item = {}
     }
+    if (arr.length-1 <= index){
+        arr.push(item) // 追加空元素
+    }
+    console.log(e, index, arr, index)
 }
 
 /**
@@ -251,6 +256,41 @@ const Enum ={
     dicCmdType: 1001,
     dicGitEvent: 1002,
     dicSqlDriver: 1003,
+    StatusDisable: 1, // 1 草稿,停用
+    StatusAudited: 5, // 5 待审核
+    StatusReject: 6, // 6 驳回
+    StatusActive: 2, // 2 激活
+    StatusFinish: 3, // 3 完成
+    StatusError: 4, // 4 错误
+    StatusDelete: 9, // 9 删除
+}
+
+function statusTypeName(status){
+    switch (Number(status)) {
+        case Enum.StatusDisable:
+            return 'info';
+        case Enum.StatusActive:
+        case Enum.StatusAudited:
+            return 'primary';
+        case Enum.StatusFinish:
+            return 'success';
+        case Enum.StatusReject:
+        case Enum.StatusError:
+            return 'warning';
+    }
+}
+
+/**
+ * 获得枚举名称
+ * ~~~
+ * 用于枚举id转名称
+ * ~~~
+ * @param enumList
+ * @param id
+ */
+function getEnumName(enumList, id){
+    let data = enumList.filter((item)=>{return id == item.id})
+    return data.length ? data[0].name : ''
 }
 
 /**

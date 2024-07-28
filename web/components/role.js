@@ -6,7 +6,7 @@ var MyRole = Vue.extend({
             流水线和任务混合在一起（sql写法要研究一下）
                 点击跳转到详情页（新的标签页）
 -->
-        <el-col :span="3" class="sidebar">
+        <el-col :span="4" class="sidebar">
             <el-row>
                 <span class="h3">角色列表</span>
                 <el-button type="text" @click="setBoxOpen" style="margin-left: 25px;">添加角色</el-button>
@@ -19,7 +19,7 @@ var MyRole = Vue.extend({
                 </ul>
             </el-row>
         </el-col>
-        <el-col :span="21" class="body" :style="auth.style">
+        <el-col :span="20" class="body" :style="auth.style">
             <el-card shadow="never">
                 <el-row>
                     <span style="margin-right: 20px">{{role_detail.name}}</span>

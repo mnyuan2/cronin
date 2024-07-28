@@ -467,17 +467,18 @@ func TestCronJob_Demo(t *testing.T) {
 		验证没有问题
 	*/
 	ti := time.Now().Add(time.Second * 80)
+	time.Sleep(time.Second * 2)
 
 	s, err := NewScheduleOnce(ti.Format(time.DateTime))
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	fmt.Println(s.Next(ti), s.execTime.UnixMilli())
+	fmt.Println(s.Next(time.Now()).Format(time.DateTime), "|", ti.Format(time.DateTime), "\n", s.execTime.UnixMilli(), ti.UnixMilli(), "\n", s.execTime.UnixMicro(), ti.UnixMicro(), "\n", s.execTime.UnixNano(), ti.UnixNano())
 
-	j := &J{}
-	j.cronId = cronRun.Schedule(s, j)
-	log.Println("等待执行...")
-	time.Sleep(time.Minute * 2)
+	//j := &J{}
+	//j.cronId = cronRun.Schedule(s, j)
+	//log.Println("等待执行...")
+	//time.Sleep(time.Minute * 2)
 	t.Log("end...")
 }
 

@@ -43,7 +43,7 @@ func (m *CronSettingData) GetOne(where *db.Where) (one *models.CronSetting, err 
 	one = &models.CronSetting{}
 	w, args := where.Build()
 
-	return one, m.db.Where(w, args...).Take(one).Error
+	return one, m.db.Where(w, args...).Find(one).Error
 }
 
 // 设置

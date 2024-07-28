@@ -34,7 +34,6 @@ var authList = []*Permission{
 	{Id: 11, Path: "/foundation/dic_gets", Title: "枚举选项", Group: "", Type: AuthTypeLogin},
 	{Id: 12, Path: "/foundation/system_info", Title: "系统信息", Group: "基础", Type: AuthTypeLogin},
 	{Id: 13, Path: "/foundation/parse_proto", Title: "解析proto", Group: "基础", Type: AuthTypeLogin},
-	{Id: 14, Path: "/foundation/events", Title: "sse事件", Group: "基础", Type: AuthTypeLogin},
 
 	{Id: 20, Path: "/config/", Title: "任务", Group: "", Type: AuthTypeGrant},
 	{Id: 21, Path: "/config/list", Title: "列表", Group: "任务", Type: AuthTypeGrant},
@@ -43,7 +42,6 @@ var authList = []*Permission{
 	{Id: 24, Path: "/config/change_status?auth_type=audit", Title: "审核", Group: "任务", Type: AuthTypeGrant, Tag: "config_audit"},
 	{Id: 25, Path: "/config/detail", Title: "详情", Group: "任务", Type: AuthTypeGrant},
 	{Id: 26, Path: "/config/run", Title: "执行一下", Group: "任务", Type: AuthTypeLogin},
-	{Id: 27, Path: "/config/register_list", Title: "已注册列表", Group: "任务", Type: AuthTypeLogin},
 
 	{Id: 30, Path: "/pipeline/", Title: "流水线", Group: "", Type: AuthTypeGrant},
 	{Id: 31, Path: "/pipeline/list", Title: "列表", Group: "流水线", Type: AuthTypeGrant},
@@ -51,6 +49,11 @@ var authList = []*Permission{
 	{Id: 33, Path: "/pipeline/change_status", Title: "提交/停用", Group: "流水线", Type: AuthTypeGrant, Tag: "pipeline_submit"},
 	{Id: 34, Path: "/pipeline/change_status?auth_type=audit", Title: "审核", Group: "流水线", Type: AuthTypeGrant, Tag: "pipeline_audit"},
 	{Id: 35, Path: "/pipeline/detail", Title: "详情", Group: "流水线", Type: AuthTypeGrant},
+	{Id: 36, Path: "/pipeline/run", Title: "执行一下", Group: "流水线", Type: AuthTypeLogin},
+	//140~149 任务
+	{Id: 140, Path: "/job/events", Title: "sse事件", Group: "注册任务", Type: AuthTypeLogin},
+	{Id: 141, Path: "/job/stop", Title: "终止任务", Group: "注册任务", Type: AuthTypeLogin},
+	{Id: 142, Path: "/job/list", Title: "已注册列表", Group: "注册任务", Type: AuthTypeLogin},
 
 	{Id: 41, Path: "/work/table", Title: "工作表", Group: "我的", Type: AuthTypeLogin},
 
@@ -76,6 +79,11 @@ var authList = []*Permission{
 	{Id: 81, Path: "/setting/message_list", Title: "列表", Group: "消息", Type: AuthTypeGrant},
 	{Id: 82, Path: "/setting/message_set", Title: "新增/编辑", Group: "消息", Type: AuthTypeGrant},
 	{Id: 83, Path: "/setting/message_run", Title: "执行一下", Group: "消息", Type: AuthTypeGrant},
+
+	//120~139
+	{Id: 120, Path: "/setting/", Title: "设置", Group: "", Type: AuthTypeGrant},
+	{Id: 121, Path: "/setting/preference_set", Title: "偏好设置", Group: "设置", Type: AuthTypeGrant, Tag: "preference_set"},
+	{Id: 122, Path: "/setting/preference_get", Title: "偏好查看", Group: "设置", Type: AuthTypeLogin},
 
 	{Id: 90, Path: "/user/", Title: "用户", Group: "", Type: AuthTypeGrant},
 	{Id: 91, Path: "/user/list", Title: "列表", Group: "用户", Type: AuthTypeGrant},
