@@ -120,7 +120,7 @@ func (h *ChangeLogHandle) diffConfig(old, new *models.CronConfig) (content []*mo
 		})
 	}
 	if old.CommandHash != new.CommandHash {
-		content = append(content, &models.ChangeLogField{
+		g := &models.ChangeLogField{
 			Field:      "command",
 			VType:      reflect.Struct.String(),
 			OldVal:     string(old.Command),
@@ -128,7 +128,14 @@ func (h *ChangeLogHandle) diffConfig(old, new *models.CronConfig) (content []*mo
 			FieldName:  "命令内容",
 			OldValName: "",
 			NewValName: "",
-		})
+		}
+		if len(g.OldVal.(string)) > 20000 {
+			g.OldVal, g.OldValName = "", "数据太大，无法展示"
+		}
+		if len(g.NewVal.(string)) > 20000 {
+			g.OldVal, g.OldValName = "", "数据太大，无法展示"
+		}
+		content = append(content, g)
 	}
 	if old.AfterTmpl != new.AfterTmpl {
 		content = append(content, &models.ChangeLogField{

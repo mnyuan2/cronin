@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/auth"
 	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
@@ -41,6 +42,7 @@ func NewTaskService(conf config.Main) *TaskService {
 func (dm *TaskService) Init() (err error) {
 	pageSize, total := 500, int64(500)
 	cronDb := data.NewCronConfigData(context.Background())
+	logDb := data.NewCronChangeLogData(context.Background())
 	for page := 1; total >= int64(pageSize*page); page++ {
 		list := []*models.CronConfig{}
 		w := db.NewWhere().Eq("status", enum.StatusActive).In("type", []int{models.TypeCycle, models.TypeOnce})
@@ -49,6 +51,7 @@ func (dm *TaskService) Init() (err error) {
 			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
 		}
 		for _, conf := range list {
+			g := data.NewChangeLogHandle(&auth.UserToken{UserName: "系统"}).SetType(models.LogTypeUpdateSys).OldConfig(*conf)
 			// 启用成功，更新任务id；启动失败，置空任务id
 			if err := dm.AddConfig(conf); err != nil {
 				conf.EntryId = 0
@@ -57,6 +60,7 @@ func (dm *TaskService) Init() (err error) {
 			} else {
 				cronDb.SetEntryId(conf)
 			}
+			logDb.Write(g.NewConfig(*conf))
 		}
 	}
 
@@ -70,6 +74,7 @@ func (dm *TaskService) Init() (err error) {
 			panic(fmt.Sprintf("任务配置读取异常：%s", err.Error()))
 		}
 		for _, conf := range list {
+			g := data.NewChangeLogHandle(&auth.UserToken{UserName: "系统"}).SetType(models.LogTypeUpdateSys).OldPipeline(*conf)
 			if err := dm.AddPipeline(conf); err != nil {
 				conf.EntryId = 0
 				conf.Status = models.ConfigStatusError
@@ -77,6 +82,7 @@ func (dm *TaskService) Init() (err error) {
 			} else {
 				pipeineData.SetEntryId(conf)
 			}
+			logDb.Write(g.NewPipeline(*conf))
 		}
 	}
 

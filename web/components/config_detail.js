@@ -190,7 +190,7 @@ var MyConfigDetail = Vue.extend({
                     <el-table-column prop="field" label="变更字段">
                         <template slot-scope="scope">
                             <table class="sub-table">
-                                <tr v-for="field in scope.row.content"><td width="">{{field.field_name}}</td><td>{{field.old_val_name}}</td><td>{{field.new_val_name}}</td></tr>
+                                <tr v-for="field in scope.row.content"><td width="">{{field.field_name}}</td><td>{{field.old_val_name==''?'-':field.old_val_name}}</td><td>{{field.new_val_name==''?'-':field.new_val_name}}</td></tr>
                             </table>
                         </template>
                     </el-table-column>

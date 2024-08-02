@@ -399,7 +399,7 @@ var MyConfigForm = Vue.extend({
             form:{
                 name: "",
             },
-            hintSpec: "* * * * * *   秒 分 时 天 月 星期 描述符",
+            hintSpec: "* * * * * *   秒 分 时 天 月 星期",
             source: {
                 boxShow: false,
                 dic_type: 0,

@@ -1,7 +1,7 @@
 var MyUser = Vue.extend({
     template: `<el-main>
         <div class="top">
-          <el-button type="text" @click="setBox(true)" v-if="user.id==detail.id || $auth_tag.user_edit">编辑</el-button>
+          <el-button type="text" @click="setBox(true)" v-if="user.id==detail.id || $auth_tag.user_set">编辑</el-button>
           <el-button type="text" @click="passwordBox(true)" v-if="user.id==detail.id || user.role_ids.filter(x => x == 1).length">修改密码</el-button>
           <el-button v-if="detail.status == 2" type="text" @click="changeStatus(1)" v-if="user.role_ids.filter(x => x == 1).length">停用</el-button>
           <el-button v-if="detail.status == 1" type="text" @click="changeStatus(2)" v-if="user.role_ids.filter(x => x == 1).length">激活</el-button>
