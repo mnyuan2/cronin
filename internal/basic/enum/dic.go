@@ -12,6 +12,8 @@ const (
 	DicCmdType       = 1001 // 命令行类型
 	DicGitEvent      = 1002 // git 事件
 	DicSqlDriver     = 1003 // sql 驱动
+	DicConfigStatus  = 1004 // 任务状态
+	DicProtocolType  = 1005 // 协议类型
 )
 
 const (

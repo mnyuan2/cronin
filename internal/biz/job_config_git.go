@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"strconv"
+	"strings"
 )
 
 func (job *JobConfig) gitFunc(ctx context.Context, r *pb.CronGit) (resp []byte, err errs.Errs) {
@@ -58,14 +59,18 @@ func (job *JobConfig) getGitFile(ctx context.Context, r *pb.Git) (flies []*dtos.
 	api := gitee.NewApiV5(conf.Git)
 	flies = []*dtos.File{}
 	for _, path := range r.Path {
-		if path == "" {
-			continue
+		list := strings.Split(path, ",")
+		for _, item := range list {
+			item = strings.Trim(strings.TrimSpace(item), "/")
+			if item == "" {
+				continue
+			}
+			file, err := job.gitReposContents(ctx, api, r, item)
+			if err != nil {
+				return nil, err
+			}
+			flies = append(flies, &dtos.File{Name: item, Byte: file})
 		}
-		file, err := job.gitReposContents(ctx, api, r, path)
-		if err != nil {
-			return nil, err
-		}
-		flies = append(flies, &dtos.File{Name: path, Byte: file})
 	}
 
 	return flies, nil

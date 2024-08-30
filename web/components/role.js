@@ -9,7 +9,7 @@ var MyRole = Vue.extend({
         <el-col :span="4" class="sidebar">
             <el-row>
                 <span class="h3">角色列表</span>
-                <el-button type="text" @click="setBoxOpen" style="margin-left: 25px;">添加角色</el-button>
+                <el-button type="text" @click="setBoxOpen" style="margin-left: 25px;" v-if="$auth_tag.role_set">添加角色</el-button>
             </el-row>
             <el-row>
                 <ul>
@@ -23,8 +23,8 @@ var MyRole = Vue.extend({
             <el-card shadow="never">
                 <el-row>
                     <span style="margin-right: 20px">{{role_detail.name}}</span>
-                    <el-button size="mini" @click="setBoxEdit()"><i class="el-icon-edit"></i></el-button> 
-                    <el-button size="mini"><i class="el-icon-delete"></i></el-button>
+                    <el-button size="mini" @click="setBoxEdit()" v-if="$auth_tag.role_set"><i class="el-icon-edit"></i></el-button> 
+                    <el-button size="mini" v-if="$auth_tag.role_set"><i class="el-icon-delete"></i></el-button>
                 </el-row>
                 <el-row>备注: {{role_detail.remark}}</el-row>
             </el-card>
@@ -40,7 +40,7 @@ var MyRole = Vue.extend({
               :props="auth.props">
             </el-tree>
             <div class="footer">
-                <el-button type="primary" @click="roleAuthSubmit()" size="medium">保 存</el-button>
+                <el-button type="primary" @click="roleAuthSubmit()" size="medium" v-if="$auth_tag.auth_set">保 存</el-button>
             </div>
         </el-col>
         
@@ -91,7 +91,9 @@ var MyRole = Vue.extend({
         }
     },
     // 模块初始化
-    created(){},
+    created(){
+        setDocumentTitle('角色&权限')
+    },
     // 模块初始化
     mounted(){
         this.auth.style = 'height: '+(window.innerHeight-128)+'px';

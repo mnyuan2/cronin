@@ -210,31 +210,92 @@ function getLoginPage() {
     window.location.href="/login"
 }
 
-// 函数用于解析URL中的hash参数
+/**
+ * 函数用于解析URL中的hash参数
+ * @param {string} url
+ * @returns {object}
+ */
 function getHashParams(url) {
     let hashParams = {};
     // 以'#'为分隔符，取数组的第二个元素（即hash参数）
+    url = decodeURIComponent(url)
     let urlParts = url.split('#');
     if (urlParts.length > 1) {
         // 对hash参数字符串进行切割
         let hashs = urlParts[1].split('?')
-        let hash = "";
-        if (hashs.length > 1){
-            hash = hashs[1]
-        }else{
-            hash = hashs[0]
-        }
-
+        let hash = hashs.length > 1 ? hashs[1] : hashs[0]
         let params = hash.split('&');
 
         params.forEach(function(param) {
             let splitter = param.split('=');
             if (splitter.length > 1) {
-                hashParams[splitter[0]] = splitter[1];
+                let key = splitter[0]
+                let val = splitter[1]
+                if (key.length > 2 && key.slice(-2) === '[]'){
+                    key = key.slice(0,-2)
+                    if (hashParams[key]){
+                        hashParams[key].push(val)
+                    }else{
+                        hashParams[key] = [val]
+                    }
+                }else{
+                    hashParams[key] = val;
+                }
             }
         });
     }
     return hashParams;
+}
+
+/**
+ * 构建查询参数字符串
+ * @param {object} data
+ */
+function buildSearchParamsString(data){
+    let p = new URLSearchParams()
+    for (let item in data){
+        let val = data[item]
+        if (Array.isArray(val)){
+            if (val.length===0) continue
+            val.forEach((item2)=>{
+                p.append(item+'[]',item2)
+            })
+        }else if (val === ''){
+            continue
+        }else{
+            p.append(item, val)
+        }
+    }
+    return p.toString()
+}
+
+/**
+ * 替换url路径
+ * @param hash
+ * @param data
+ */
+function replaceHash(hash, data){
+    // var url = new URL(window.location.href);
+    // var queryParams = new URLSearchParams(url.hash);
+    // queryParams.set('aa','bb')
+    // url.hash = queryParams
+    // console.log(queryParams, url, url.hash)
+    //
+    // let hash = getHashParams(url.hash)
+
+    let search = buildSearchParamsString(data)
+    let str = hash + "?" + search
+
+    console.log("hash",str)
+    window.history.replaceState({}, '', '#'+str);
+}
+
+/**
+ * 设置页面名称
+ * @param title
+ */
+function setDocumentTitle(title){
+    document.title = title + ' - cronin任务平台'
 }
 
 /**
@@ -256,6 +317,8 @@ const Enum ={
     dicCmdType: 1001,
     dicGitEvent: 1002,
     dicSqlDriver: 1003,
+    dicConfigStatus: 1004, // 任务状态
+    dicProtocolType: 1005, // 协议类型
     StatusDisable: 1, // 1 草稿,停用
     StatusAudited: 5, // 5 待审核
     StatusReject: 6, // 6 驳回

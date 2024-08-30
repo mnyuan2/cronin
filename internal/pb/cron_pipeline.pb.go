@@ -2,10 +2,14 @@ package pb
 
 // 列表
 type CronPipelineListRequest struct {
-	Type   int `form:"type"`
-	Page   int `form:"page"`
-	Size   int `form:"size"`
-	Status int `form:"status"`
+	Type                 int    `form:"type"`
+	Page                 int    `form:"page"`
+	Size                 int    `form:"size"`
+	Status               []int  `form:"status[]"`
+	CreateUserIds        []int  `form:"create_user_ids[]"`
+	HandleUserIds        []int  `form:"handle_user_ids[]"`
+	CreateOrHandleUserId int    `form:"create_or_handle_user_id"`
+	Name                 string `form:"name"`
 }
 type CronPipelineListReply struct {
 	List []*CronPipelineListItem `json:"list"`

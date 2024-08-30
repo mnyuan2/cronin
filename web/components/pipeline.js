@@ -1,7 +1,7 @@
 var MyPipeline = Vue.extend({
     template: `<el-container>
         <!--边栏-->
-    <el-aside width="240px" style="padding-top: 10px">
+    <el-aside style="padding-top: 10px">
         <el-card class="aside-card">
             <div slot="header">
                 <span class="h3">执行任务</span>
@@ -35,10 +35,34 @@ var MyPipeline = Vue.extend({
     <!--                        <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>-->
     <!--                        <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>-->
             <div style="float: right">
-                <el-button type="text" @click="setShow()">添加流水线</el-button>
-    <!--                            <el-button type="text" @click="getRegisterList()">已注册任务</el-button>-->
+                <el-button type="text" @click="setShow()" v-if="$auth_tag.pipeline_set">添加流水线</el-button>
             </div>
         </el-menu>
+        <el-row>
+            <el-form :inline="true" :model="list.param" size="small" class="search-form">
+                <el-form-item label="名称">
+                    <el-input v-model="list.param.name" placeholder="搜索名称"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="list.param.status" placeholder="所有" multiple>
+                        <el-option v-for="item in dic.config_status" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="处理人">
+                    <el-select v-model="list.param.handle_user_ids" placeholder="所有" multiple>
+                        <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="创建人">
+                    <el-select v-model="list.param.create_user_ids" placeholder="所有" multiple>
+                        <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="getList">查询</el-button>
+                </el-form-item>
+            </el-form>
+        </el-row>
         <el-table :data="list.items" @cell-mouse-enter="listTableCellMouse" @cell-mouse-leave="listTableCellMouse">
             <el-table-column prop="" label="成功率" width="80">
                 <template slot-scope="scope">
@@ -54,8 +78,9 @@ var MyPipeline = Vue.extend({
                     <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
                         <router-link :to="{path:'/config_detail',query:{id:row.id, type:'pipeline'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
                     </span>
-                    <span v-show="row.option.name.mouse" style="margin-left: 4px;">
-                        <i  class="el-icon-edit hover" @click="setShow(row)"></i>
+                    <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
+                        <i  class="el-icon-edit hover" @click="setShow(row)" title="编辑"></i>
+                        <i class="el-icon-notebook-2 hover" @click="configLogBox(row)" title="日志"></i>
                     </span>
                 </div>
             </el-table-column>
@@ -68,7 +93,8 @@ var MyPipeline = Vue.extend({
                 </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注"></el-table-column>
-            <el-table-column prop="handle_user_names" label="处理人"></el-table-column>
+            <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
+            <el-table-column prop="create_user_name" label="创建人" width="80"></el-table-column>
         </el-table>
         <el-pagination
                 @size-change="handleSizeChange"
@@ -84,7 +110,10 @@ var MyPipeline = Vue.extend({
         <el-drawer :title="add_box.title" :visible.sync="add_box.show" size="60%" wrapperClosable="false">
             <my-pipeline-form v-if="add_box.show" :request="{detail:add_box.detail}" @close="formClose"></my-pipeline-form>
         </el-drawer>
-    
+        <!-- 任务日志弹窗 -->
+        <el-drawer :title="config_log_box.title" :visible.sync="config_log_box.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
+            <my-config-log :tags="config_log_box.tags"></my-config-log>
+        </el-drawer>
         <!--状态变更弹窗-->
         <my-status-change v-if="status_box.show" :request="status_box" @close="statusShow"></my-status-change>
     </el-main>
@@ -97,6 +126,7 @@ var MyPipeline = Vue.extend({
             dic:{
                 user: [],
                 msg: [],
+                config_status: [],
             },
             sys_info:{},
             labelType: '2',
@@ -112,6 +142,10 @@ var MyPipeline = Vue.extend({
                     type: 2,
                     page: 1,
                     size: 20,
+                    status: [],
+                    handle_user_ids:[],
+                    create_user_ids:[],
+                    name: '',
                 },
                 request: false, // 请求中标志
             },
@@ -131,15 +165,21 @@ var MyPipeline = Vue.extend({
                 detail:{},
                 type: '',
             },
+            config_log_box:{
+                show: false,
+                title:'',
+                tags: {},
+            },
         }
     },
     // 模块初始化
     created(){
-        document.title = '流水线管理';
+        setDocumentTitle('流水线管理')
         this.getDic()
         api.systemInfo((res)=>{
             this.sys_info = res;
         })
+        this.loadParams(getHashParams(window.location.hash))
     },
     // 模块初始化
     mounted(){
@@ -156,16 +196,26 @@ var MyPipeline = Vue.extend({
     },
     // 具体方法
     methods:{
+        loadParams(param){
+            if (typeof param !== 'object'){return}
+            if (param.type){this.list.param.type = Number(param.type)}
+            if (param.page){this.list.param.page = Number(param.page)}
+            if (param.size){this.list.param.size = Number(param.size)}
+            if (param.name){this.list.param.name = param.name.toString()}
+            if (param.status){this.list.param.status = param.status.map(Number)}
+            if (param.handle_user_ids){this.list.param.handle_user_ids = param.handle_user_ids.map(Number)}
+            if (param.create_user_ids){this.list.param.create_user_ids = param.create_user_ids.map(Number)}
+        },
         // 任务列表
         getList(){
             if (this.list.request){
                 return this.$message.info('请求执行中,请稍等.');
             }
+            replaceHash('/pipeline', this.list.param)
             this.list.request = true
-            api.innerGet("/pipeline/list", this.listParam, (res)=>{
+            api.innerGet("/pipeline/list", this.list.param, (res)=>{
                 this.list.request = false
                 if (!res.status){
-                    console.log("pipeline/list 错误", res)
                     return this.$message.error(res.message);
                 }
                 for (i in res.data.list){
@@ -257,9 +307,10 @@ var MyPipeline = Vue.extend({
         },
         // 枚举
         getDic(){
-            api.dicList([Enum.dicUser, Enum.dicMsg],(res) =>{
+            api.dicList([Enum.dicUser, Enum.dicMsg, Enum.dicConfigStatus],(res) =>{
                 this.dic.user = res[Enum.dicUser]
                 this.dic.msg = res[Enum.dicMsg]
+                this.dic.config_status = res[Enum.dicConfigStatus]
             })
         },
         // 添加弹窗
@@ -280,6 +331,18 @@ var MyPipeline = Vue.extend({
                 this.getList()
             }
         },
+        configLogBox(item){
+            let tags = {ref_id:item.id, component:"pipeline"}
+            this.config_log_box.tags = tags
+            this.config_log_box.title = item.name+' 日志'
+            this.config_log_box.show = true
+        },
+        configLogBoxClose(done){
+            this.config_log_box.show = false;
+            this.config_log_box.id = 0;
+            this.config_log_box.title = ' 日志'
+            this.config_log_box.tags = {}
+        },
         // 停止执行任务
         jobStop(row){
             api.innerPost("/job/stop",row, res=>{
@@ -291,7 +354,7 @@ var MyPipeline = Vue.extend({
         },
         // 消息监听处理
         execQueue(e){
-            console.log("execQueue", e)
+            // console.log("execQueue", e)
             let data = JSON.parse(e.data)
             if (!data){
                 this.queue.exec = []
@@ -300,7 +363,7 @@ var MyPipeline = Vue.extend({
             this.queue.exec = data
         },
         registerQueue(e){
-            console.log("registerQueue", e)
+            // console.log("registerQueue", e)
             let data = JSON.parse(e.data)
             if (!data){
                 this.queue.register = []

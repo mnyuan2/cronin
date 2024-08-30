@@ -1,10 +1,10 @@
 var MyUser = Vue.extend({
     template: `<el-main>
         <div class="top">
-          <el-button type="text" @click="setBox(true)">编辑</el-button>
-          <el-button type="text" @click="passwordBox(true)">修改密码</el-button>
-          <el-button v-if="detail.status == 2" type="text" @click="changeStatus(1)">停用</el-button>
-          <el-button v-if="detail.status == 1" type="text" @click="changeStatus(2)">激活</el-button>
+          <el-button type="text" @click="setBox(true)" v-if="user.id==detail.id || $auth_tag.user_set">编辑</el-button>
+          <el-button type="text" @click="passwordBox(true)" v-if="user.id==detail.id || user.role_ids.filter(x => x == 1).length">修改密码</el-button>
+          <el-button v-if="detail.status == 2" type="text" @click="changeStatus(1)" v-if="user.role_ids.filter(x => x == 1).length">停用</el-button>
+          <el-button v-if="detail.status == 1" type="text" @click="changeStatus(2)" v-if="user.role_ids.filter(x => x == 1).length">激活</el-button>
         </div>
         
         <el-divider></el-divider>
@@ -12,7 +12,7 @@ var MyUser = Vue.extend({
             <el-descriptions-item label="账号">
                 <span v-if="detail.account==''">未设置</span>
                 {{detail.account}}
-                <el-link type="primary" @click="accountBox(true)" style="margin-left: 20px">设置账号</el-link>
+                <el-link type="primary" @click="accountBox(true)" style="margin-left: 20px" v-if="$auth_tag.user_account">设置账号</el-link>
             </el-descriptions-item>
             <el-descriptions-item label="用户名">{{detail.username}}</el-descriptions-item>
             <el-descriptions-item label="手机号">{{detail.mobile}}</el-descriptions-item>
@@ -32,7 +32,7 @@ var MyUser = Vue.extend({
                 <el-form-item label="手机号">
                     <el-input v-model="set_box.form.mobile"></el-input>
                 </el-form-item>
-                <el-form-item label="角色*">
+                <el-form-item label="角色*" v-if="user.role_ids.filter(x => x == 1).length">
                     <el-select v-model="set_box.form.role_ids" multiple filterable clearable>
                         <el-option v-for="item in dic_role" :key="item.id" :label="item.name" :value="item.id"></el-option>
                     </el-select>
@@ -103,17 +103,20 @@ var MyUser = Vue.extend({
         }
     },
     // 模块初始化
-    created(){},
-    // 模块初始化
-    mounted(){
+    created(){
+        setDocumentTitle('用户信息')
+        this.user = cache.getUser()
         let searchParams = getHashParams(window.location.href)
         let data_id = searchParams["data_id"]
         if (!this.data_id && data_id){
             this.data_id = data_id
         }
-        this.user = cache.getUser()
+    },
+    // 模块初始化
+    mounted(){
         this.getDic()
         this.getDetail()
+        console.log("user",this.user)
     },
 
     // 具体方法
@@ -151,10 +154,8 @@ var MyUser = Vue.extend({
 
             // 附加权限标记
             let path = "/user/set"
-            if (!body.id){
-                path += "?auth_type=add"
-            }else if (body.id != this.user.id){
-                path += "?auth_type=edit"
+            if (body.id != this.user.id){
+                path += "?auth_type=set"
             }
 
             api.innerPost(path, body, (res) =>{

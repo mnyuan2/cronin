@@ -89,7 +89,7 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 				}
 			} else {
 				// 单个值的情况
-				builder.wheres = append(builder.wheres, fmt.Sprintf(" AND FIND_IN_SET(%v,%v)", value, field))
+				builder.wheres = append(builder.wheres, fmt.Sprintf("FIND_IN_SET(%v,%v)", value, field))
 			}
 		}
 	}
@@ -180,6 +180,25 @@ func (builder *Where) Lt(field string, value interface{}, options ...Option) *Wh
 // 当传入的Value为空值时,忽略该查询条件
 func (builder *Where) Lte(field string, value interface{}, options ...Option) *Where {
 	return builder.op(field, OpLte, value, options...)
+}
+
+// Func
+func (builder *Where) Sub(subFn func(sub *Where), options ...Option) *Where {
+	subWhere := NewWhere()
+	subFn(subWhere)
+	_where, values := subWhere.Build()
+
+	if _where != "" {
+		// 前后拼接括号
+		_where = "(" + _where + ")"
+		//if op == OR {
+		//	item.or = true
+		//}
+
+		builder.wheres = append(builder.wheres, _where)
+		builder.values = append(builder.values, values...)
+	}
+	return builder
 }
 
 // 条件数量

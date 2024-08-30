@@ -55,6 +55,7 @@
         },
         beforeCreate(){},
         created(){
+            setDocumentTitle('登录')
             let q = window.location.search
             let searchParams = new URLSearchParams(q)
             this.env = searchParams.get("env")
