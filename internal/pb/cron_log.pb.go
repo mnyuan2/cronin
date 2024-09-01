@@ -65,3 +65,36 @@ type CronLogDelRequest struct {
 type CronLogDelResponse struct {
 	Count int `json:"count"`
 }
+
+// 变更日志列表
+type CronChangeLogListRequest struct {
+	Page    int    `form:"page"`
+	Size    int    `form:"size"`
+	RefType string `form:"ref_type"`
+	RefId   int    `form:"ref_id"`
+}
+type CronChangeLogListResponse struct {
+	List []*CronChangeLogItem `json:"list"`
+	Page *Page                `json:"page"`
+}
+type CronChangeLogItem struct {
+	Id             int                       `json:"id,omitempty"`
+	CreateDt       string                    `json:"create_dt,omitempty"`
+	CreateUserId   int                       `json:"create_user_id,omitempty"`
+	CreateUserName string                    `json:"create_user_name,omitempty"`
+	Type           int                       `json:"type" format:"enum:type"`
+	TypeName       string                    `json:"type_name"`
+	RefType        string                    `json:"ref_type,omitempty"`
+	RefId          int                       `json:"ref_id,omitempty"`
+	ContentStr     string                    `json:"-" gorm:"column:content;"`
+	Content        []*CronChangeLogItemField `json:"content" gorm:"-"`
+}
+type CronChangeLogItemField struct {
+	Field      string `json:"field"`
+	VType      string `json:"v_type"`
+	OldVal     any    `json:"old_val"`
+	NewVal     any    `json:"new_val"`
+	FieldName  string `json:"field_name"`
+	OldValName string `json:"old_val_name"`
+	NewValName string `json:"new_val_name"`
+}

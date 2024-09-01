@@ -44,11 +44,16 @@ type GitEventPRMerge struct {
 
 // 任务列表
 type CronConfigListRequest struct {
-	Ids    []int `form:"ids[]"`
-	Type   int   `form:"type"`
-	Page   int   `form:"page"`
-	Size   int   `form:"size"`
-	Status int   `form:"status"`
+	Ids                  []int  `form:"ids[]"`
+	Type                 int    `form:"type"`
+	Page                 int    `form:"page"`
+	Size                 int    `form:"size"`
+	Protocol             []int  `form:"protocol[]"`
+	Status               []int  `form:"status[]"`
+	CreateUserIds        []int  `form:"create_user_ids[]"`
+	HandleUserIds        []int  `form:"handle_user_ids[]"`
+	CreateOrHandleUserId int    `form:"create_or_handle_user_id"`
+	Name                 string `form:"name"`
 }
 type CronConfigListReply struct {
 	List []*CronConfigListItem `json:"list"`

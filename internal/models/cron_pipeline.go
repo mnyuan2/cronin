@@ -42,9 +42,13 @@ type CronPipeline struct {
 	UpdateDt            string `json:"update_dt" gorm:"column:update_dt;type:datetime;default:null;comment:更新时间;"`
 	CreateDt            string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
 	MsgSet              []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
+	MsgSetHash          string `json:"msg_set_hash" gorm:"column:msg_set_hash;type:char(32);default:'';comment:消息配置hash;"`
 	CreateUserId        int    `json:"create_user_id" gorm:"column:create_user_id;type:int(11);default:0;comment:创建人;"`
+	CreateUserName      string `json:"create_user_name" gorm:"column:create_user_name;type:varchar(64);default:'';comment:创建人名称;"`
 	AuditUserId         int    `json:"audit_user_id" gorm:"column:audit_user_id;type:int(11);default:0;comment:审核人;"`
+	AuditUserName       string `json:"audit_user_name" gorm:"column:audit_user_name;type:varchar(64);default:'';comment:审核人名称;"`
 	HandleUserIds       string `json:"handle_user_ids" gorm:"column:handle_user_ids;type:varchar(255);default:'';comment:处理人,多选id逗号分隔;"`
+	HandleUserNames     string `json:"handle_user_names" gorm:"column:handle_user_names;type:varchar(500);default:'';comment:处理人名称,多选id逗号分隔;"`
 }
 
 func (m *CronPipeline) ConfigErrActionName() string {

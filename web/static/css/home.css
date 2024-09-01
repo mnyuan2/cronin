@@ -190,6 +190,13 @@ i.el-alert__icon{
     background-color: #f4f4f5 !important;
 }
 
+/*搜索框*/
+.search-form .el-form-item {
+    margin: 6px 5px 6px 0;
+}
+.search-form .el-form-item__label{
+    padding-right: 5px;
+}
 /*边栏*/
 .aside-card{
     margin-top: 20px;
@@ -514,17 +521,43 @@ pre code, .sql-show-warp code{
     margin: 0;
 }
 
-#config-detail .el-descriptions__title p{
+#config-detail .title{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e8eaee;
+    padding-bottom: 12px;
+}
+#config-detail .title p{
     margin: 0;
     font-weight: 200;
     font-size: 13px;
     color: #909399;
 }
+#config-detail .detail-wrap .el-tabs__content{
+    min-height: 200px;
+}
+
+#config-detail .detail-wrap .el-table__cell{
+    padding: 6px 0;
+    border: none;
+}
+#config-detail .detail-wrap .el-table__cell .cell{
+    line-height: 18px;
+    font-weight: 400;
+}
+
+#config-detail .detail-wrap .sub-table{
+    width: 102%;
+}
+#config-detail .detail-wrap .sub-table tr{
+    background: none;
+}
+#config-detail .detail-wrap .sub-table td{
+    width: 33%;
+}
 #config-detail .detail .el-form-item{
     margin: 0;
-}
-#config-detail .el-descriptions__header{
-    margin-bottom: 10px;
 }
 
 /* 状态弹窗 */

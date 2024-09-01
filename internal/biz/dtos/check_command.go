@@ -87,9 +87,17 @@ func CheckSql(sql *pb.CronSql) error {
 			if len(item.Git.Path) < 1 {
 				return errors.New("未设置 sql 语句 文件路径")
 			}
-			for i, path := range item.Git.Path {
-				item.Git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
+			paths := []string{}
+			for _, path := range item.Git.Path {
+				list := strings.Split(path, ",")
+				for _, item2 := range list {
+					item2 = strings.Trim(strings.TrimSpace(item2), "/")
+					if item2 != "" {
+						paths = append(paths, item2)
+					}
+				}
 			}
+			item.Git.Path = paths
 		} else {
 			return errors.New("sql来源有误")
 		}

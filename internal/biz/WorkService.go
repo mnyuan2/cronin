@@ -5,6 +5,7 @@ import (
 	"cron/internal/basic/auth"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
 )
@@ -35,11 +36,24 @@ func (dm *WorkService) Table(r *pb.WorkTableRequest) (resp *pb.WorkTableReply, e
 	//if _, ok := models.ConfigStatusMap[r.Status]; !ok {
 	//	return nil, errors.New("不支持的状态请求")
 	//}
-	w, args := db.NewWhere().Eq("status", r.Status).Build()
+	w := db.NewWhere()
+	switch r.Tab {
+	case "todo":
+		w.FindInSet("handle_user_ids", dm.user.UserId).
+			In("status", []int{models.ConfigStatusAudited})
+	case "created":
+		w.Eq("create_user_id", dm.user.UserId)
+	case "draft":
+		w.Raw("(create_user_id IN (?) OR FIND_IN_SET(?,handle_user_ids))", dm.user.UserId, dm.user.UserId).
+			Eq("status", models.ConfigStatusDisable)
+	default:
+		return resp, nil
+	}
+	where, args := w.Build()
 
-	sql := fmt.Sprintf(`SELECT COUNT(*) total, 'config' join_type, env FROM cron_config where %s GROUP BY env
+	sql := fmt.Sprintf(`SELECT COUNT(*) total, 'config' type, env FROM cron_config where %s GROUP BY env
 UNION ALL
-SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GROUP BY env`, w, w)
+SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GROUP BY env`, where, where)
 	args = append(args, args...)
 	list := []*pb.WorkTableItem{}
 	dm.db.Raw(sql, args...).Scan(&list)
@@ -54,7 +68,7 @@ SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GRO
 
 	listMap := map[string]*pb.WorkTableItem{}
 	for _, val := range list {
-		listMap[val.Env+"|"+val.JoinType] = val
+		listMap[val.Env+"|"+val.Type] = val
 	}
 	for _, env := range envs {
 		if item, ok := listMap[env.Key+"|config"]; ok {

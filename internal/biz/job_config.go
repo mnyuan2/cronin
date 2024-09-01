@@ -3,6 +3,7 @@ package biz
 import (
 	"bytes"
 	"context"
+	"cron/internal/basic/auth"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
@@ -174,6 +175,7 @@ func (job *JobConfig) Run() {
 		}
 		// 移除任务
 		remark := ""
+		g := data.NewChangeLogHandle(&auth.UserToken{UserName: "系统"}).SetType(models.LogTypeUpdateSys).OldConfig(*job.conf)
 		if job.ErrorCount >= 10 {
 			job.conf.Status = models.ConfigStatusError
 			remark = "最大重试次数"
@@ -193,6 +195,8 @@ func (job *JobConfig) Run() {
 			job.conf.EntryId = 0
 			if er := data.NewCronConfigData(ctx1).ChangeStatus(job.conf, remark); er != nil {
 				span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", "完成状态写入失败"+er.Error())))
+			} else if er = data.NewCronChangeLogData(ctx1).Write(g.NewConfig(*job.conf)); er != nil {
+				span.AddEvent("", trace.WithAttributes(attribute.String("warning", "变更记录写入失败"+er.Error())))
 			}
 		}
 		span.End()

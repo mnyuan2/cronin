@@ -9,7 +9,7 @@ import (
 
 // 任务列表
 func httpList(ctx *gin.Context) {
-	r := &pb.CronConfigListRequest{Ids: []int{}}
+	r := &pb.CronConfigListRequest{Ids: []int{}, CreateUserIds: []int{}, HandleUserIds: []int{}}
 	if err := ctx.BindQuery(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return

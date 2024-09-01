@@ -83,7 +83,7 @@ var MySetting = Vue.extend({
     },
     // 模块初始化
     created(){
-        document.title = '设置';
+        setDocumentTitle('设置')
     },
     // 模块初始化
     mounted(){

@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/auth"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
@@ -79,6 +80,7 @@ func (job *JobPipeline) Run() {
 	defer func() {
 		job.conf.isRun = false
 		status, remark := 0, ""
+		g := data.NewChangeLogHandle(&auth.UserToken{UserName: "系统"}).SetType(models.LogTypeUpdateSys).OldPipeline(*job.pipeline)
 		//if res != nil {
 		//	span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
 		//}
@@ -103,6 +105,8 @@ func (job *JobPipeline) Run() {
 		job.pipeline.Status = status
 		if er := data.NewCronPipelineData(ctx1).ChangeStatus(job.pipeline, remark); er != nil {
 			log.Println(attribute.String("error.object", "完成状态写入失败"+er.Error()))
+		} else if er = data.NewCronChangeLogData(ctx1).Write(g.NewPipeline(*job.pipeline)); er != nil {
+			span.AddEvent("", trace.WithAttributes(attribute.String("warning", "变更记录写入失败"+er.Error())))
 		}
 		span.End()
 	}()

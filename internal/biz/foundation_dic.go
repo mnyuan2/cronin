@@ -166,6 +166,24 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			{Key: enum.SqlDriverMysql, Name: enum.SqlDriverMysql},
 			{Key: enum.SqlDriverClickhouse, Name: enum.SqlDriverClickhouse},
 		}
+	case enum.DicConfigStatus:
+		items = []*pb.DicGetItem{
+			{Id: models.ConfigStatusDisable, Name: models.ConfigStatusMap[models.ConfigStatusDisable]},
+			{Id: models.ConfigStatusAudited, Name: models.ConfigStatusMap[models.ConfigStatusAudited]},
+			{Id: models.ConfigStatusReject, Name: models.ConfigStatusMap[models.ConfigStatusReject]},
+			{Id: models.ConfigStatusActive, Name: models.ConfigStatusMap[models.ConfigStatusActive]},
+			{Id: models.ConfigStatusFinish, Name: models.ConfigStatusMap[models.ConfigStatusFinish]},
+			{Id: models.ConfigStatusError, Name: models.ConfigStatusMap[models.ConfigStatusError]},
+		}
+	case enum.DicProtocolType:
+		items = []*pb.DicGetItem{
+			{Id: models.ProtocolHttp, Name: models.ProtocolMap[models.ProtocolHttp]},
+			{Id: models.ProtocolRpc, Name: models.ProtocolMap[models.ProtocolRpc]},
+			{Id: models.ProtocolCmd, Name: models.ProtocolMap[models.ProtocolCmd]},
+			{Id: models.ProtocolSql, Name: models.ProtocolMap[models.ProtocolSql]},
+			{Id: models.ProtocolJenkins, Name: models.ProtocolMap[models.ProtocolJenkins]},
+			{Id: models.ProtocolGit, Name: models.ProtocolMap[models.ProtocolGit]},
+		}
 	}
 
 	return items, nil
