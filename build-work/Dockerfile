@@ -1,6 +1,7 @@
-FROM alpine:latest
-COPY cronin /biz-code/cronin/
-COPY configs/ /biz-code/cronin/configs
-WORKDIR /biz-code
-CMD cd ./cronin && ./cronin
+FROM busybox:glibc
+COPY ./configs/ /cronin/configs
+COPY ./data/ /cronin/data
+COPY ./cronin /cronin
+WORKDIR /cronin
 EXPOSE 9003
+CMD ./cronin
