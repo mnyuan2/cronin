@@ -16,7 +16,6 @@ type HttpConf struct {
 }
 type TaskConf struct {
 	LogRetention string `yaml:"log_retention"` // 日志保留时间
-	IsAudited    bool   `yaml:"is_audited"`    // 是否审计
 }
 type CryptoConf struct {
 	Secret string `yaml:"secret"`

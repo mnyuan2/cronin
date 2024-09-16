@@ -160,6 +160,7 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 		items = []*pb.DicGetItem{
 			{Id: enum.GitEventPullsCreate, Name: enum.GitEventMap[enum.GitEventPullsCreate]},
 			{Id: enum.GitEventPullsMerge, Name: enum.GitEventMap[enum.GitEventPullsMerge]},
+			{Id: enum.GitEventFileUpdate, Name: enum.GitEventMap[enum.GitEventFileUpdate]},
 		}
 	case enum.DicSqlDriver:
 		items = []*pb.DicGetItem{
@@ -194,7 +195,6 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 		Version:     config.Version,
 		CmdName:     "sh",
 		CurrentDate: time.Now().Format(time.RFC3339),
-		IsAudited:   config.MainConf().Task.IsAudited,
 	}
 	// 根据运行环境确认cmd的类型
 	if runtime.GOOS == "windows" {

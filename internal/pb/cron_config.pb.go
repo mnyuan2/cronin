@@ -23,8 +23,9 @@ type Git struct {
 }
 
 type GitEvent struct {
-	Id      int              `json:"id"`       // 事件id
-	PRMerge *GitEventPRMerge `json:"pr_merge"` // pr合并内容
+	Id         int                 `json:"id"`          // 事件id
+	PRMerge    *GitEventPRMerge    `json:"pr_merge"`    // pr合并内容
+	FileUpdate *GitEventFileUpdate `json:"file_update"` // 文件更新
 }
 
 type GitEventPRMerge struct {
@@ -40,6 +41,14 @@ type GitEventPRMerge struct {
 	Title string `json:"title"`
 	// 可选。合并描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
 	Description string `json:"description"`
+}
+type GitEventFileUpdate struct {
+	Owner   string `json:"owner"`   // 空间地址
+	Repo    string `json:"repo"`    // 项目名称（仓库路径）
+	Path    string `json:"path"`    // 文件路径
+	Content string `json:"content"` // 文件内容
+	Message string `json:"message"` // 提交描述
+	Branch  string `json:"branch"`  // 分支名称
 }
 
 // 任务列表
@@ -60,33 +69,27 @@ type CronConfigListReply struct {
 	Page *Page                 `json:"page"`
 }
 type CronConfigListItem struct {
-	Id             int                `json:"id"`
-	EntryId        int                `json:"entry_id"`
-	Name           string             `json:"name"`
-	Spec           string             `json:"spec"`
-	Protocol       int                `json:"protocol"`
-	ProtocolName   string             `json:"protocol_name"`
-	Remark         string             `json:"remark"`
-	Status         int                `json:"status"`
-	StatusName     string             `json:"status_name"`
-	StatusRemark   string             `json:"status_remark"`
-	StatusDt       string             `json:"status_dt"`
-	Type           int                `json:"type"`
-	TypeName       string             `json:"type_name"`
-	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
-	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
-	UpdateDt       string             `json:"update_dt"`
-	AfterTmpl      string             `json:"after_tmpl"`          // 结果模板
-	VarFields      []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
-	Command        *CronConfigCommand `json:"command" gorm:"-"`
-	MsgSet         []*CronMsgSet      `json:"msg_set" gorm:"-"`
-	VarFieldsStr   []byte             `json:"-" gorm:"column:var_fields;"`
-	CommandStr     []byte             `json:"-" gorm:"column:command;"` // 这里只能读取字符串后，载入到结构体
-	MsgSetStr      []byte             `json:"-" gorm:"column:msg_set;"`
-	HandleUserStr  []byte             `json:"-" gorm:"column:handle_user_ids;"`
-	CreateUserId   int                `json:"create_user_id"`
-	CreateUserName string             `json:"create_user_name" gorm:"-"`
-	HandleUserIds  []int              `json:"handle_user_ids" gorm:"-"` // 处理人
+	Id             int       `json:"id"`
+	Name           string    `json:"name"`
+	Spec           string    `json:"spec"`
+	Protocol       int       `json:"protocol"`
+	ProtocolName   string    `json:"protocol_name"`
+	Remark         string    `json:"remark"`
+	Status         int       `json:"status"`
+	StatusName     string    `json:"status_name"`
+	StatusRemark   string    `json:"status_remark"`
+	StatusDt       string    `json:"status_dt"`
+	Type           int       `json:"type"`
+	TypeName       string    `json:"type_name"`
+	TopNumber      int       `json:"top_number"`       // 最近执行次数（最大5次）
+	TopErrorNumber int       `json:"top_error_number"` // 最近执行次数中，失败的次数
+	UpdateDt       string    `json:"update_dt"`
+	VarFields      []*KvItem `json:"var_fields" gorm:"-"` // 定义变量参数
+	VarFieldsStr   []byte    `json:"-" gorm:"column:var_fields;"`
+	HandleUserStr  []byte    `json:"-" gorm:"column:handle_user_ids;"`
+	CreateUserId   int       `json:"create_user_id"`
+	CreateUserName string    `json:"create_user_name" gorm:"-"`
+	HandleUserIds  []int     `json:"handle_user_ids" gorm:"-"` // 处理人
 }
 
 type CronConfigDetailRequest struct {
@@ -114,6 +117,7 @@ type CronConfigDetailReply struct {
 	VarFields      []*KvItem          `json:"var_fields"` // 定义变量参数
 	Command        *CronConfigCommand `json:"command"`
 	MsgSet         []*CronMsgSet      `json:"msg_set"`
+	AfterSleep     int                `json:"after_sleep"`
 	CreateUserId   int                `json:"create_user_id"`
 	AuditUserId    int                `json:"audit_user_id"`
 	HandleUserIds  []int              `json:"handle_user_ids"` // 处理人
@@ -134,6 +138,7 @@ type CronConfigSetRequest struct {
 	HandleUserIds []int              `json:"handle_user_ids"`    // 处理人
 	Remark        string             `json:"remark"`             // 备注
 	MsgSet        []*CronMsgSet      `json:"msg_set"`            // 消息设置
+	AfterSleep    int                `json:"after_sleep"`        // 延迟关闭
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`
@@ -221,17 +226,18 @@ type CronConfigRegisterListResponse struct {
 
 // 任务设置
 type CronConfigRunRequest struct {
-	Id        int                `json:"id"`                 // 任务编号
-	Name      string             `json:"name,omitempty"`     // 任务名称
-	Type      int                `json:"type"`               // 类型
-	Spec      string             `json:"spec"`               // 执行时间表达式
-	Protocol  int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
-	Command   *CronConfigCommand `json:"command,omitempty"`  // 命令
-	Status    int                `json:"status"`             // 状态
-	Remark    string             `json:"remark"`
-	AfterTmpl string             `json:"after_tmpl"`          // 结果模板
-	VarFields []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
-	MsgSet    []*CronMsgSet      `json:"msg_set"`             // 消息设置
+	Id         int                `json:"id"`                 // 任务编号
+	Name       string             `json:"name,omitempty"`     // 任务名称
+	Type       int                `json:"type"`               // 类型
+	Spec       string             `json:"spec"`               // 执行时间表达式
+	Protocol   int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	Command    *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status     int                `json:"status"`             // 状态
+	Remark     string             `json:"remark"`
+	AfterTmpl  string             `json:"after_tmpl"`          // 结果模板
+	VarFields  []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
+	MsgSet     []*CronMsgSet      `json:"msg_set"`             // 消息设置
+	AfterSleep int                `json:"after_sleep"`
 }
 type CronConfigRunResponse struct {
 	Result string `json:"result"`

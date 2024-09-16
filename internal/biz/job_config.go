@@ -233,6 +233,9 @@ func (job *JobConfig) Run() {
 		job.ErrorCount = 0
 		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
 	}
+	if job.conf.AfterSleep > 0 {
+		job.Sleep(ctx, time.Second*time.Duration(job.conf.AfterSleep))
+	}
 }
 
 // 执行任务 未注册版本
@@ -290,6 +293,9 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	} else {
 		job.ErrorCount = 0
 		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
+	}
+	if job.conf.AfterSleep > 0 {
+		job.Sleep(ctx, time.Second*time.Duration(job.conf.AfterSleep))
 	}
 	return res, err
 }

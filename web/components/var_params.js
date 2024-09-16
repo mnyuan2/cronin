@@ -67,6 +67,14 @@ var MyVarParams = Vue.extend({
                     </li>
                     <li><b>float64<code>(any val) float64</code></b> 转浮点数</li>
                     <li><b>string<code>(any val) string</code></b> 转字符串</li>
+                    <li><b>str_replace_calc<code>(str string, regex string, expr string) string</code></b> 正则匹配字符串计算后替换
+                        <ul>
+                            <li>参数1：str 被搜索的值</li>
+                            <li>参数2：regex 数值匹配表达式，采用最左匹配原则</li>
+                            <li>参数3：expr 计算公式</li>
+                            <li>示例：<code>[[str_replace_calc \`release_v3.5.87.25 abc\` \`(\\d+)(\\D*$)\` \`+1\`]]</code> 输出 <code>release_v3.5.87.26 abc</code> 方法找到了字符串最左的数值并进行+1运算</li>
+                        </ul>   
+                    </li>
                 </ul>
             </p>
 <!--            <p>系统内置变量：-->

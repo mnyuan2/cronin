@@ -315,6 +315,7 @@ const Enum ={
     dicGitSource: 13,
     dicHostSource: 14,
     dicCmdType: 1001,
+    // 1002 git事件
     dicGitEvent: 1002,
     dicSqlDriver: 1003,
     dicConfigStatus: 1004, // 任务状态

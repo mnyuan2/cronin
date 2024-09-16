@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/Knetic/govaluate"
 	jsoniter "github.com/json-iterator/go"
 	"gitlab.com/metakeule/fmtdate"
 	"net/url"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -125,6 +128,25 @@ func DefaultStringTemplate() *StringTemplate {
 				}
 				date = fmtdate.Format(*format, t)
 				return date, err
+			},
+			// 字符串查最左找计算，并将结果替换原字符串
+			//  参数1: string raw 原始字符串
+			//  参数1: string regex 正则表达式，提取字符串中的数字，示例：`(\d+)(\D*$)`
+			//  参数1: string 对数字进行计算的公式，示例 +1
+			//  返回： 计算结果替换后的字符串
+			"str_replace_calc": func(raw, regex, expr string) (str string, err error) {
+				matches := regexp.MustCompile(regex).FindStringSubmatch(raw)
+				if matches == nil {
+					return raw, nil
+				}
+				exp, _ := govaluate.NewEvaluableExpression(matches[1] + expr)
+				val, err := exp.Evaluate(nil)
+				if err != nil {
+					return "", fmt.Errorf("运算执行错误，%s", err.Error())
+				}
+				matches[1] = strconv.FormatFloat(val.(float64), 'f', -1, 64)
+				str = raw[:len(raw)-len(matches[0])] + matches[1] + matches[2]
+				return str, nil
 			},
 		},
 	}

@@ -20,6 +20,7 @@ require (
 require (
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.15.0 // indirect
+	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
 	github.com/PuerkitoBio/goquery v1.9.0 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect

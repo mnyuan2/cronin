@@ -113,19 +113,7 @@ var MyConfigSelect = Vue.extend({
             api.innerGet("/config/list", this.list.param, (res)=>{
                 this.list.request = false
                 if (!res.status){
-                    console.log("config/list 错误", res)
                     return this.$message.error(res.message);
-                }
-                for (i in res.data.list){
-                    let ratio = 0
-                    if (res.data.list[i].top_number){
-                        ratio = res.data.list[i].top_error_number / res.data.list[i].top_number
-                    }
-                    if (res.data.list[i].command.sql){
-                        res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
-                    }
-                    // res.data.list[i].status = res.data.list[i].status.toString()
-                    res.data.list[i].topRatio = 100 - ratio * 100
                 }
                 this.list.items = res.data.list;
                 this.list.page = res.data.page;

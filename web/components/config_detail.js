@@ -124,12 +124,12 @@ var MyConfigDetail = Vue.extend({
                                 <el-row>驱动<b class="b">{{detail.command.sql.driver}}</b> 链接<b class="b">{{getEnumName(dic.sql_source, detail.command.sql.source.id)}}</b> 执行<b class="b">{{detail.command.sql.origin}}</b>语句：</el-row>
                                 <div class="sql-show-warp">
                                     <!--本地sql展示-->
-                                    <div v-if="detail.command.sql.origin == 'local'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='local' || statement.type==''" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                        <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 45px;"><code class="language-sql hljs">{{statement.local}}</code></pre>
+                                    <div v-if="detail.command.sql.origin == 'local'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='local' || statement.type==''" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 4px;">
+                                        <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 45px;"><code>{{statement.local}}</code></pre>
                                         <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
                                     </div>
                                     <!--git sql展示-->
-                                    <div v-if="detail.command.sql.origin == 'git'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='git'" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <div v-if="detail.command.sql.origin == 'git'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='git'" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 4px;">
                                         <el-row v-html="statement.git.descrition"></el-row>
                                         <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
                                     </div>
@@ -480,6 +480,11 @@ var MyConfigDetail = Vue.extend({
                     data.desc = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a><b class="b">${data.pr_merge.owner}/${data.pr_merge.repo}</b>/pulls/<b class="b">${data.pr_merge.number}</b> <b class="b">${this.gitMergeTypeList[data.pr_merge.merge_method]}</b>  ${data.pr_merge.prune_source_branch===true?'<b class="b">删除提交分支</b>':''}`+
                         `<br><i style="margin-left: 3em;"></i><b>${data.pr_merge.title}</b> ${data.pr_merge.description}`
                     break
+                case 131:
+                    data.desc = `<b>文件更新</b> <a href="https://gitee.com/${data.file_update.owner}/${data.file_update.repo}/blob/${data.file_update.branch}/${data.file_update.path}" target="_blank" title="点击 查看"><i class="el-icon-connection"></i></a> <b class="b">${data.file_update.owner}</b>/<b class="b">${data.file_update.repo}</b>/blob/<b class="b">${data.file_update.branch}</b>/<b class="b">${data.file_update.path}</b>`+
+                        `<br><i style="margin-left: 2em;"></i>内容：<b class="b">${data.file_update.content}</b>`+
+                        `<br><i style="margin-left: 2em;"></i>描述：<b class="b">${data.file_update.message}</b>`
+                    break
                 default:
                     data.desc = '未支持的事件类型'
             }
@@ -489,14 +494,19 @@ var MyConfigDetail = Vue.extend({
             detail.view_panel = show === true
         },
         // 流水线中的任务详情展示
-        configDetailBox(detail=null){
+        configDetailBox(detail= null){
             if (!detail){
                 this.config_detail.show =false
                 this.config_detail.detail = {}
                 return
             }
-            this.config_detail.show = true
-            this.config_detail.detail = detail
+            api.innerGet('/config/detail', {id: detail.id}, (res)=>{
+                if (!res.status){
+                    return this.$message.error(res.message)
+                }
+                this.config_detail.show = true
+                this.config_detail.detail = res.data
+            },{async:false})
         },
         editOpen(){
             this.detail_form_box.show= true

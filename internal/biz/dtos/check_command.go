@@ -5,6 +5,7 @@ import (
 	"cron/internal/basic/grpcurl"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"regexp"
@@ -202,6 +203,27 @@ func CheckGit(c *pb.CronGit) error {
 			if e.PRMerge.MergeMethod == "" {
 				return errors.New("git 合并方式不得为空")
 			}
+		case enum.GitEventFileUpdate:
+			if e.FileUpdate.Owner == "" {
+				return errors.New("git 仓库空间 未设置")
+			}
+			if !regexp.MustCompile(`^[a-zA-Z][\w-]{1,}[a-zA-Z0-9]$`).MatchString(e.FileUpdate.Owner) {
+				return errors.New("git 仓库空间 只允许字母、数字或者下划线（_）、中划线（-），至少 2 个字符，必须以字母开头，不能以特殊字符结尾")
+			}
+			if e.FileUpdate.Repo == "" {
+				return errors.New("git 项目名称 未设置")
+			}
+			if e.FileUpdate.Path == "" {
+				return errors.New("git 文件路径为必填")
+			}
+			if e.FileUpdate.Content == "" {
+				return errors.New("git 文件内容不得为空")
+			}
+			if e.FileUpdate.Message == "" {
+				return errors.New("git 提交描述不得为空")
+			}
+			e.FileUpdate.Path = strings.Trim(strings.TrimSpace(e.FileUpdate.Path), "/")
+			e.FileUpdate.Content = base64.StdEncoding.EncodeToString([]byte(e.FileUpdate.Content))
 		default:
 			return fmt.Errorf("未支持的事件 %v-%v", i, e.Id)
 		}

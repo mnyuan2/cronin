@@ -288,9 +288,9 @@ var MyPipelineForm = Vue.extend({
             data.configs.forEach(function (item,index) {
                 body.config_ids.push(item.id)
                 // data.configs[index].status = Number(data.configs[index].status)
-                if (data.configs[index].command.sql != null){
-                    data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
-                }
+                // if (data.configs[index].command.sql != null){
+                //     data.configs[index].command.sql.err_action = Number(data.configs[index].command.sql.err_action)
+                // }
             })
             if (body.interval < 0){
                 body.interval = 0
@@ -426,8 +426,14 @@ var MyPipelineForm = Vue.extend({
                 this.config_detail.detail = {}
                 return
             }
-            this.config_detail.show = true
-            this.config_detail.detail = detail
+            api.innerGet('/config/detail', {id: detail.id}, (res)=>{
+                if (!res.status){
+                    return this.$message.error(res.message)
+                }
+                this.config_detail.show = true
+                this.config_detail.detail = res.data
+            },{async:false})
+
         },
         removeAt(idx) {
             this.$confirm('确定移除任务', '提示', {
