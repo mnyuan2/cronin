@@ -6,7 +6,6 @@ import (
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
 	"cron/internal/models"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/axgle/mahonia"
@@ -217,13 +216,12 @@ func convertMessageToMap(message *desc.MessageDescriptor) map[string]interface{}
 func TestCronJob_Http(t *testing.T) {
 	hader := map[string]string{}
 	hader = nil
-	if config.MainConf().User.AdminAccount != "" {
-		s := base64.StdEncoding.EncodeToString([]byte(config.MainConf().User.AdminAccount + ":" + config.MainConf().User.AdminPassword))
-		fmt.Println(s)
-		hader = map[string]string{
-			"Authorization": "Basic " + s,
-		}
-	}
+
+	//s := base64.StdEncoding.EncodeToString([]byte(config.MainConf().User.AdminAccount + ":" + config.MainConf().User.AdminPassword))
+	//fmt.Println(s)
+	//hader = map[string]string{
+	//	"Authorization": "Bearer " + s,
+	//}
 
 	ctx := context.Background()
 	job := &JobConfig{}

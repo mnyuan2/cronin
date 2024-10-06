@@ -8,7 +8,7 @@ type Main struct {
 	Http   *HttpConf   `yaml:"http"`
 	Task   *TaskConf   `yaml:"task"`
 	Crypto *CryptoConf `yaml:"crypto"`
-	User   *UserConf   `yaml:"user"` // 用户配置，配置后接口访问需要登录
+	//User   *UserConf   `yaml:"user"` // 用户配置，配置后接口访问需要登录
 }
 
 type HttpConf struct {
@@ -16,15 +16,15 @@ type HttpConf struct {
 }
 type TaskConf struct {
 	LogRetention string `yaml:"log_retention"` // 日志保留时间
-	IsAudited    bool   `yaml:"is_audited"`    // 是否审计
 }
 type CryptoConf struct {
 	Secret string `yaml:"secret"`
 }
-type UserConf struct {
-	AdminAccount  string `yaml:"admin_account"`
-	AdminPassword string `yaml:"admin_password"`
-}
+
+//type UserConf struct {
+//	AdminAccount  string `yaml:"admin_account"`
+//	AdminPassword string `yaml:"admin_password"`
+//}
 
 var mainConf Main
 var mainOnce sync.Once

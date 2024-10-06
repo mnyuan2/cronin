@@ -3,11 +3,15 @@ package conv
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/Knetic/govaluate"
 	jsoniter "github.com/json-iterator/go"
 	"gitlab.com/metakeule/fmtdate"
 	"net/url"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -71,6 +75,12 @@ func DefaultStringTemplate() *StringTemplate {
 				str = strings.ReplaceAll(str, "+", "%20")
 				return str
 			},
+			// errorf 主动抛出错误
+			//  format 错误值
+			//  args 格式参数
+			"errorf": func(format string, args ...any) (struct{}, error) {
+				return struct{}{}, fmt.Errorf(format, args...)
+			},
 			// 兼容 null 参数，转换为 nil
 			"null": func() any {
 				return nil
@@ -126,6 +136,25 @@ func DefaultStringTemplate() *StringTemplate {
 				date = fmtdate.Format(*format, t)
 				return date, err
 			},
+			// 字符串查最左找计算，并将结果替换原字符串
+			//  参数1: string raw 原始字符串
+			//  参数1: string regex 正则表达式，提取字符串中的数字，示例：`(\d+)(\D*$)`
+			//  参数1: string 对数字进行计算的公式，示例 +1
+			//  返回： 计算结果替换后的字符串
+			"str_replace_calc": func(raw, regex, expr string) (str string, err error) {
+				matches := regexp.MustCompile(regex).FindStringSubmatch(raw)
+				if matches == nil {
+					return raw, nil
+				}
+				exp, _ := govaluate.NewEvaluableExpression(matches[1] + expr)
+				val, err := exp.Evaluate(nil)
+				if err != nil {
+					return "", fmt.Errorf("运算执行错误，%s", err.Error())
+				}
+				matches[1] = strconv.FormatFloat(val.(float64), 'f', -1, 64)
+				str = raw[:len(raw)-len(matches[0])] + matches[1] + matches[2]
+				return str, nil
+			},
 		},
 	}
 }
@@ -174,7 +203,15 @@ func (t *StringTemplate) Execute(text []byte) (newStr []byte, err error) {
 	// 应用模板到数据
 	buf := bytes.NewBuffer([]byte{})
 	if err = _tmpl.Execute(buf, t.params); err != nil {
-		return nil, fmt.Errorf("模板执行失败,%w", err)
+		switch e := err.(type) {
+		case template.ExecError:
+			if e2 := errors.Unwrap(e.Unwrap()); e2 != nil {
+				return nil, e2
+			}
+			return nil, e.Unwrap()
+		default:
+			return nil, e
+		}
 	}
 	// 获取替换后的字符串
 	//result := buf.String()

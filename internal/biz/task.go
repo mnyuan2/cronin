@@ -13,7 +13,6 @@ import (
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -294,12 +293,12 @@ func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 		Git:     &pb.CronGit{},
 	}
 	// 启用了账号时，构建token header
-	if config.MainConf().User.AdminAccount != "" {
-		s := base64.StdEncoding.EncodeToString([]byte(config.MainConf().User.AdminAccount + ":" + config.MainConf().User.AdminPassword))
-		cmd.Http.Header = []*pb.KvItem{
-			{Key: "Authorization", Value: "Basic " + s},
-		}
-	}
+	//if config.MainConf().User.AdminAccount != "" {
+	//	s := base64.StdEncoding.EncodeToString([]byte(config.MainConf().User.AdminAccount + ":" + config.MainConf().User.AdminPassword))
+	//	cmd.Http.Header = []*pb.KvItem{
+	//		{Key: "Authorization", Value: "Basic " + s},
+	//	}
+	//}
 	sysLogRetention.Command, _ = jsoniter.Marshal(cmd)
 	return sysLogRetention
 }

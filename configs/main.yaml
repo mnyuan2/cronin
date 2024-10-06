@@ -9,8 +9,3 @@ task:
 ## 加密
 crypto:
   secret: '12345678' # 秘钥 长度必须为8位字符，空表示不加密
-
-## 用户
-user:
-  admin_account: "" # 管理员账号，设置后页面请求需要登录
-  admin_password: "" # 管理员密码

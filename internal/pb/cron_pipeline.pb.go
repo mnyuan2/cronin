@@ -104,6 +104,7 @@ type CronPipelineDetailReply struct {
 	ConfigDisableAction     int                   `json:"config_disable_action"`
 	ConfigDisableActionName string                `json:"config_disable_action_name"`
 	ConfigErrAction         int                   `json:"config_err_action"`
+	ConfigErrActionName     string                `json:"config_err_action_name"`
 	Interval                int                   `json:"interval"`
 	TopNumber               int                   `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber          int                   `json:"top_error_number"` // 最近执行次数中，失败的次数

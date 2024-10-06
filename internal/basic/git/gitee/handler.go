@@ -11,6 +11,7 @@ import (
 type Handler struct {
 	ctx            context.Context
 	startTime      time.Time
+	endTime        time.Time
 	General        *General
 	RequestHeader  http.Header
 	RequestBody    []byte
@@ -26,9 +27,8 @@ type General struct {
 
 func NewHandler(ctx context.Context) *Handler {
 	return &Handler{
-		ctx:       ctx,
-		General:   &General{},
-		startTime: time.Now(),
+		ctx:     ctx,
+		General: &General{},
 	}
 }
 
@@ -82,6 +82,10 @@ func (m *Handler) ResponseHeaderBytes() []byte {
 
 func (m *Handler) StartTime() time.Time {
 	return m.startTime
+}
+
+func (m *Handler) EndTime() time.Time {
+	return m.endTime
 }
 
 // 返回字符串表示

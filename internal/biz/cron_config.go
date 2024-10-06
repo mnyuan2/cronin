@@ -13,6 +13,7 @@ import (
 	"cron/internal/models"
 	"cron/internal/pb"
 	"crypto/md5"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -82,28 +83,11 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 	}
 	dicUserMap := dtos.DicToMap(dicUser)
 	for _, item := range resp.List {
-		item.Command = &pb.CronConfigCommand{
-			Http:    &pb.CronHttp{Header: []*pb.KvItem{}},
-			Rpc:     &pb.CronRpc{Actions: []string{}},
-			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{Path: []string{}}}, Host: &pb.SettingHostSource{}},
-			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
-			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
-			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
-		}
-		item.MsgSet = []*pb.CronMsgSet{}
 		item.TypeName = models.ConfigTypeMap[item.Type]
 		item.StatusName = models.ConfigStatusMap[item.Status]
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
 		item.CreateUserName = dicUserMap[item.CreateUserId]
 		item.HandleUserIds = []int{}
-		if er := jsoniter.Unmarshal(item.CommandStr, item.Command); er != nil {
-			log.Println("	command 解析错误", item.Id, er.Error())
-		}
-		if item.MsgSetStr != nil {
-			if er := jsoniter.Unmarshal(item.MsgSetStr, &item.MsgSet); er != nil {
-				log.Println("	msg_set 解析错误", item.Id, er.Error())
-			}
-		}
 		if item.VarFieldsStr != nil {
 			_ = jsoniter.Unmarshal(item.VarFieldsStr, &item.VarFields)
 		}
@@ -126,7 +110,7 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 	}
 
 	one := &models.CronConfig{}
-	if r.Id < 0 {
+	if r.Id < 0 { // 兼容系统任务
 		list := cronRun.Entries()
 		for _, v := range list {
 			c, ok := v.Job.(*JobConfig)
@@ -165,17 +149,46 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 		return nil, errs.New(err, "系统错误")
 	}
 
+	if one.VarFields != nil {
+		if er := jsoniter.Unmarshal(one.VarFields, &resp.VarFields); er != nil {
+			return nil, errs.New(er, "var_fields 解析错误")
+		}
+	}
+	// 流水线预览任务时，需要将参数传递进来解析看最终效果。
+	if r.VarParams != "" {
+		params := map[string]any{}
+		if err := jsoniter.UnmarshalFromString(r.VarParams, &params); err != nil {
+			return nil, errs.New(err, "参数实现错误")
+		}
+		newParams := map[string]any{}
+		for _, item := range resp.VarFields {
+			if val, ok := params[item.Key]; ok {
+				newParams[item.Key] = val
+				item.Value = fmt.Sprintf("%v", val)
+			} else {
+				newParams[item.Key] = item.Value
+			}
+		}
+		cmd, err := conv.DefaultStringTemplate().SetParam(newParams).Execute(one.Command)
+		if err != nil {
+			return nil, errs.New(err, "模板错误.")
+		}
+		one.Command = cmd
+	}
+
 	if er := jsoniter.Unmarshal(one.Command, resp.Command); er != nil {
 		return nil, errs.New(er, "command 解析错误")
+	}
+	for _, item := range resp.Command.Git.Events {
+		if item.FileUpdate == nil || item.FileUpdate.Content == "" {
+			continue
+		}
+		content, _ := base64.StdEncoding.DecodeString(item.FileUpdate.Content)
+		item.FileUpdate.Content = string(content)
 	}
 	if one.MsgSet != nil {
 		if er := jsoniter.Unmarshal(one.MsgSet, &resp.MsgSet); er != nil {
 			return nil, errs.New(er, "msg_set 解析错误")
-		}
-	}
-	if one.VarFields != nil {
-		if er := jsoniter.Unmarshal(one.VarFields, &resp.VarFields); er != nil {
-			return nil, errs.New(er, "var_fields 解析错误")
 		}
 	}
 	if one.HandleUserIds != "" {
@@ -196,8 +209,8 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 			c2, ok := v.Job.(*JobPipeline)
 			if !ok {
 				resp.List = append(resp.List, &pb.CronConfigListItem{
-					Id:       0,
-					EntryId:  int(v.ID),
+					Id: 0,
+					//EntryId:  int(v.ID),
 					Name:     "未识别注册任务",
 					UpdateDt: v.Next.Format(time.DateTime),
 				})
@@ -216,8 +229,8 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 			next = s.Next(time.Now()).Format(conv.FORMAT_DATETIME)
 		}
 		resp.List = append(resp.List, &pb.CronConfigListItem{
-			Id:           conf.Id,
-			EntryId:      int(v.ID),
+			Id: conf.Id,
+			//EntryId:      int(v.ID),
 			Name:         conf.Name,
 			Spec:         conf.Spec,
 			Protocol:     conf.Protocol,
@@ -226,8 +239,6 @@ func (dm *CronConfigService) RegisterList(r *pb.CronConfigRegisterListRequest) (
 			Status:       conf.Status,
 			StatusName:   conf.GetStatusName(),
 			UpdateDt:     next, // 下一次时间
-			Command:      c.commandParse,
-			MsgSet:       c.msgSetParse.Set,
 		})
 	}
 
@@ -260,8 +271,11 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, fmt.Errorf("时间格式不规范，%s", err.Error())
 		}
 	} else if r.Type == models.TypeOnce {
-		if _, err = NewScheduleOnce(r.Spec); err != nil {
-			return nil, err
+		if r.Spec != "" {
+			_, err = time.ParseInLocation(time.DateTime, r.Spec, time.Local)
+			if err != nil {
+				return nil, errs.New(err, "执行时间格式不规范")
+			}
 		}
 	} else if r.Type == models.TypeModule {
 		//
@@ -311,6 +325,11 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, errors.New("git 连接 配置有误，请确认")
 		}
 	}
+	if r.ErrRetryNum > 30 {
+		return nil, errors.New("最大重试次数不得超过30")
+	} else if r.ErrRetryNum < 0 {
+		return nil, errors.New("最大重试次数不得小于0")
+	}
 	pl := len(r.VarFields)
 	for i, param := range r.VarFields {
 		if param.Key == "" && i < (pl-1) {
@@ -336,6 +355,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Remark = r.Remark
 	d.Type = r.Type
 	d.AfterTmpl = r.AfterTmpl
+	d.AfterSleep = r.AfterSleep
+	d.ErrRetryNum = r.ErrRetryNum
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
@@ -396,7 +417,11 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject && conf.Status != models.ConfigStatusFinish && conf.Status != models.ConfigStatusError {
 			return nil, fmt.Errorf("错误状态请求")
 		}
-		//conf.StatusUserId = r.AuditorUserId // 待审核可以指定操作人
+		if r.Type == models.TypeOnce {
+			if _, err = NewScheduleOnce(r.Spec); err != nil {
+				return nil, err
+			}
+		}
 	case models.ConfigStatusDisable: // 草稿、停用
 		if conf.Type != models.TypeModule {
 			if conf.Status == models.ConfigStatusActive { // 启用 到 停用 要关闭执行中的对应任务；
@@ -456,18 +481,27 @@ func (dm *CronConfigService) Del() {
 
 // 任务执行
 func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfigRunResponse, err error) {
+	for _, item := range r.Command.Git.Events {
+		if item.FileUpdate == nil || item.FileUpdate.Content == "" {
+			continue
+		}
+		item.FileUpdate.Content = base64.StdEncoding.EncodeToString([]byte(item.FileUpdate.Content))
+	}
+
 	conf := &models.CronConfig{
-		Id:        r.Id,
-		Env:       dm.user.Env,
-		Name:      r.Name,
-		Type:      r.Type,
-		Protocol:  r.Protocol,
-		AfterTmpl: r.AfterTmpl,
+		Id:         r.Id,
+		Env:        dm.user.Env,
+		Name:       r.Name,
+		Type:       r.Type,
+		Protocol:   r.Protocol,
+		AfterTmpl:  r.AfterTmpl,
+		AfterSleep: r.AfterSleep,
 	}
 	conf.Command, err = jsoniter.Marshal(r.Command)
 	if err != nil {
 		return nil, err
 	}
+
 	if r.MsgSet != nil {
 		if conf.MsgSet, err = jsoniter.Marshal(r.MsgSet); err != nil {
 			return nil, errs.New(err, "消息设置序列化错误")

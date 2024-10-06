@@ -91,6 +91,8 @@ type CronConfig struct {
 	CreateDt        string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
 	MsgSet          []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
 	MsgSetHash      string `json:"msg_set_hash" gorm:"column:msg_set_hash;type:char(32);default:'';comment:消息配置hash;"`
+	AfterSleep      int    `json:"after_sleep" gorm:"column:after_sleep;type:int(11);default:0;comment:延迟关闭;"`
+	ErrRetryNum     int    `json:"err_retry_num" gorm:"column:err_retry_num;type:int(11);default:0;comment:错误重试次数;"`
 	VarFields       []byte `json:"var_fields" gorm:"column:var_fields;type:json;default:null;comment:参数变量;"`
 	VarFieldsHash   string `json:"var_fields_hash" gorm:"column:var_fields_hash;type:char(32);default:'';comment:参数变量hash;"`
 	CreateUserId    int    `json:"create_user_id" gorm:"column:create_user_id;type:int(11);default:0;comment:创建人;"`

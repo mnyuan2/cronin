@@ -44,6 +44,17 @@ func routerParseProto(ctx *gin.Context) {
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
+// 解析时间
+func routerParseSpec(ctx *gin.Context) {
+	r := &pb.ParseSpecRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewDicService(ctx.Request.Context(), nil).PaseSpec(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
 func routerEvents(ctx *gin.Context) {
 	// 设置HTTP头，声明内容类型为text/event-stream
 	//ctx.Header("Content-Type", "text/event-stream")

@@ -153,6 +153,21 @@ func TestParse(t *testing.T) {
 	fmt.Println(string(b))
 }
 
+// str_replace_calc 模板函数测试
+func TestStrReplaceCalc(t *testing.T) {
+	str := "[[if .tag_fixed]][[printf `%v%v` `release_` .tag_fixed]][[else if .tag_expr]][[str_replace_calc .raw_content `(\\d+)(\\D*$)` `+1`]][[end]]"
+	p := map[string]any{
+		"raw_content": "release_v3.5.87.2",
+		//"tag_fixed":   "v3.2.1.0", // 固定值替换
+		"tag_expr": "+1", // 运算规则替换
+	}
+	b, e := DefaultStringTemplate().SetParam(p).Execute([]byte(str))
+	if e != nil {
+		t.Fatal(e)
+	}
+	fmt.Println(string(b))
+}
+
 func TestTemplateJson(t *testing.T) {
 	data := map[string]any{
 		"a": map[string]string{"a1": "A1", "a2": "a2"},

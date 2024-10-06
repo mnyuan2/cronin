@@ -248,8 +248,14 @@ func (s *MysqlSpan) AddEvent(name string, options ...trace.EventOption) {
 }
 
 // End does nothing.
-func (s *MysqlSpan) End(...trace.SpanEndOption) {
-	s.endTime = time.Now()
+func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
+	config := trace.NewSpanEndConfig(options...)
+	if !config.Timestamp().IsZero() {
+		s.endTime = config.Timestamp()
+	} else {
+		s.endTime = time.Now()
+	}
+
 	tagsKey, tagsVal := make([]string, len(s.tags)), make([]string, len(s.tags))
 	for i, item := range s.tags {
 		tagsKey[i] = string(item.Key)

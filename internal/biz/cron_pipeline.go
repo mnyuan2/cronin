@@ -263,6 +263,7 @@ func (dm *CronPipelineService) Detail(r *pb.CronPipelineDetailRequest) (resp *pb
 
 	resp.StatusName = models.ConfigStatusMap[resp.Status]
 	resp.ConfigDisableActionName = models.DisableActionMap[resp.ConfigDisableAction]
+	resp.ConfigErrActionName = models.ErrActionMap[resp.ConfigErrAction]
 	if one.ConfigIds != nil {
 		if err = jsoniter.Unmarshal(one.ConfigIds, &resp.ConfigIds); err != nil {
 			fmt.Println("	", err.Error())
@@ -271,6 +272,25 @@ func (dm *CronPipelineService) Detail(r *pb.CronPipelineDetailRequest) (resp *pb
 	if one.Configs != nil {
 		if err = jsoniter.Unmarshal(one.Configs, &resp.Configs); err != nil {
 			fmt.Println("	", err.Error())
+		}
+		// 加载最新任务信息
+		confs, _ := NewCronConfigService(dm.ctx, dm.user).List(&pb.CronConfigListRequest{
+			Ids:  resp.ConfigIds,
+			Page: 1,
+			Size: len(resp.Configs),
+		})
+		if confs != nil {
+			for _, item := range confs.List {
+				for _, c := range resp.Configs {
+					if item.Id == c.Id {
+						c.Name = item.Name
+						c.TypeName = item.TypeName
+						c.Status = item.Status
+						c.StatusName = item.StatusName
+						c.ProtocolName = item.ProtocolName
+					}
+				}
+			}
 		}
 	}
 	if resp.MsgSet != nil {

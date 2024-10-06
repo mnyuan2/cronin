@@ -49,6 +49,7 @@ button{
     margin: 0 6px;
     font-size: 12px;
     font-weight: normal;
+    white-space: nowrap;
 }
 .info-2{
     color: #C0C4CC;
@@ -69,6 +70,14 @@ i.hover{
 i.hover:hover{
     border-color: #e9e9eb;
     background: #f4f4f5;
+}
+/*滚动条*/
+*{
+    scrollbar-width: thin;
+    scrollbar-color: #e5e5e5 transparent;
+}
+*:hover{
+    scrollbar-color: #8b8b8b #fcfcfc;
 }
 .el-menu--horizontal>.el-menu-item,
 .el-submenu{
@@ -239,9 +248,9 @@ i.el-alert__icon{
 .config-form-box .el-form-item{
     margin-bottom: 10px;
 }
-.config-form-box .el-tabs{
-    margin: 10px 0;
-}
+/*.config-form-box .el-tabs{*/
+/*    margin: 10px 0;*/
+/*}*/
 .config-form-box .el-tabs--border-card>.el-tabs__content{
     padding-top: 0;
     padding-bottom: 10px;
@@ -250,38 +259,40 @@ i.el-alert__icon{
     margin: 6px 0;
     overflow: hidden;
 }
-.config-form .el-dialog__footer,
-.pipeline-form .el-dialog__footer{
-    padding: 10px 0 10px 0;
+/*.config-form .el-dialog__footer,*/
+/*.pipeline-form .el-dialog__footer{*/
+/*    padding: 10px 0 10px 0;*/
+/*}*/
+.input-input .el-input-group__prepend{
+    background: #fff;
 }
-.http_header_box .el-input-group__prepend,
-.http_header_box .el-input-group__append,
-.http_url_box .el-input-group__prepend{
-    background: #FFFFFF;
+.input-input .el-input-group__prepend input{
+    padding: 0;
 }
-.http_url_box .el-input-group__prepend .el-input{
+.input-input .el-input-group__prepend .el-input__suffix{
+    right: 0;
+}
+.input-input .el-input-group__prepend .el-input__suffix input{
+    padding-left: 10px;
+}
+.el-input-group__prepend{
+    /*background: none;*/
+    padding: 0 10px;
+}
+.el-input-group__prepend .el-select{
+    margin: 0;
     width: 120px;
 }
 .http_header_box .el-input-group__prepend{
     width: 240px;
-    padding: 0 2px;
-}
-.http_header_box .el-input-group__prepend input{
-    line-height: 38px;
-    height: 38px;
-    border: 0;
-    padding: 0 13px;
 }
 .var_fields .el-input-group__prepend{
     width: 350px;
 }
-/*.http_header_box .el-input-group__append{*/
-/*    padding: 0 5px;*/
-/*    overflow: hidden;*/
-/*}*/
-.http_header_box.el-form-item--mini .el-input-group__prepend input{
-    line-height: 26px;
-    height: 26px;
+.el-input--small.el-input-group div input{
+    line-height: 30px;
+    height: 30px;
+    border: none;
 }
 .el-dropdown-link{
     cursor: pointer;
@@ -293,9 +304,14 @@ i.el-alert__icon{
 .sql-show-warp{
     overflow-y: auto;
     max-height: 360px;
+    margin: 8px 0;
 }
 .sql-show-warp a{
     margin: 0 4px 0 4px;
+}
+.sql-show-warp .input-box pre{
+    white-space: nowrap;
+    min-height: 45px;
 }
 
 /* 日志 */
@@ -445,6 +461,41 @@ i.el-alert__icon{
 b code{
     font-weight: normal;
 }
+.input-box{
+    position: relative;
+    border-radius: 4px;
+    background: #f8f8f9;
+    border: 1px solid #ebeef5;
+    padding: 6px 22px 7px 8px;
+    margin-bottom: 4px;
+    max-height: 200px;
+    line-height: 133%;
+}
+.input-box pre{
+    margin: 0;
+    overflow: auto;
+    white-space: break-spaces;
+    max-height: 180px;
+}
+.input-box .input-body{
+    overflow: auto;
+    max-height: 180px;
+}
+.input-box:hover .input-header{
+    display: block;
+}
+.input-header{
+    display: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 2px 2px;
+    width: 24px;
+    text-align: right;
+}
+.input-header i{
+    cursor: pointer;
+}
 pre code, .sql-show-warp code{
     color: #606266;
 }
@@ -506,10 +557,6 @@ pre code, .sql-show-warp code{
     padding: 0;
 }
 /* 详情页面 */
-#config-detail pre{
-    background-color: #f8f9fa;
-    padding: 10px;
-}
 #config-detail .el-aside{
     width: 321px;
     padding: 70px 0 10px 10px;
