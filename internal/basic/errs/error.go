@@ -29,9 +29,10 @@ func (c Code) String() string {
 }
 
 const (
-	SysError      = Code("999999") // 系统错误
-	ParamNotFound = Code(pb.ParamNotFound)
-	UserNotLogin  = Code(pb.UserNotLogin)
+	SysError      Code = "999999" // 系统错误
+	ParamNotFound Code = pb.ParamNotFound
+	UserNotLogin  Code = pb.UserNotLogin
+	ParamError    Code = pb.ParamError
 )
 
 // 错误描述

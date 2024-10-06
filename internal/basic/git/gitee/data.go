@@ -64,6 +64,7 @@ type PullsTestRequest struct {
 	Force bool
 }
 
+// pr 合并
 type PullsMergeRequest struct {
 	BaseRequest
 	// 第几个PR，即本仓库PR的序数
@@ -76,6 +77,12 @@ type PullsMergeRequest struct {
 	Title string
 	// 可选。合并 commit 描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
 	Description string
+}
+type PullsMergeResponse struct {
+	Sha     string `json:"sha"`
+	Merged  bool   `json:"merged"`
+	Message string `json:"message"`
+	HtmlUrl string `json:"html_url"` // 这是自定义字段
 }
 
 // 文件获取

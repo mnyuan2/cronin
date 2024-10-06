@@ -93,7 +93,8 @@ type CronConfigListItem struct {
 }
 
 type CronConfigDetailRequest struct {
-	Id int `json:"id" form:"id"`
+	Id        int    `json:"id" form:"id"`
+	VarParams string `json:"var_params" form:"var_params"`
 }
 type CronConfigDetailReply struct {
 	Id             int                `json:"id"`
@@ -118,8 +119,11 @@ type CronConfigDetailReply struct {
 	Command        *CronConfigCommand `json:"command"`
 	MsgSet         []*CronMsgSet      `json:"msg_set"`
 	AfterSleep     int                `json:"after_sleep"`
+	ErrRetryNum    int                `json:"err_retry_num"`
 	CreateUserId   int                `json:"create_user_id"`
+	CreateUserName string             `json:"create_user_name"`
 	AuditUserId    int                `json:"audit_user_id"`
+	AuditUserName  string             `json:"audit_user_name"`
 	HandleUserIds  []int              `json:"handle_user_ids"` // 处理人
 }
 
@@ -139,6 +143,7 @@ type CronConfigSetRequest struct {
 	Remark        string             `json:"remark"`             // 备注
 	MsgSet        []*CronMsgSet      `json:"msg_set"`            // 消息设置
 	AfterSleep    int                `json:"after_sleep"`        // 延迟关闭
+	ErrRetryNum   int                `json:"err_retry_num"`      // 错误重试次数
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`

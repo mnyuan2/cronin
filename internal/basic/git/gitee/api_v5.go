@@ -319,7 +319,7 @@ func (m *ApiV5) PullsTest(handler *Handler, r *PullsTestRequest) (res []byte, er
 // PullsMerge pr合并
 //
 //	https://gitee.com/api/v5/swagger#/putV5ReposOwnerRepoPullsNumberMerge
-func (m *ApiV5) PullsMerge(handler *Handler, r *PullsMergeRequest) (res []byte, err error) {
+func (m *ApiV5) PullsMerge(handler *Handler, r *PullsMergeRequest) (res *PullsMergeResponse, err error) {
 	handler.startTime = time.Now()
 	defer func() {
 		handler.endTime = time.Now()
@@ -354,13 +354,12 @@ func (m *ApiV5) PullsMerge(handler *Handler, r *PullsMergeRequest) (res []byte, 
 	if er != nil {
 		return nil, fmt.Errorf("响应获取失败，%w", err)
 	}
+	res = &PullsMergeResponse{}
+	_ = jsoniter.Unmarshal(respByte, res)
+	res.HtmlUrl = fmt.Sprintf("https://gitee.com/%s/%s/pulls/%v", r.Owner, r.Repo, r.Number)
 
-	if resp.StatusCode != http.StatusOK { // {"message":"此 Pull Request 未通过设置的审查"}  {"message":"此 Pull Request 未通过设置的测试"}
-		out := map[string]any{}
-		_ = jsoniter.Unmarshal(respByte, &out)
-		if message, ok := out["message"]; ok {
-			return nil, errors.New(message.(string))
-		}
+	if resp.StatusCode != http.StatusOK { // {"message":"此 Pull Request 未通过设置的审查"}、{"message":"此 Pull Request 未通过设置的测试"}
+		return nil, errors.New(res.Message)
 	}
-	return respByte, nil
+	return res, nil
 }

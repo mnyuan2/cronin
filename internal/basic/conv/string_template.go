@@ -3,6 +3,7 @@ package conv
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Knetic/govaluate"
 	jsoniter "github.com/json-iterator/go"
@@ -73,6 +74,12 @@ func DefaultStringTemplate() *StringTemplate {
 				str := url.QueryEscape(param)
 				str = strings.ReplaceAll(str, "+", "%20")
 				return str
+			},
+			// errorf 主动抛出错误
+			//  format 错误值
+			//  args 格式参数
+			"errorf": func(format string, args ...any) (struct{}, error) {
+				return struct{}{}, fmt.Errorf(format, args...)
 			},
 			// 兼容 null 参数，转换为 nil
 			"null": func() any {
@@ -196,7 +203,15 @@ func (t *StringTemplate) Execute(text []byte) (newStr []byte, err error) {
 	// 应用模板到数据
 	buf := bytes.NewBuffer([]byte{})
 	if err = _tmpl.Execute(buf, t.params); err != nil {
-		return nil, fmt.Errorf("模板执行失败,%w", err)
+		switch e := err.(type) {
+		case template.ExecError:
+			if e2 := errors.Unwrap(e.Unwrap()); e2 != nil {
+				return nil, e2
+			}
+			return nil, e.Unwrap()
+		default:
+			return nil, e
+		}
 	}
 	// 获取替换后的字符串
 	//result := buf.String()

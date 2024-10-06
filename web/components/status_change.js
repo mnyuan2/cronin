@@ -115,6 +115,7 @@ var MyStatusChange = Vue.extend({
         }
         this.getDicSqlSource()
         console.log("状态变更 start",this.request, this.$auth_tag)
+        window.copyToClipboard = this.copyToClipboard; // 事件绑定在window对象中后才可以被触发
     },
 
     // 具体方法
@@ -148,6 +149,7 @@ var MyStatusChange = Vue.extend({
             })
         },
         statusSubmit(status){
+            let sucMsg = {message:'操作成功',type: 'success'}
             let body = copyJSON(this.form)
             body.status = status
             body.id = this.info.id
@@ -161,6 +163,10 @@ var MyStatusChange = Vue.extend({
             }
             if (body.status === Enum.StatusActive || body.status === Enum.StatusReject){
                 path += '?auth_type=audit'
+            }else if (body.status === Enum.StatusAudited){
+                let url = '【'+this.info.name+'】'+ window.location.protocol + "//"+window.location.host+'/index?env='+cache.getEnv().env+'#/config_detail?id='+body.id+'&type='+this.type
+                sucMsg.dangerouslyUseHTMLString = true
+                sucMsg.message += `, <a href="javascript:;" onclick="copyToClipboard('标题&链接','${url}')">复制标题&链接</a>`
             }
             console.log("submit",status, body)
 
@@ -168,7 +174,7 @@ var MyStatusChange = Vue.extend({
                 if (!res.status){
                     return this.$message.error(res.message)
                 }
-                this.$message.success('操作成功')
+                this.$message(sucMsg)
                 this.close(true)
             })
         },

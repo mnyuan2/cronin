@@ -110,7 +110,7 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 	}
 
 	one := &models.CronConfig{}
-	if r.Id < 0 {
+	if r.Id < 0 { // 兼容系统任务
 		list := cronRun.Entries()
 		for _, v := range list {
 			c, ok := v.Job.(*JobConfig)
@@ -149,6 +149,33 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 		return nil, errs.New(err, "系统错误")
 	}
 
+	if one.VarFields != nil {
+		if er := jsoniter.Unmarshal(one.VarFields, &resp.VarFields); er != nil {
+			return nil, errs.New(er, "var_fields 解析错误")
+		}
+	}
+	// 流水线预览任务时，需要将参数传递进来解析看最终效果。
+	if r.VarParams != "" {
+		params := map[string]any{}
+		if err := jsoniter.UnmarshalFromString(r.VarParams, &params); err != nil {
+			return nil, errs.New(err, "参数实现错误")
+		}
+		newParams := map[string]any{}
+		for _, item := range resp.VarFields {
+			if val, ok := params[item.Key]; ok {
+				newParams[item.Key] = val
+				item.Value = fmt.Sprintf("%v", val)
+			} else {
+				newParams[item.Key] = item.Value
+			}
+		}
+		cmd, err := conv.DefaultStringTemplate().SetParam(newParams).Execute(one.Command)
+		if err != nil {
+			return nil, errs.New(err, "模板错误.")
+		}
+		one.Command = cmd
+	}
+
 	if er := jsoniter.Unmarshal(one.Command, resp.Command); er != nil {
 		return nil, errs.New(er, "command 解析错误")
 	}
@@ -162,11 +189,6 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 	if one.MsgSet != nil {
 		if er := jsoniter.Unmarshal(one.MsgSet, &resp.MsgSet); er != nil {
 			return nil, errs.New(er, "msg_set 解析错误")
-		}
-	}
-	if one.VarFields != nil {
-		if er := jsoniter.Unmarshal(one.VarFields, &resp.VarFields); er != nil {
-			return nil, errs.New(er, "var_fields 解析错误")
 		}
 	}
 	if one.HandleUserIds != "" {
@@ -303,6 +325,11 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, errors.New("git 连接 配置有误，请确认")
 		}
 	}
+	if r.ErrRetryNum > 30 {
+		return nil, errors.New("最大重试次数不得超过30")
+	} else if r.ErrRetryNum < 0 {
+		return nil, errors.New("最大重试次数不得小于0")
+	}
 	pl := len(r.VarFields)
 	for i, param := range r.VarFields {
 		if param.Key == "" && i < (pl-1) {
@@ -329,6 +356,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Type = r.Type
 	d.AfterTmpl = r.AfterTmpl
 	d.AfterSleep = r.AfterSleep
+	d.ErrRetryNum = r.ErrRetryNum
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)

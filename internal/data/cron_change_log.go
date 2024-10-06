@@ -214,6 +214,28 @@ func (h *ChangeLogHandle) diffConfig(old, new *models.CronConfig) (content []*mo
 			NewValName: "",
 		})
 	}
+	if old.AfterSleep != new.AfterSleep {
+		content = append(content, &models.ChangeLogField{
+			Field:      "after_sleep",
+			VType:      reflect.Int.String(),
+			OldVal:     old.AfterSleep,
+			NewVal:     new.AfterSleep,
+			FieldName:  "延迟关闭",
+			OldValName: strconv.Itoa(old.AfterSleep),
+			NewValName: strconv.Itoa(new.AfterSleep),
+		})
+	}
+	if old.ErrRetryNum != new.ErrRetryNum {
+		content = append(content, &models.ChangeLogField{
+			Field:      "err_retry_num",
+			VType:      reflect.Int.String(),
+			OldVal:     old.ErrRetryNum,
+			NewVal:     new.ErrRetryNum,
+			FieldName:  "重试",
+			OldValName: strconv.Itoa(old.ErrRetryNum),
+			NewValName: strconv.Itoa(new.ErrRetryNum),
+		})
+	}
 	if old.CreateUserId != new.CreateUserId {
 		content = append(content, &models.ChangeLogField{
 			Field:      "create_user_id",

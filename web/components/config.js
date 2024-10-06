@@ -107,8 +107,9 @@ var MyConfig = Vue.extend({
                 @size-change="handleSizeChange"
                 @current-change="handleCurrentChange"
                 :current-page.sync="listPage.page"
+                :page-sizes="[10, 50, 100]"
                 :page-size="listPage.size"
-                layout="total, prev, pager, next"
+                layout="total, sizes, prev, pager, next"
                 :total="listPage.total">
         </el-pagination>
     </el-main>
@@ -156,7 +157,7 @@ var MyConfig = Vue.extend({
             listParam:{
                 type: '1',
                 page: 1,
-                size: 15,
+                size: 10,
                 protocol: [],
                 status: [],
                 handle_user_ids:[],
@@ -314,6 +315,7 @@ var MyConfig = Vue.extend({
         },
         handleSizeChange(val) {
             console.log(`每页 ${val} 条`);
+            this.listParam.size = val
         },
         handleCurrentChange(val) {
             this.listParam.page = val

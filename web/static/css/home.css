@@ -49,6 +49,7 @@ button{
     margin: 0 6px;
     font-size: 12px;
     font-weight: normal;
+    white-space: nowrap;
 }
 .info-2{
     color: #C0C4CC;
@@ -466,6 +467,7 @@ b code{
     background: #f8f8f9;
     border: 1px solid #ebeef5;
     padding: 6px 22px 7px 8px;
+    margin-bottom: 4px;
     max-height: 200px;
     line-height: 133%;
 }
@@ -475,9 +477,12 @@ b code{
     white-space: break-spaces;
     max-height: 180px;
 }
+.input-box .input-body{
+    overflow: auto;
+    max-height: 180px;
+}
 .input-box:hover .input-header{
     display: block;
-
 }
 .input-header{
     display: none;
@@ -485,8 +490,8 @@ b code{
     top: 0;
     right: 0;
     padding: 2px 2px;
-    width: 23px;
-    text-align: center;
+    width: 24px;
+    text-align: right;
 }
 .input-header i{
     cursor: pointer;

@@ -11,7 +11,7 @@ var MyConfigDetail = Vue.extend({
                 <template slot="label">状态描述</template>
                 <div style="font-size: 12px;color: #909399;">{{detail.status_dt}}<el-divider direction="vertical"></el-divider>{{detail.status_remark}}</div>
             </el-descriptions-item>
-            <el-descriptions-item>
+            <el-descriptions-item v-if="detail.type!=5">
                 <template slot="label">执行时间</template>
                 {{detail.spec}}
             </el-descriptions-item>
@@ -26,7 +26,7 @@ var MyConfigDetail = Vue.extend({
             <el-descriptions-item  span="3">
                 <template slot="label">消息</template>
                 <div>
-                   <el-row v-for="(msg,msg_index) in detail.msg_set" v-html="msg.descrition" style="background: rgb(248, 248, 249);margin-bottom: 4px;border-radius: 3px;padding: 2px 4px;"></el-row>
+                   <el-row class="input-box" v-for="(msg,msg_index) in detail.msg_set" v-html="msg.descrition" style="padding: 2px 4px;"></el-row>
                 </div>
             </el-descriptions-item>
             <el-descriptions-item>
@@ -40,6 +40,14 @@ var MyConfigDetail = Vue.extend({
             <el-descriptions-item>
                 <template slot="label">创建时间</template>
                 {{detail.create_dt}}
+            </el-descriptions-item>
+            <el-descriptions-item>
+                <template slot="label">创建人</template>
+                {{detail.create_user_name}}
+            </el-descriptions-item>
+            <el-descriptions-item>
+                <template slot="label">审核人</template>
+                {{detail.audit_user_name}}
             </el-descriptions-item>
         </el-descriptions>
     </el-aside>
@@ -73,29 +81,29 @@ var MyConfigDetail = Vue.extend({
                     
                     <el-descriptions-item span="2" v-if="detail.var_params">
                         <template slot="label">参数实现</template>
-                        <el-input type="textarea" v-model="detail.var_params" rows="3" disabled></el-input>
+                        <el-input type="textarea" v-model="detail.var_params" rows="2" disabled></el-input>
                     </el-descriptions-item>
                     
                     <el-descriptions-item span="2">
                         <template slot="label">细节</template>
                         <el-form size="mini" disabled class="detail">
                             <div v-if="detail.protocol_name == 'http'">
-                                    <el-form-item label="" class="http_url_box" size="mini">
-                                        <el-input v-model="detail.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
-                                            <el-select v-model="detail.command.http.method" placeholder="请选请求方式" slot="prepend">
-                                                <el-option label="GET" value="GET"></el-option>
-                                                <el-option label="POST" value="POST"></el-option>
-                                            </el-select>
-                                        </el-input>
-                                    </el-form-item>
-                                    <el-form-item label="请求Header" class="http_header_box" size="mini" v-if="detail.command.http.header">
-                                        <el-input v-for="(header_v,header_i) in detail.command.http.header" v-model="header_v.value" v-if="header_v.key">
-                                            <el-input v-model="header_v.key" slot="prepend"></el-input>
-                                        </el-input>
-                                    </el-form-item>
-                                    <el-form-item label="请求Body参数" size="mini" v-if="detail.command.http.body != ''">
-                                        <el-input type="textarea" v-model="detail.command.http.body" rows="4"></el-input>
-                                    </el-form-item>
+                                <el-form-item label="" class="http_url_box" size="mini">
+                                    <el-input v-model="detail.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
+                                        <el-select v-model="detail.command.http.method" placeholder="请选请求方式" slot="prepend">
+                                            <el-option label="GET" value="GET"></el-option>
+                                            <el-option label="POST" value="POST"></el-option>
+                                        </el-select>
+                                    </el-input>
+                                </el-form-item>
+                                <el-form-item label="请求Header" class="http_header_box" size="mini" v-if="detail.command.http.header">
+                                    <el-input v-for="(header_v,header_i) in detail.command.http.header" v-model="header_v.value" v-if="header_v.key">
+                                        <el-input v-model="header_v.key" slot="prepend"></el-input>
+                                    </el-input>
+                                </el-form-item>
+                                <el-form-item label="请求Body参数" size="mini" v-if="detail.command.http.body != ''">
+                                    <el-input type="textarea" v-model="detail.command.http.body" rows="4"></el-input>
+                                </el-form-item>
                             </div>
                             
                             <div v-if="detail.protocol_name == 'rpc'">
@@ -121,15 +129,15 @@ var MyConfigDetail = Vue.extend({
                             </div>
                             
                             <div v-if="detail.protocol_name == 'sql'">
-                                <el-row>驱动<b class="b">{{detail.command.sql.driver}}</b> 链接<b class="b">{{getEnumName(dic.sql_source, detail.command.sql.source.id)}}</b> 执行<b class="b">{{detail.command.sql.origin}}</b>语句：</el-row>
+                                <p>驱动<b class="b">{{detail.command.sql.driver}}</b> 链接<b class="b">{{getEnumName(dic.sql_source, detail.command.sql.source.id)}}</b> 执行<b class="b">{{detail.command.sql.origin}}</b>语句：</p>
                                 <div class="sql-show-warp">
                                     <!--本地sql展示-->
-                                    <div v-if="detail.command.sql.origin == 'local'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='local' || statement.type==''" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 4px;">
-                                        <pre style="margin: 0;overflow-y: auto;max-height: 180px;min-height: 45px;"><code>{{statement.local}}</code></pre>
-                                        <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
+                                    <div class="input-box" v-if="detail.command.sql.origin == 'local'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='local' || statement.type==''">
+                                        <pre><code>{{statement.local}}</code></pre>
+                                        <span class="input-header"><i style="font-size: 16px;">{{sql_index}}</i></span>
                                     </div>
                                     <!--git sql展示-->
-                                    <div v-if="detail.command.sql.origin == 'git'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='git'" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 4px;">
+                                    <div class="input-box" v-if="detail.command.sql.origin == 'git'" v-for="(statement,sql_index) in detail.command.sql.statement" v-show="statement.type=='git'">
                                         <el-row v-html="statement.git.descrition"></el-row>
                                         <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{sql_index}}</i>
                                     </div>
@@ -149,23 +157,22 @@ var MyConfigDetail = Vue.extend({
                             </div>
                             
                             <div v-if="detail.protocol_name == 'git'">
-                                <el-row>链接 <b class="b">{{getEnumName(dic.git_source, detail.command.git.link_id)}}</b> 事件</el-row>
+                                <p>链接 <b class="b">{{getEnumName(dic.git_source, detail.command.git.link_id)}}</b> 事件</p>
                                 <div style="overflow-y: auto;max-height: 420px;">
-                                    <div v-for="(event,git_index) in detail.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                                    <div class="input-box" v-for="(event,git_index) in detail.command.git.events">
                                         <el-row v-html="event.desc" style="min-height: 45px;"></el-row>
-                                        <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
+                                        <span class="input-header">
+                                            <i style="font-size: 16px;">{{git_index}}</i>
+                                        </span>
+                                        
                                     </div>
                                 </div>
                             </div>
                             
                             <div v-if="detail.protocol_name == 'pipeline'">
+                                <p>任务执行间隔<b class="b">{{detail.interval}}/秒</b> 任务停用时<b class="b">{{detail.config_disable_action_name}}</b> 任务执行错误时<b class="b">{{detail.config_err_action_name}}</b></p>
                                 <div class="sort-drag-box">
-                                    <div class="item-drag" 
-                                        v-for="(conf,conf_index) in detail.configs" 
-                                        style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;"
-                                        @mouseover="configDetailPanel(conf, true)"
-                                        @mouseout="configDetailPanel(conf, false)"
-                                    >
+                                    <div class="input-box" v-for="(conf,conf_index) in detail.configs" @mouseover="configDetailPanel(conf, true)"  @mouseout="configDetailPanel(conf, false)">
                                         <b class="b">{{conf.type_name}}</b>-<b>{{conf.name}}</b>-<b class="b">{{conf.protocol_name}}</b>
                                         <el-button :type="statusTypeName(conf.status)" size="mini" plain round disabled>{{conf.status_name}}</el-button>
                                         <el-divider direction="vertical"></el-divider>
@@ -420,7 +427,7 @@ var MyConfigDetail = Vue.extend({
         },
         // 构建消息设置描述
         msgSetBuildDesc(data){
-            let statusList = [{id:1,name:"错误"}, {id:2, name:"成功"}, {id:0,name:"完成"}]
+            let statusList = [{id:1,name:"错误"}, {id:2, name:"结束"}, {id:0,name:"开始"}]
             let item1 = statusList.find(option => option.id === data.status);
             if (item1){
                 data.status_name = item1.name
@@ -461,7 +468,9 @@ var MyConfigDetail = Vue.extend({
                     if (item == ''){
                         return
                     }
-                    data.git.descrition += `<div style="margin: 0;padding: 0 0 0 30px;"><a href="https://gitee.com/${data.git.owner}/${data.git.project}/blob/${data.git.ref}/${item}" target="_blank" title="点击 查看文件详情"><i class="el-icon-connection"></i></a><code>${item}</code></div>`
+                    item.split(',').forEach(function (item2) {
+                        data.git.descrition += `<div style="margin: 0;padding: 0 0 0 30px;"><a href="https://gitee.com/${data.git.owner}/${data.git.project}/blob/${data.git.ref}/${item2}" target="_blank" title="点击 查看文件详情"><i class="el-icon-connection"></i></a><code>${item2}</code></div>`
+                    })
                 })
             }else{
 
@@ -500,7 +509,7 @@ var MyConfigDetail = Vue.extend({
                 this.config_detail.detail = {}
                 return
             }
-            api.innerGet('/config/detail', {id: detail.id}, (res)=>{
+            api.innerGet('/config/detail', {id: detail.id, var_params: this.detail.var_params}, (res)=>{
                 if (!res.status){
                     return this.$message.error(res.message)
                 }

@@ -37,7 +37,7 @@ var MyConfigSelect = Vue.extend({
         </el-form>
     </el-row>
     
-    <el-table :data="list.items" @selection-change="selectedChange">
+    <el-table :data="list.items" @selection-change="selectedChange" max-height="460">
         <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="name" label="任务名称">
             <div slot-scope="{row}" class="abc" style="display: flex;">
@@ -61,8 +61,9 @@ var MyConfigSelect = Vue.extend({
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
             :current-page.sync="list.page.page"
+            :page-sizes="[10, 50, 100]"
             :page-size="list.page.size"
-            layout="total, prev, pager, next"
+            layout="total, sizes, prev, pager, next"
             :total="list.page.total">
     </el-pagination>
 </div>`,
@@ -124,6 +125,7 @@ var MyConfigSelect = Vue.extend({
         },
         handleSizeChange(val) {
             console.log(`每页 ${val} 条`);
+            this.list.param.size = val
         },
         handleCurrentChange(val) {
             this.list.param.page = val

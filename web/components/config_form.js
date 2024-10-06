@@ -10,8 +10,8 @@ var MyConfigForm = Vue.extend({
             <el-radio v-model="form.type" label="5">组件</el-radio>
         </el-form-item>
         <el-form-item label="时间*" label-width="50px" v-if="form.type != 5">
-            <el-input v-show="form.type==1" v-model="form.spec" :placeholder="hintSpec" style="width: 220px"></el-input>
-            <el-button v-show="form.type==1">检测</el-button>
+            <el-input v-model="form.spec" :placeholder="hintSpec" style="width: 220px" v-show="form.type==1"></el-input>
+            <el-button @click="parseSpec" v-show="form.type==1">检测</el-button>
             <el-date-picker 
                 style="width: 220px"
                 v-show="form.type==2" 
@@ -42,15 +42,15 @@ var MyConfigForm = Vue.extend({
             <el-tabs type="border-card" v-model="form.protocol">
                 <el-tab-pane label="http" name="1">
                     <el-form-item label="请求地址">
-                        <el-input v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
-                            <el-select v-model="form.command.http.method" placeholder="请选请求方式" slot="prepend">
+                        <el-input class="input-input" v-model="form.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
+                            <el-select v-model="form.command.http.method" placeholder="method" slot="prepend" style="width: 70px;">
                                 <el-option label="GET" value="GET"></el-option>
                                 <el-option label="POST" value="POST"></el-option>
                             </el-select>
                         </el-input>
                     </el-form-item>
                     <el-form-item label="请求Header" class="http_header_box">
-                        <el-input v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
+                        <el-input class="input-input" v-for="(header_v,header_i) in form.command.http.header" v-model="header_v.value" placeholder="参数值">
                             <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
                             <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
                         </el-input>
@@ -143,12 +143,12 @@ var MyConfigForm = Vue.extend({
                         </div>
                         <div class="sql-show-warp">
                             <!--本地sql展示-->
-                            <div class="input-box" v-if="form.command.sql.origin == 'local'" v-for="(statement,sql_index) in form.command.sql.statement" v-show="statement.type=='local' || statement.type==''" style="margin-bottom: 10px;">
+                            <div class="input-box" v-if="form.command.sql.origin == 'local'" v-for="(statement,sql_index) in form.command.sql.statement" v-show="statement.type=='local' || statement.type==''">
                                 <pre><code>{{statement.local}}</code></pre>
                                 <span class="input-header">
                                     <i class="el-icon-close" @click="sqlSetDel(sql_index)"></i>
                                     <i class="el-icon-edit" @click="sqlSetShow(sql_index,statement)"></i>
-                                    <i style="font-size: 16px;white-space: nowrap;">{{sql_index}}</i>
+                                    <i style="white-space: nowrap;">{{sql_index}}</i>
                                 </span>
                             </div>
                             <el-alert v-show="form.command.sql.statement.length==0" title="未添加执行sql，请添加。" type="info"></el-alert>
@@ -158,7 +158,7 @@ var MyConfigForm = Vue.extend({
                                 <span class="input-header">
                                     <i class="el-icon-close" @click="sqlSetDel(sql_index)"></i>
                                     <i class="el-icon-edit" @click="sqlSetShow(sql_index,statement)"></i>
-                                    <i style="font-size: 16px;white-space: nowrap;">{{sql_index}}</i>
+                                    <i style="white-space: nowrap;">{{sql_index}}</i>
                                 </span>
                                 
                             </div>
@@ -212,11 +212,13 @@ var MyConfigForm = Vue.extend({
                         <div style="overflow-y: auto;max-height: 420px;">
                             <el-alert v-show="form.command.git.events.length==0" title="未添加事件，请添加。" type="info"></el-alert>
                             <!--git 事件展示-->
-                            <div v-for="(event,git_index) in form.command.git.events" style="position: relative;line-height: 133%;background: #f4f4f5;margin-bottom: 5px;padding: 6px 20px 7px 8px;border-radius: 3px;">
-                                <el-row v-html="event.desc" style="min-height: 45px;"></el-row>
-                                <i class="el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="gitSetDel(git_index)"></i>
-                                <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="gitSetShow(git_index,event)"></i>
-                                <i style="position: absolute;right: 1px;top: 40px;font-size: 16px;">#{{git_index}}</i>
+                            <div class="input-box" v-for="(event,git_index) in form.command.git.events">
+                                <el-row class="input-body" v-html="event.desc" style="min-height: 45px;max-height: 200px;"></el-row>
+                                <span class="input-header">
+                                    <i class="el-icon-close" @click="gitSetDel(git_index)"></i>
+                                    <i class="el-icon-edit" @click="gitSetShow(git_index,event)"></i>
+                                    <i>{{git_index}}</i>
+                                </span>
                             </div>
                         </div>
                     </el-form-item>
@@ -235,6 +237,12 @@ var MyConfigForm = Vue.extend({
                 <pre>{{form.after_tmpl}}</pre>
             </div>
         </el-form-item>
+        <el-form-item label="重试" label-width="50px" v-show="form.err_retry_num>0">
+            <div class="input-box">
+                <span class="input-header"><i class="el-icon-edit" @click="biggerShow(true)"></i></span>
+                {{form.err_retry_num}}/次
+            </div>
+        </el-form-item>
         <el-form-item label="延迟" label-width="50px" v-show="form.after_sleep>0">
             <div class="input-box">
                 <span class="input-header"><i class="el-icon-edit" @click="biggerShow(true)"></i></span>
@@ -249,10 +257,12 @@ var MyConfigForm = Vue.extend({
         </el-form-item>
         <el-form-item label-width="2px">
             <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
-            <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f8f8f9;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+            <div class="input-box" v-for="(msg,msg_index) in form.msg_set">
                 <el-row v-html="msg.descrition"></el-row>
-                <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
-                <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
+                <span class="input-header">
+                    <i class="el-icon-close" @click="msgSetDel(msg_index)"></i>
+                    <i class="el-icon-edit" @click="msgBoxShow(msg_index,msg)"></i>
+                </span>
             </div>
         </el-form-item>
         <div style="text-align: right;padding-bottom: 14px;">
@@ -444,7 +454,12 @@ var MyConfigForm = Vue.extend({
                         <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                     </el-tooltip>
                 </span>
-                <el-input type="textarea" v-model="bigger_set.form.after_tmpl" rows="2" placeholder="任务成功后，对结果文本进行模板处理；输出空文本表示通过、非空文本将被认为错误描述。\n支持变量: result·string"></el-input>
+                <el-input type="textarea" v-model="bigger_set.form.after_tmpl" rows="2" placeholder="任务成功后，对结果响应文本进行二次解析；可重构响应及错误验证。\n结果变量: result·string"></el-input>
+            </el-form-item>
+            <el-form-item label="重试">
+                <el-input type="number" v-model="bigger_set.form.err_retry_num" placeholder="失败时重试">
+                    <span slot="append">次</span>
+                </el-input>
             </el-form-item>
             <el-form-item label="延迟">
                 <el-input type="number" v-model="bigger_set.form.after_sleep" placeholder="任务成功完成后，继续等待...秒">
@@ -513,7 +528,7 @@ var MyConfigForm = Vue.extend({
                 title: '添加',
                 index: -1, // 操作行号
                 data: {}, // 实际内容
-                statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}, {id:0,name:"完成"}],
+                statusList:[{id:1,name:"错误"}, {id:2, name:"结束"}], //  {id:0,name:"开始"}
             },
             bigger_set:{
                 show:false,
@@ -682,6 +697,7 @@ var MyConfigForm = Vue.extend({
                 },
                 after_tmpl: '',
                 after_sleep: '',
+                err_retry_num: '',
                 msg_set: [],
                 status: '1',
             }
@@ -778,6 +794,7 @@ var MyConfigForm = Vue.extend({
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
             body.command.git.link_id = Number(body.command.git.link_id)
             body.after_sleep = Number(body.after_sleep)
+            body.err_retry_num = Number(body.err_retry_num)
 
             api.innerPost("/config/set", body, (res)=>{
                 if (!res.status){
@@ -1067,6 +1084,7 @@ var MyConfigForm = Vue.extend({
                     var_fields: copyJSON(this.form.var_fields),
                     after_tmpl: this.form.after_tmpl,
                     after_sleep: this.form.after_sleep,
+                    err_retry_num: this.form.err_retry_num,
                     remark: this.form.remark
                 }
                 if (form.var_fields == null || form.var_fields.length == 0){
@@ -1085,6 +1103,7 @@ var MyConfigForm = Vue.extend({
             })
             this.form.after_tmpl = data.after_tmpl
             this.form.after_sleep = data.after_sleep
+            this.form.err_retry_num = data.err_retry_num
             this.form.remark = data.remark
             this.biggerShow(false)
         },
@@ -1181,7 +1200,9 @@ var MyConfigForm = Vue.extend({
                 if (item == ''){
                     return
                 }
-                data.git.descrition += `<div style="margin: 0;padding: 0 0 0 30px;"><a href="https://gitee.com/${data.git.owner}/${data.git.project}/blob/${data.git.ref}/${item}" target="_blank" title="点击 查看文件详情"><i class="el-icon-connection"></i></a><code>${item}</code></div>`
+                item.split(',').forEach(function (item2) {
+                    data.git.descrition += `<div style="margin: 0;padding: 0 0 0 30px;"><a href="https://gitee.com/${data.git.owner}/${data.git.project}/blob/${data.git.ref}/${item2}" target="_blank" title="点击 查看文件详情"><i class="el-icon-connection"></i></a><code>${item2}</code></div>`
+                })
             })
 
             console.log("sql描述",data.git.descrition)
@@ -1199,7 +1220,7 @@ var MyConfigForm = Vue.extend({
                     break
                 case 131:
                     data.desc = `<b>文件更新</b> <a href="https://gitee.com/${data.file_update.owner}/${data.file_update.repo}/blob/${data.file_update.branch}/${data.file_update.path}" target="_blank" title="点击 查看"><i class="el-icon-connection"></i></a> <b class="b">${data.file_update.owner}</b>/<b class="b">${data.file_update.repo}</b>/blob/<b class="b">${data.file_update.branch}</b>/<b class="b">${data.file_update.path}</b>`+
-                        `<br><i style="margin-left: 2em;"></i>内容：<b class="b">${data.file_update.content}</b>`+
+                        `<br><i style="margin-left: 2em;"></i>内容：<pre style="display: inline-flex;max-height: 140px;">${data.file_update.content}</pre>`+
                         `<br><i style="margin-left: 2em;"></i>描述：<b class="b">${data.file_update.message}</b>`
                     break
                 default:
@@ -1243,6 +1264,24 @@ var MyConfigForm = Vue.extend({
                     return this.$message.error(res.message)
                 }
                 this.form.command.rpc.actions = res.data.actions
+            })
+        },
+        // 解析 spec 时间
+        parseSpec(){
+            let data = this.form.spec
+            if (!data){
+                return this.$message.warning("请先输入时间");
+            }
+            api.innerPost("/foundation/parse_spec", {spec:data}, (res)=>{
+                if (!res.status){
+                    return this.$message.error(res.message)
+                }
+                let txt = res.data.list.join('</br>')
+                // 弹窗展示结果
+                this.$alert(txt, '最近5次运行时间', {
+                    confirmButtonText: '确定',
+                    dangerouslyUseHTMLString: true
+                });
             })
         },
         // 执行一下

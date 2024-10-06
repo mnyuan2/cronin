@@ -71,10 +71,15 @@
     Vue.prototype.$auth_tag = cache.getAuthTags()
     // 复制文本到剪切板
     Vue.prototype.copyToClipboard = function (title, text) {
+        let msg = this.$message
+        if (msg == undefined){
+            msg = v.$message
+        }
         navigator.clipboard.writeText(text).then(()=> {
-            this.$message.success(title+' 已复制到剪贴板')
+            msg.info(title+' 已复制到剪贴板')
         }).catch((err)=> {
-            this.$message.warning(title+' 复制失败: '+err.toString())
+            msg.warning(title+' 复制失败: '+err.toString())
+            console.log(title+' 复制失败: '+err.toString())
         });
     }
 
@@ -134,6 +139,12 @@
                             message: '服务器时间与当前系统时间存在较大差异，请核查！<br>服务时间：'+ser.toISOString()+'<br>本地时间：'+cur.toISOString(),
                             type: 'warning'
                         })
+                    }
+                    if (!this.env){
+                        let searchParams = new URLSearchParams(window.location.search)
+                        console.log(searchParams.toString())
+                        searchParams.set("env", res.env)
+                        replaceHash("", null, searchParams.toString())
                     }
                 }, true)
             },

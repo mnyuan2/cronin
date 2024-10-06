@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/basic/grpcurl"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -225,6 +226,27 @@ func (dm *FoundationService) ParseProto(r *pb.ParseProtoRequest) (resp *pb.Parse
 	}
 
 	resp = &pb.ParseProtoReply{Actions: grpcurl.ParseProtoMethods(fds)}
+
+	return resp, nil
+}
+
+func (dm *FoundationService) PaseSpec(r *pb.ParseSpecRequest) (resp *pb.ParseSpecReply, err error) {
+	if r.Spec == "" {
+		return nil, errors.New("未输入时间规则")
+	}
+
+	m, err := secondParser.Parse(r.Spec)
+	if err != nil {
+		return nil, errs.New(err, "时间输入有误", errs.ParamError)
+	}
+	resp = &pb.ParseSpecReply{
+		List: []string{},
+	}
+	next := time.Now()
+	for i := 0; i < 5; i++ {
+		next = m.Next(next)
+		resp.List = append(resp.List, next.Format(time.DateTime))
+	}
 
 	return resp, nil
 }

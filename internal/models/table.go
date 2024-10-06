@@ -119,7 +119,7 @@ func AutoMigrate(db *db.MyDB) {
 			panic("请确认秘钥是否正确设置，" + err.Error())
 		}
 		err = db.CreateInBatches([]*CronUser{{
-			Account:  "root",
+			Account:  "ROOT",
 			Username: "超管",
 			Status:   enum.StatusActive,
 			UpdateDt: ti.Format(time.DateTime),

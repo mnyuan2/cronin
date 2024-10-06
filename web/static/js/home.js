@@ -271,23 +271,23 @@ function buildSearchParamsString(data){
 
 /**
  * 替换url路径
- * @param hash
- * @param data
+ * @param {String} hash
+ * @param {Object} hashData
+ * @param {string} search
  */
-function replaceHash(hash, data){
-    // var url = new URL(window.location.href);
-    // var queryParams = new URLSearchParams(url.hash);
-    // queryParams.set('aa','bb')
-    // url.hash = queryParams
-    // console.log(queryParams, url, url.hash)
-    //
-    // let hash = getHashParams(url.hash)
-
-    let search = buildSearchParamsString(data)
-    let str = hash + "?" + search
+function replaceHash(hash, hashData, search=''){
+    let str = ''
+    if (search !== ''){
+        str += '?'+search
+    }
+    if (hash !== ''){
+        str += "#"+hash + "?" + buildSearchParamsString(hashData)
+    }else if (hashData){
+        str += "#?" + buildSearchParamsString(hashData)
+    }
 
     console.log("hash",str)
-    window.history.replaceState({}, '', '#'+str);
+    window.history.replaceState({}, '', str);
 }
 
 /**
@@ -318,15 +318,24 @@ const Enum ={
     // 1002 git事件
     dicGitEvent: 1002,
     dicSqlDriver: 1003,
-    dicConfigStatus: 1004, // 任务状态
-    dicProtocolType: 1005, // 协议类型
-    StatusDisable: 1, // 1 草稿,停用
-    StatusAudited: 5, // 5 待审核
-    StatusReject: 6, // 6 驳回
-    StatusActive: 2, // 2 激活
-    StatusFinish: 3, // 3 完成
-    StatusError: 4, // 4 错误
-    StatusDelete: 9, // 9 删除
+    // 任务状态
+    dicConfigStatus: 1004,
+    // 协议类型
+    dicProtocolType: 1005,
+    // 1 草稿,停用
+    StatusDisable: 1,
+    // 5 待审核
+    StatusAudited: 5,
+    // 6 驳回
+    StatusReject: 6,
+    // 2 激活
+    StatusActive: 2,
+    // 3 完成
+    StatusFinish: 3,
+    // 4 错误
+    StatusError: 4,
+    // 9 删除
+    StatusDelete: 9,
 }
 
 function statusTypeName(status){

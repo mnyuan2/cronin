@@ -34,12 +34,7 @@ var MyPipelineForm = Vue.extend({
             <el-form-item label="任务" label-width="76px">
                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
                 <div id="config-selected-box" class="sort-drag-box">
-                    <div class="item-drag"  
-                        v-for="(conf,conf_index) in form.configs" 
-                        style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;"
-                        @mouseover="configDetailPanel(conf, true)"
-                        @mouseout="configDetailPanel(conf, false)"
-                    >
+                    <div class="input-box" v-for="(conf,conf_index) in form.configs" @mouseover="configDetailPanel(conf, true)" @mouseout="configDetailPanel(conf, false)">
                         <i class="el-icon-more-outline drag"></i>
                         <b class="b">{{conf.type_name}}</b>-
                         <b>{{conf.name}}</b>-
@@ -52,7 +47,9 @@ var MyPipelineForm = Vue.extend({
                         <span style="margin-left: 4px;" v-show="conf.view_panel">
                             <i class="el-icon-view hover" @click="configDetailBox(conf)"></i>
                         </span>
-                        <i class="el-icon-close item-close" @click="removeAt(conf_index)"></i>
+                        <span class="input-header">
+                            <i class="el-icon-close" @click="removeAt(conf_index)"></i>
+                        </span>
                     </div>
                 </div>
             </el-form-item>
@@ -87,10 +84,13 @@ var MyPipelineForm = Vue.extend({
             </el-form-item>
             <el-form-item  label-width="76px">
                 <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
-                <div v-for="(msg,msg_index) in form.msg_set" style="position: relative;max-height: 200px;line-height: 133%;background: #f4f4f5;margin-bottom: 10px;padding: 6px 20px 7px 8px;border-radius: 3px;">
+                <div class="input-box" v-for="(msg,msg_index) in form.msg_set">
                     <el-row v-html="msg.descrition"></el-row>
-                    <i class="el-tag__close el-icon-close" style="font-size: 15px;position: absolute;top: 2px;right: 2px;cursor:pointer" @click="msgSetDel(msg_index)"></i>
-                    <i class="el-icon-edit" style="font-size: 15px;position: absolute;top: 23px;right: 2px;cursor:pointer" @click="msgBoxShow(msg_index,msg)"></i>
+                    <span class="input-header">
+                        <i class="el-icon-close" @click="msgSetDel(msg_index)"></i>
+                        <i class="el-icon-edit" @click="msgBoxShow(msg_index,msg)"></i>
+                    </span>
+                    
                 </div>
             </el-form-item>
         </el-form>
@@ -245,18 +245,9 @@ var MyPipelineForm = Vue.extend({
             for (let i in row.msg_set){
                 row.msg_set[i] = this.msgSetBuildDesc(row.msg_set[i])
             }
-
-            let configList = this.getConfigHash(row.config_ids)
-            for (let i=0; i<row.configs.length;i++){
-                let config = configList[row.configs[i].id]
-                if (config != undefined){
-                    row.configs[i].view_panel = false
-                    row.configs[i].name = config.name
-                    row.configs[i].type_name = config.type_name
-                    row.configs[i].status_name = config.status_name
-                    row.configs[i].protocol_name = config.protocol_name
-                }
-            }
+            row.configs.forEach(function (item) {
+                item.view_panel = false
+            })
             row.config_disable_action = row.config_disable_action.toString()
             row.config_err_action = row.config_err_action.toString()
             return row
@@ -426,7 +417,7 @@ var MyPipelineForm = Vue.extend({
                 this.config_detail.detail = {}
                 return
             }
-            api.innerGet('/config/detail', {id: detail.id}, (res)=>{
+            api.innerGet('/config/detail', {id: detail.id, var_params: this.form.var_params}, (res)=>{
                 if (!res.status){
                     return this.$message.error(res.message)
                 }
@@ -443,22 +434,6 @@ var MyPipelineForm = Vue.extend({
             }).then(() => {
                 this.form.configs.splice(idx, 1);
             }).catch(() => {/*取消*/});
-        },
-        // 任务列表
-        getConfigHash(ids){
-            if (ids == undefined || ids == []){
-                return []
-            }
-            let list = {}
-            api.innerGet("/config/list", {ids: ids,page:1,size:ids.length}, (res)=>{
-                if (!res.status){
-                    return this.$message.error(res.message);
-                }
-                res.data.list.forEach(function (item) {
-                    list[item.id] = item;
-                })
-            }, {async:false})
-            return list
         },
         // 执行一下
         configRun(){

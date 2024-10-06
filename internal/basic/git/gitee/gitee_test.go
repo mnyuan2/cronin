@@ -136,7 +136,7 @@ func TestPullsMerge(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	fmt.Println(string(res))
+	fmt.Println(res)
 }
 
 func TestName(t *testing.T) {

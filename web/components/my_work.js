@@ -28,10 +28,11 @@ var MyWork = Vue.extend({
                     <el-table-column prop="name" label="任务名称">
                         <div slot-scope="{row}" class="abc" style="display: flex;">
                             <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
-                                <router-link target="_blank" :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                                <router-link target="_blank" :to="{path:'/config_detail',query:{id:row.id, type:group_v.type}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
                             </span>
-                            <span v-show="row.option.name.mouse" style="margin-left: 4px;">
-                                <i  class="el-icon-edit hover" @click="setShow(row, group_v.type)"></i>
+                            <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
+                                <i  class="el-icon-edit hover" @click="setShow(row, group_v.type)" title="编辑"></i>
+                                <i class="el-icon-notebook-2 hover" @click="configLogBox(row, group_v.type)" title="日志"></i>
                             </span>
                         </div>
                     </el-table-column>
@@ -56,6 +57,10 @@ var MyWork = Vue.extend({
         </el-dialog>
         <el-drawer title="编辑流水线" :visible.sync="detail_form_box.show && detail_form_box.type=='pipeline'" size="60%" :before-close="formClose">
             <my-pipeline-form v-if="detail_form_box.show && detail_form_box.type==='pipeline'" :request="{detail:detail_form_box.detail}" @close="formClose"></my-pipeline-form>
+        </el-drawer>
+        <!-- 任务日志弹窗 -->
+        <el-drawer :title="config_log_box.title" :visible.sync="config_log_box.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
+            <my-config-log :tags="config_log_box.tags"></my-config-log>
         </el-drawer>
         <my-status-change v-if="status_box.show" :request="status_box" @close="statusShow"></my-status-change>
     </el-main>`,
@@ -83,6 +88,11 @@ var MyWork = Vue.extend({
                 show:false,
                 detail:{},
                 type: '',
+            },
+            config_log_box:{
+                show: false,
+                title:'',
+                tags: {},
             },
         }
     },
@@ -223,15 +233,14 @@ var MyWork = Vue.extend({
         setShow(row=null,type=''){
             this.detail_form_box.show = true
             this.detail_form_box.type = type
-            if (row == null){
-                this.detail_form_box.title= '添加任务'
-                this.detail_form_box.detail = {
-                    type: this.listParam.type.toString()
+            this.detail_form_box.title= '编辑任务'
+            api.innerGet('/'+type+'/detail', {id: row.id}, (res)=>{
+                if (!res.status){
+                    return this.$message.error(res.message)
                 }
-            }else{
-                this.detail_form_box.title= '编辑任务'
-                this.detail_form_box.detail = row
-            }
+                this.detail_form_box.detail = res.data
+            },{async:false})
+
         },
         formClose(e){
             console.log("close",e)
@@ -251,7 +260,7 @@ var MyWork = Vue.extend({
                 }
             }
         },
-        statusShow(e, type=''){
+        statusShow(e, type){
             this.status_box.show = e.id > 0
             if (this.status_box.show){
                 this.status_box.detail = e
@@ -263,6 +272,18 @@ var MyWork = Vue.extend({
             if (typeof e == 'object' && e.is_change===true){ // 数据变更了重新加载
                 this.getList()
             }
+        },
+        configLogBox(item, type){
+            let tags = {ref_id:item.id, component:type}
+            this.config_log_box.tags = tags
+            this.config_log_box.title = item.name+' 日志'
+            this.config_log_box.show = true
+        },
+        configLogBoxClose(done){
+            this.config_log_box.show = false;
+            this.config_log_box.id = 0;
+            this.config_log_box.title = ' 日志'
+            this.config_log_box.tags = {}
         },
     }
 })

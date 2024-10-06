@@ -28,25 +28,6 @@ type UserToken struct {
 type UserData struct {
 }
 
-// 解析http令牌
-func ParseToken(ctx *gin.Context) (u *UserToken, err error) {
-	conf := config.MainConf().User
-	// 不校验账号
-	if conf == nil || conf.AdminAccount == "" {
-		return &UserToken{UserName: "无"}, nil
-	}
-	account, password, ok := ctx.Request.BasicAuth()
-	if !ok {
-		return nil, errors.New("401 Unauthorized!")
-	}
-	if account != conf.AdminAccount || password != conf.AdminPassword {
-		return nil, errors.New("401 Password error!")
-	}
-
-	u = &UserToken{UserName: "管理员"}
-	return u, nil
-}
-
 // 解析 http 令牌 v2
 func ParseJwtToken(token string) (u *UserToken, err error) {
 	if token == "" {

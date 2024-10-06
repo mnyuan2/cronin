@@ -172,9 +172,9 @@ func (job *JobConfig) PRMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEv
 	}
 	res, er := api.PullsMerge(h, request)
 	if er != nil {
-		return nil, errs.New(er, "pr合并失败")
+		return []byte(res.HtmlUrl), errs.New(er, "pr合并失败")
 	}
-	return res, nil
+	return []byte(res.HtmlUrl + "   " + res.Message), nil
 }
 
 // 文件 更新

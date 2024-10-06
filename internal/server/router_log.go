@@ -45,12 +45,12 @@ func routerLogDel(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	user, err := GetUser(ctx)
-	if err != nil {
-		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
-		return
-	}
-	rep, err := biz.NewCronLogService(ctx.Request.Context(), user).Del(r)
+	//user, err := GetUser(ctx)
+	//if err != nil {
+	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+	//	return
+	//}
+	rep, err := biz.NewCronLogService(ctx.Request.Context(), nil).Del(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 

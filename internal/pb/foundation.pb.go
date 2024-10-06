@@ -42,3 +42,10 @@ type ParseProtoRequest struct {
 type ParseProtoReply struct {
 	Actions []string `json:"actions"`
 }
+
+type ParseSpecRequest struct {
+	Spec string `json:"spec"` // 时间表示
+}
+type ParseSpecReply struct {
+	List []string `json:"list"`
+}
