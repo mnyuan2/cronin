@@ -76,6 +76,7 @@ GOOS=linux go build -ldflags "-X main.version=v0.xx -X main.isBuildResource=true
 
 默认账号：root / 123456
 
+演示地址：http://cronin.mnyuan.com/login
 
 ### 捐助与支持
 如果您觉得我的开源软件对你有所帮助请关注、star、fork。
