@@ -37,7 +37,7 @@ var MyConfigSelect = Vue.extend({
         </el-form>
     </el-row>
     
-    <el-table :data="list.items" @selection-change="selectedChange">
+    <el-table :data="list.items" @selection-change="selectedChange" max-height="460">
         <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="name" label="任务名称">
             <div slot-scope="{row}" class="abc" style="display: flex;">
@@ -61,8 +61,9 @@ var MyConfigSelect = Vue.extend({
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
             :current-page.sync="list.page.page"
+            :page-sizes="[10, 50, 100]"
             :page-size="list.page.size"
-            layout="total, prev, pager, next"
+            layout="total, sizes, prev, pager, next"
             :total="list.page.total">
     </el-pagination>
 </div>`,
@@ -113,19 +114,7 @@ var MyConfigSelect = Vue.extend({
             api.innerGet("/config/list", this.list.param, (res)=>{
                 this.list.request = false
                 if (!res.status){
-                    console.log("config/list 错误", res)
                     return this.$message.error(res.message);
-                }
-                for (i in res.data.list){
-                    let ratio = 0
-                    if (res.data.list[i].top_number){
-                        ratio = res.data.list[i].top_error_number / res.data.list[i].top_number
-                    }
-                    if (res.data.list[i].command.sql){
-                        res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
-                    }
-                    // res.data.list[i].status = res.data.list[i].status.toString()
-                    res.data.list[i].topRatio = 100 - ratio * 100
                 }
                 this.list.items = res.data.list;
                 this.list.page = res.data.page;
@@ -136,6 +125,7 @@ var MyConfigSelect = Vue.extend({
         },
         handleSizeChange(val) {
             console.log(`每页 ${val} 条`);
+            this.list.param.size = val
         },
         handleCurrentChange(val) {
             this.list.param.page = val

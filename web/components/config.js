@@ -31,7 +31,7 @@ var MyConfig = Vue.extend({
     </el-aside>
     <!--主内容-->
     <el-main>
-        <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
+        <el-menu :default-active="listParam.type" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
             <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>
             <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>
             <el-menu-item index="5" :disabled="listRequest">组件任务</el-menu-item>
@@ -45,12 +45,12 @@ var MyConfig = Vue.extend({
                     <el-input v-model="listParam.name" placeholder="搜索名称"></el-input>
                 </el-form-item>
                 <el-form-item label="协议">
-                    <el-select v-model="listParam.protocol" placeholder="所有" multiple>
+                    <el-select v-model="listParam.protocol" placeholder="所有" multiple style="width: 150px">
                         <el-option v-for="item in dic.protocol" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="状态">
-                    <el-select v-model="listParam.status" placeholder="所有" multiple>
+                    <el-select v-model="listParam.status" placeholder="所有" multiple style="width: 160px">
                         <el-option v-for="item in dic.config_status" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
@@ -78,7 +78,7 @@ var MyConfig = Vue.extend({
                     </el-tooltip>
                 </template>
             </el-table-column>
-            <el-table-column prop="spec" label="执行时间" v-show="labelType!=5" width="160"></el-table-column>
+            <el-table-column prop="spec" label="执行时间" v-show="listParam.type!=5" width="160"></el-table-column>
             <el-table-column prop="name" label="任务名称">
                 <div slot-scope="{row}" class="abc" style="display: flex;">
                     <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
@@ -107,8 +107,9 @@ var MyConfig = Vue.extend({
                 @size-change="handleSizeChange"
                 @current-change="handleCurrentChange"
                 :current-page.sync="listPage.page"
+                :page-sizes="[10, 50, 100]"
                 :page-size="listPage.size"
-                layout="total, prev, pager, next"
+                layout="total, sizes, prev, pager, next"
                 :total="listPage.total">
         </el-pagination>
     </el-main>
@@ -154,9 +155,9 @@ var MyConfig = Vue.extend({
                 size: 10,
             },
             listParam:{
-                type: 1,
+                type: '1',
                 page: 1,
-                size: 15,
+                size: 10,
                 protocol: [],
                 status: [],
                 handle_user_ids:[],
@@ -212,7 +213,6 @@ var MyConfig = Vue.extend({
                 type: '',
             },
             form:{},
-            labelType: '1',
             // 日期选择器设置
             pickerOptions: {
                 disabledDate(time){
@@ -251,7 +251,7 @@ var MyConfig = Vue.extend({
     methods:{
         loadParams(param){
             if (typeof param !== 'object'){return}
-            if (param.type){this.listParam.type = Number(param.type)}
+            if (param.type){this.listParam.type = param.type.toString()}
             if (param.page){this.listParam.page = Number(param.page)}
             if (param.size){this.listParam.size = Number(param.size)}
             if (param.name){this.listParam.name = param.name.toString()}
@@ -278,11 +278,11 @@ var MyConfig = Vue.extend({
                     if (res.data.list[i].top_number){
                         ratio = res.data.list[i].top_error_number / res.data.list[i].top_number
                     }
-                    if (res.data.list[i].command.sql){
-                        res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
-                        res.data.list[i].command.sql.interval = res.data.list[i].command.sql.interval.toString()
-                    }
-                    res.data.list[i].status = res.data.list[i].status.toString()
+                    // if (res.data.list[i].command.sql){
+                    //     res.data.list[i].command.sql.err_action = res.data.list[i].command.sql.err_action.toString()
+                    //     res.data.list[i].command.sql.interval = res.data.list[i].command.sql.interval.toString()
+                    // }
+                    // res.data.list[i].status = res.data.list[i].status.toString()
                     res.data.list[i].topRatio = 100 - ratio * 100
                     // 处理人
                     let handle_user_names = ''
@@ -315,6 +315,7 @@ var MyConfig = Vue.extend({
         },
         handleSizeChange(val) {
             console.log(`每页 ${val} 条`);
+            this.listParam.size = val
         },
         handleCurrentChange(val) {
             this.listParam.page = val
@@ -349,7 +350,12 @@ var MyConfig = Vue.extend({
                 }
             }else{
                 this.add_box.title= '编辑任务'
-                this.add_box.detail = row
+                api.innerGet('/config/detail', {id: row.id}, (res)=>{
+                    if (!res.status){
+                        return this.$message.error(res.message)
+                    }
+                    this.add_box.detail = res.data
+                },{async:false})
             }
         },
         formClose(e){

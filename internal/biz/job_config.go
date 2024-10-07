@@ -48,10 +48,10 @@ func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
 	}
 	m.execTime, err = time.ParseInLocation(time.DateTime, dateTime, time.Local)
 	if err != nil {
-		return nil, errs.New(err, "执行时间格式不规范")
+		return nil, errs.New(err, "执行时间格式不规范", errs.ParamError)
 	}
 	if m.execTime.Unix()-60 < time.Now().Unix() {
-		return nil, errs.New(nil, "执行时间不得小于当前1分钟")
+		return nil, errs.New(nil, "执行时间不得小于当前1分钟", errs.ParamError)
 	}
 
 	return m, nil
@@ -221,17 +221,24 @@ func (job *JobConfig) Run() {
 		return
 	}
 
-	res, err = job.Exec(ctx)
-	if err == nil {
-		err = job.AfterTmpl(res, param)
+	for i := 0; i <= job.conf.ErrRetryNum; i++ {
+		res, err = job.Exec(ctx)
+		if err == nil {
+			res, err = job.AfterTmpl(res, param)
+		}
+
+		if err != nil {
+			job.ErrorCount++
+			go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
+		} else {
+			job.ErrorCount = 0
+			go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
+			break // 成功后调出，不再重试
+		}
 	}
 
-	if err != nil {
-		job.ErrorCount++
-		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
-	} else {
-		job.ErrorCount = 0
-		go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
+	if job.conf.AfterSleep > 0 {
+		job.Sleep(ctx, time.Second*time.Duration(job.conf.AfterSleep))
 	}
 }
 
@@ -280,16 +287,23 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		return
 	}
 
-	res, err = job.Exec(ctx)
-	if err == nil {
-		err = job.AfterTmpl(res, params)
+	for i := 0; i <= job.conf.ErrRetryNum; i++ {
+		res, err = job.Exec(ctx)
+		if err == nil {
+			res, err = job.AfterTmpl(res, params)
+		}
+		if err != nil {
+			job.ErrorCount++
+			job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
+		} else {
+			job.ErrorCount = 0
+			job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
+			break
+		}
 	}
-	if err != nil {
-		job.ErrorCount++
-		job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
-	} else {
-		job.ErrorCount = 0
-		job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
+
+	if job.conf.AfterSleep > 0 {
+		job.Sleep(ctx, time.Second*time.Duration(job.conf.AfterSleep))
 	}
 	return res, err
 }
@@ -324,7 +338,7 @@ func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // 结果模板处理
-func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) errs.Errs {
+func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) (out []byte, err errs.Errs) {
 	p := map[string]any{
 		"result": string(result),
 	}
@@ -336,12 +350,11 @@ func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) errs.Errs {
 			SetParam(p).
 			Execute([]byte(job.conf.AfterTmpl))
 		if er != nil {
-			return errs.New(er, "结果 模板错误")
-		} else if string(str) != "" {
-			return errs.New(errors.New(string(str)), "业务失败")
+			return nil, errs.New(er, "结果 模板错误")
 		}
+		out = str
 	}
-	return nil
+	return out, nil
 }
 
 // 等待

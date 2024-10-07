@@ -34,7 +34,6 @@ type SystemInfoReply struct {
 	Env         string `json:"env"`
 	EnvName     string `json:"env_name"`
 	CurrentDate string `json:"current_date"`
-	IsAudited   bool   `json:"is_audited"` // 是否审计
 }
 
 type ParseProtoRequest struct {
@@ -42,4 +41,11 @@ type ParseProtoRequest struct {
 }
 type ParseProtoReply struct {
 	Actions []string `json:"actions"`
+}
+
+type ParseSpecRequest struct {
+	Spec string `json:"spec"` // 时间表示
+}
+type ParseSpecReply struct {
+	List []string `json:"list"`
 }

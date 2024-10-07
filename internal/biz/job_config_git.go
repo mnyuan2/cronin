@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/git/gitee"
@@ -9,6 +10,7 @@ import (
 	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/pb"
+	"encoding/base64"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/otel/attribute"
@@ -35,6 +37,8 @@ func (job *JobConfig) gitFunc(ctx context.Context, r *pb.CronGit) (resp []byte, 
 		switch e.Id {
 		case enum.GitEventPullsMerge:
 			resp, err = job.PRMerge(ctx, api, e.PRMerge)
+		case enum.GitEventFileUpdate:
+			resp, err = job.FileUpdate(ctx, api, e.FileUpdate)
 		default:
 			return nil, errs.New(nil, fmt.Sprintf("未支持的任务 %v-%v", i, e.Id))
 		}
@@ -76,6 +80,7 @@ func (job *JobConfig) getGitFile(ctx context.Context, r *pb.Git) (flies []*dtos.
 	return flies, nil
 }
 
+// 获取文件信息
 func (job *JobConfig) gitReposContents(ctx context.Context, api *gitee.ApiV5, r *pb.Git, path string) (file []byte, err errs.Errs) {
 	h := gitee.NewHandler(ctx)
 	ctx, span := job.tracer.Start(ctx, "repos-contents")
@@ -97,17 +102,31 @@ func (job *JobConfig) gitReposContents(ctx context.Context, api *gitee.ApiV5, r 
 		span.End()
 	}()
 
-	res, er := api.ReposContents(h, r.Owner, r.Project, path, r.Ref)
+	res, er := api.FileGet(h, &gitee.FileGetRequest{
+		BaseRequest: gitee.BaseRequest{
+			Owner: r.Owner,
+			Repo:  r.Project,
+		},
+		Path: path,
+		Ref:  r.Ref,
+	})
 	if er != nil {
 		return nil, errs.New(er, "gite文件获取失败")
 	}
-	span.AddEvent("", trace.WithAttributes(attribute.String("response", string(res))))
+	file, er = res.DecodeContent()
+	if er != nil {
+		return nil, errs.New(er, "gite文件解析失败")
+	}
+	span.AddEvent("", trace.WithAttributes(attribute.String("response", string(file))))
 
-	return res, nil
+	return file, nil
 }
 
 // 记录日志
 func (job *JobConfig) handlerLog(name string, h *gitee.Handler, err errs.Errs) {
+	if h == nil {
+		return
+	}
 	_, span := job.tracer.Start(h.GetContext(), name, trace.WithTimestamp(h.StartTime()))
 	span.SetAttributes(
 		attribute.String("component", "HTTP"),
@@ -125,7 +144,7 @@ func (job *JobConfig) handlerLog(name string, h *gitee.Handler, err errs.Errs) {
 		span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
 	}
 
-	span.End()
+	span.End(trace.WithTimestamp(h.EndTime()))
 }
 
 // pr 合并
@@ -153,7 +172,61 @@ func (job *JobConfig) PRMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEv
 	}
 	res, er := api.PullsMerge(h, request)
 	if er != nil {
-		return nil, errs.New(er, "pr合并失败")
+		return []byte(res.HtmlUrl), errs.New(er, "pr合并失败")
 	}
-	return res, nil
+	return []byte(res.HtmlUrl + "   " + res.Message), nil
+}
+
+// 文件 更新
+func (job *JobConfig) FileUpdate(ctx context.Context, api *gitee.ApiV5, r *pb.GitEventFileUpdate) (resp []byte, err errs.Errs) {
+	h1 := gitee.NewHandler(ctx)
+	h2 := gitee.NewHandler(ctx)
+	defer func() {
+		job.handlerLog("FileGet", h1, err)
+		job.handlerLog("FileUpdate", h2, err)
+	}()
+
+	// 获取原文件信息
+
+	res1, er := api.FileGet(h1, &gitee.FileGetRequest{
+		BaseRequest: gitee.BaseRequest{
+			Owner: r.Owner,
+			Repo:  r.Repo,
+		},
+		Path: r.Path,
+		Ref:  r.Branch,
+	})
+	if er != nil {
+		return nil, errs.New(er, "文件获取错误")
+	}
+
+	// 对内容支持模板解析
+	inContent, _ := base64.StdEncoding.DecodeString(r.Content)
+	p := map[string]any{}
+	for k, v := range job.varParams {
+		p[k] = v
+	}
+	rawContent, _ := res1.DecodeContent()
+	p["raw_content"] = string(rawContent)
+	content, er := conv.DefaultStringTemplate().SetParam(p).Execute(inContent)
+	if er != nil {
+		return nil, errs.New(er, "内容模板错误")
+	}
+
+	// 更新文件信息
+	res2, er := api.FileUpdate(h2, &gitee.FileUpdateRequest{
+		BaseRequest: gitee.BaseRequest{
+			Owner: r.Owner,
+			Repo:  r.Repo,
+		},
+		Path:    r.Path,
+		Content: string(content),
+		Sha:     res1.Sha,
+		Message: r.Message,
+		Branch:  r.Branch,
+	})
+	if er != nil {
+		return nil, errs.New(er, "文件更新错误")
+	}
+	return []byte(res2.Commit.HtmlUrl), nil
 }

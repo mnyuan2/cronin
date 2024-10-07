@@ -4,6 +4,8 @@ import (
 	"context"
 	"cron/internal/basic/git"
 	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -12,12 +14,20 @@ var conf = &git.Config{AccessToken: "e6a28b06d79d492f9809069d5550b436"}
 func TestUrl(t *testing.T) {
 	api := NewApiV5(conf)
 	handler := NewHandler(context.Background())
-	res, err := api.ReposContents(handler, "mnyuan", "cronin", "work/mysql.sql", "master")
+	res, err := api.FileGet(handler, &FileGetRequest{
+		BaseRequest: BaseRequest{
+			Owner: "mnyuan",
+			Repo:  "cronin",
+		},
+		Path: "work/mysql.sql",
+		Ref:  "master",
+	})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	fmt.Println(handler)
-	fmt.Println(string(res))
+	fmt.Println(res)
+	fmt.Println(res.DecodeContent())
 }
 
 func TestUser(t *testing.T) {
@@ -126,5 +136,28 @@ func TestPullsMerge(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	fmt.Println(string(res))
+	fmt.Println(res)
+}
+
+func TestName(t *testing.T) {
+	// 最后一个字符串+1
+	// 层级为4，不足时补0
+	str := `release_v3.5.87.2`
+	parts := strings.Split(str, ".")
+	lastNumString := parts[len(parts)-1]
+	fmt.Println(parts, lastNumString)
+
+	// 将字符串转换为数字并加 1
+	lastNum, err := strconv.Atoi(lastNumString)
+	if err != nil {
+		panic(err)
+	}
+	lastNum++
+
+	// 将数字转换回字符串并重新组装版本号
+	newLastNumString := strconv.Itoa(lastNum)
+	parts[len(parts)-1] = newLastNumString
+	newVersion := strings.Join(parts, ".")
+
+	fmt.Println(newVersion) // 输出：release_v3.5.87.3
 }

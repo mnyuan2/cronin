@@ -1,5 +1,10 @@
 package gitee
 
+import (
+	"encoding/base64"
+	"time"
+)
+
 type BaseRequest struct {
 	Owner string `json:"owner"` // 空间地址
 	Repo  string `json:"repo"`  // 项目名称（仓库路径）
@@ -59,6 +64,7 @@ type PullsTestRequest struct {
 	Force bool
 }
 
+// pr 合并
 type PullsMergeRequest struct {
 	BaseRequest
 	// 第几个PR，即本仓库PR的序数
@@ -71,4 +77,88 @@ type PullsMergeRequest struct {
 	Title string
 	// 可选。合并 commit 描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
 	Description string
+}
+type PullsMergeResponse struct {
+	Sha     string `json:"sha"`
+	Merged  bool   `json:"merged"`
+	Message string `json:"message"`
+	HtmlUrl string `json:"html_url"` // 这是自定义字段
+}
+
+// 文件获取
+type FileGetRequest struct {
+	BaseRequest
+	Path string
+	Ref  string
+}
+
+// 文件获取 响应
+type FileGetResponse struct {
+	Message string `json:"message"` // 错误描述
+	Content
+}
+type Content struct {
+	Type        string `json:"type"`
+	Encoding    string `json:"encoding"`
+	Size        int    `json:"size"`
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Content     string `json:"content"`
+	Sha         string `json:"sha"`
+	Url         string `json:"url"`
+	HtmlUrl     string `json:"html_url"`
+	DownloadUrl string `json:"download_url"`
+	Links       struct {
+		Self string `json:"self"`
+		Html string `json:"html"`
+	} `json:"_links"`
+}
+type Commit struct {
+	Sha     string `json:"sha"`
+	HtmlUrl string `json:"html_url"` // 这是自定义字段
+	Author  struct {
+		Name  string    `json:"name"`
+		Email string    `json:"email"`
+		Date  time.Time `json:"date"`
+	} `json:"author"`
+	Committer struct {
+		Name  string    `json:"name"`
+		Email string    `json:"email"`
+		Date  time.Time `json:"date"`
+	} `json:"committer"`
+	Message string `json:"message"`
+	Tree    struct {
+		Sha string `json:"sha"`
+		Url string `json:"url"`
+	} `json:"tree"`
+	Parents []struct {
+		Sha string `json:"sha"`
+		Url string `json:"url"`
+	} `json:"parents"`
+}
+
+// 解密内容
+func (m *FileGetResponse) DecodeContent() ([]byte, error) {
+	return base64.StdEncoding.DecodeString(m.Content.Content)
+}
+
+// 文件更新
+type FileUpdateRequest struct {
+	BaseRequest
+	Path    string // branch
+	Content string // 文件内容, 要用 base64 编码
+	Sha     string // 文件的 Blob SHA，可通过 [获取仓库具体路径下的内容] API 获取
+	Message string // 提交(commit 描述)信息
+	Branch  string // 分支名称。默认为仓库对默认分支
+}
+
+// 编码内容
+func (m *FileUpdateRequest) EncodeContent() string {
+	return base64.StdEncoding.EncodeToString([]byte(m.Content))
+}
+
+type FileUpdateResponse struct {
+	Message string   `json:"message"` // 错误描述
+	Content *Content `json:"content"`
+	Commit  *Commit  `json:"commit"`
 }

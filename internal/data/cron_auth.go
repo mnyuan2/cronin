@@ -34,6 +34,7 @@ var authList = []*Permission{
 	{Id: 11, Path: "/foundation/dic_gets", Title: "枚举选项", Group: "", Type: AuthTypeLogin},
 	{Id: 12, Path: "/foundation/system_info", Title: "系统信息", Group: "基础", Type: AuthTypeLogin},
 	{Id: 13, Path: "/foundation/parse_proto", Title: "解析proto", Group: "基础", Type: AuthTypeLogin},
+	{Id: 14, Path: "/foundation/parse_spec", Title: "解析时间", Group: "基础", Type: AuthTypeLogin},
 
 	{Id: 20, Path: "/config/", Title: "任务", Group: "", Type: AuthTypeGrant},
 	{Id: 21, Path: "/config/list", Title: "列表", Group: "任务", Type: AuthTypeGrant, Tag: "config_list"},
@@ -60,7 +61,7 @@ var authList = []*Permission{
 	{Id: 50, Path: "/log/", Title: "日志", Group: "", Type: AuthTypeLogin},
 	{Id: 51, Path: "/log/list", Title: "列表", Group: "日志", Type: AuthTypeLogin},
 	{Id: 52, Path: "/log/traces", Title: "详情", Group: "日志", Type: AuthTypeLogin},
-	{Id: 53, Path: "/log/del", Title: "删除", Group: "日志", Type: AuthTypeLogin},
+	{Id: 53, Path: "/log/del", Title: "删除", Group: "日志", Type: AuthTypeOpen},
 	// 140~149
 	{Id: 140, Path: "/change_log/list", Title: "列表", Group: "变更日志", Type: AuthTypeLogin},
 

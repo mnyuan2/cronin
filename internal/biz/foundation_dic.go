@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/basic/grpcurl"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -160,6 +161,7 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 		items = []*pb.DicGetItem{
 			{Id: enum.GitEventPullsCreate, Name: enum.GitEventMap[enum.GitEventPullsCreate]},
 			{Id: enum.GitEventPullsMerge, Name: enum.GitEventMap[enum.GitEventPullsMerge]},
+			{Id: enum.GitEventFileUpdate, Name: enum.GitEventMap[enum.GitEventFileUpdate]},
 		}
 	case enum.DicSqlDriver:
 		items = []*pb.DicGetItem{
@@ -194,7 +196,6 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 		Version:     config.Version,
 		CmdName:     "sh",
 		CurrentDate: time.Now().Format(time.RFC3339),
-		IsAudited:   config.MainConf().Task.IsAudited,
 	}
 	// 根据运行环境确认cmd的类型
 	if runtime.GOOS == "windows" {
@@ -225,6 +226,27 @@ func (dm *FoundationService) ParseProto(r *pb.ParseProtoRequest) (resp *pb.Parse
 	}
 
 	resp = &pb.ParseProtoReply{Actions: grpcurl.ParseProtoMethods(fds)}
+
+	return resp, nil
+}
+
+func (dm *FoundationService) PaseSpec(r *pb.ParseSpecRequest) (resp *pb.ParseSpecReply, err error) {
+	if r.Spec == "" {
+		return nil, errors.New("未输入时间规则")
+	}
+
+	m, err := secondParser.Parse(r.Spec)
+	if err != nil {
+		return nil, errs.New(err, "时间输入有误", errs.ParamError)
+	}
+	resp = &pb.ParseSpecReply{
+		List: []string{},
+	}
+	next := time.Now()
+	for i := 0; i < 5; i++ {
+		next = m.Next(next)
+		resp.List = append(resp.List, next.Format(time.DateTime))
+	}
 
 	return resp, nil
 }
