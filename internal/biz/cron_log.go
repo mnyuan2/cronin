@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"cron/internal/basic/auth"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/errs"
 	"cron/internal/data"
@@ -35,9 +36,11 @@ func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListRe
 	w := db.NewWhere().In("env", []string{dm.user.Env, ""})
 	for k, v := range tags {
 		if k == "ref_id" {
+			v, _ = conv.Int64s().ParseAny(v)
 			w.Eq("ref_id", v)
 		} else {
-			w.JsonIndexEq("tags_key", "tags_val", k, v)
+			//w.JsonIndexEq("tags_key", "tags_val", k, v)
+			w.Like("tags_kv", fmt.Sprintf("%s=%v", k, v))
 		}
 	}
 

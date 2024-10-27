@@ -54,8 +54,7 @@ var MyConfigLog = Vue.extend({
         tags:{
             immediate: true, // 解决首次负值不触发的情况
             handler: function (newVal,oldVal){
-                console.log("config_log tags",newVal, oldVal)
-                if (newVal != {}){
+                if (Object.keys(newVal).length){
                     this.logByConfig(newVal)
                 }
             },

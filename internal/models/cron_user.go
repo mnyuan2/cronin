@@ -2,7 +2,7 @@ package models
 
 // 用户/人员
 type CronUser struct {
-	Id       int    `json:"id" gorm:"column:id;type:int(11);primary_key;comment:主键;"`
+	Id       int    `json:"id" gorm:"column:id;type:INTEGER;primary_key;comment:主键;"` // 此处的类型mysql会兼容为int(11)；sqlite的INTEGER会自动自增
 	Account  string `json:"account"  gorm:"column:account;type:varchar(64);default:'';comment:账号;"`
 	Username string `json:"username" gorm:"column:username;type:varchar(64);default:'';comment:用户名;"`
 	Mobile   string `json:"mobile" gorm:"column:mobile;type:varchar(24);default:'';comment:手机号;"`
@@ -12,4 +12,8 @@ type CronUser struct {
 	UpdateDt string `json:"update_dt" gorm:"column:update_dt;type:datetime;default:null;comment:更新时间;"`
 	CreateDt string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
 	RoleIds  string `json:"role_ids" gorm:"column:role_ids;type:varchar(255);default:'';comment:拥有角色;"`
+}
+
+func (m *CronUser) TableName() string {
+	return "cron_user"
 }

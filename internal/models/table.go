@@ -1,6 +1,7 @@
 package models
 
 import (
+	"cron/internal/basic/config"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/pb"
@@ -18,20 +19,29 @@ import (
 var mysqlLower = []int{5, 7, 7}
 
 // 注册表结构
-func AutoMigrate(db *db.MyDB) {
-	if err := mysqlLowerCheck(db); err != nil {
-		panic(err.Error())
+func AutoMigrate(Db *db.MyDB) {
+	if config.DbConf().Driver == db.DriverMysql {
+		if err := mysqlLowerCheck(Db); err != nil {
+			panic(err.Error())
+		}
+		// 迁移表结构
+		err := Db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
+			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+		if err != nil {
+			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
+		}
+	} else if config.DbConf().Driver == db.DriverSqlite {
+		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+		if err != nil {
+			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
+		}
+	} else {
+		panic(fmt.Sprintf("驱动异常，%s", config.DbConf().Driver))
 	}
 
-	// 迁移表结构
-	err := db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-		AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
-	if err != nil {
-		panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
-	}
 	ti := time.Now()
 	// 初始化数据
-	err = db.Where("scene=? and status=?", SceneEnv, enum.StatusActive).FirstOrCreate(&CronSetting{
+	err := Db.Where("scene=? and status=?", SceneEnv, enum.StatusActive).FirstOrCreate(&CronSetting{
 		Scene:    "env",
 		Name:     "public",
 		Title:    "public",
@@ -44,12 +54,12 @@ func AutoMigrate(db *db.MyDB) {
 		panic(fmt.Sprintf("cron_setting 表默认行数据初始化失败，%s", err.Error()))
 	}
 	msg := &CronSetting{}
-	err = db.Where("scene=?", SceneMsg).Find(msg).Error
+	err = Db.Where("scene=?", SceneMsg).Find(msg).Error
 	if err != nil {
 		panic(fmt.Sprintf("cron_setting 表默认行数据初始化失败，%s", err.Error()))
 	}
 	if msg.Id == 0 { // 后期会有多条默认消息模板
-		db.CreateInBatches([]*CronSetting{
+		Db.CreateInBatches([]*CronSetting{
 			{
 				Scene: "msg",
 				Name:  "",
@@ -77,12 +87,12 @@ func AutoMigrate(db *db.MyDB) {
 
 	// 初始化角色
 	role := &CronAuthRole{}
-	err = db.Find(role).Error
+	err = Db.Find(role).Error
 	if err != nil {
 		panic(fmt.Sprintf("cron_auth_role 表默认行数据初始化失败，%s", err.Error()))
 	}
 	if role.Id == 0 {
-		db.CreateInBatches([]*CronAuthRole{
+		Db.CreateInBatches([]*CronAuthRole{
 			{
 				Id:      1,
 				Name:    "管理员",
@@ -109,7 +119,7 @@ func AutoMigrate(db *db.MyDB) {
 
 	// 初始化超管用户
 	user := &CronUser{}
-	err = db.Where("role_ids !=''").Find(user).Error
+	err = Db.Where("role_ids !=''").Find(user).Error
 	if err != nil {
 		panic(fmt.Sprintf("cron_user 表默认行数据初始化失败，%s", err.Error()))
 	}
@@ -118,7 +128,7 @@ func AutoMigrate(db *db.MyDB) {
 		if err != nil {
 			panic("请确认秘钥是否正确设置，" + err.Error())
 		}
-		err = db.CreateInBatches([]*CronUser{{
+		err = Db.CreateInBatches([]*CronUser{{
 			Account:  "ROOT",
 			Username: "超管",
 			Status:   enum.StatusActive,
@@ -133,7 +143,7 @@ func AutoMigrate(db *db.MyDB) {
 	}
 
 	// 历史 数据修正
-	historyDataRevise(db)
+	historyDataRevise(Db)
 }
 
 // mysql 最低版本检测

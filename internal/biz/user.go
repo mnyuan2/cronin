@@ -258,13 +258,14 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 	if r.Account == "" || r.Password == "" {
 		return nil, errors.New("账号密码不得为空")
 	}
+	account := strings.ToUpper(strings.TrimSpace(r.Account))
 	password, err := models.SqlSourceEncrypt(r.Password)
 	if err != nil {
 		return nil, errors.New("密码异常")
 	}
 
 	_data := data.NewCronUserData(dm.ctx)
-	user, err := _data.Login(r.Account, password)
+	user, err := _data.Login(account, password)
 	if err != nil {
 		return nil, fmt.Errorf("登录错误，%w", err)
 	}
