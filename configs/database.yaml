@@ -1,11 +1,14 @@
 # 数据库配置
 
-# 驱动名称
-driver: mysql
-# mysql配置
+# 驱动选择：mysql、sqlite
+driver: sqlite
+# mysql 配置
 mysql:
   hostname: 127.0.0.1 # 连接地址
   port: 3306 # 端口
   username: root # 用户名
   password: 123456 # 密码
   database: cronin # 连接库名
+# sqlite 本地存储配置
+sqlite:
+  path: "./data/" # 存储路径

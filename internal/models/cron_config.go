@@ -73,10 +73,10 @@ func ConfTypeMap() map[int]string {
 }
 
 type CronConfig struct {
-	Id              int    `json:"id" gorm:"column:id;type:int(11);primary_key;comment:主键;"`
-	Env             string `json:"env" gorm:"column:env;type:varchar(32);index:env;comment:环境;"`
+	Id              int    `json:"id" gorm:"column:id;type:INTEGER;primary_key;comment:主键;"`
+	Env             string `json:"env" gorm:"column:env;type:varchar(32);index:config_env;comment:环境;"`
 	EntryId         int    `json:"entry_id" gorm:"column:entry_id;type:int(11);default:0;comment:执行队列编号;"`
-	Type            int    `json:"type" gorm:"column:type;type:tinyint(2);default:1;index:env,priority:11;comment:类型：1.周期任务（默认）、2.单次任务;"`
+	Type            int    `json:"type" gorm:"column:type;type:tinyint(2);default:1;index:config_env,priority:11;comment:类型：1.周期任务（默认）、2.单次任务;"`
 	Name            string `json:"name" gorm:"column:name;type:varchar(255);default:'';comment:任务名称;"`
 	Spec            string `json:"spec" gorm:"column:spec;type:varchar(32);default:'';comment:执行时间 表达式;"`
 	Protocol        int    `json:"protocol" gorm:"column:protocol;type:tinyint(2);default:0;comment:协议：1.http、2.grpc、3.系统命令、4.sql执行;"`
@@ -101,6 +101,10 @@ type CronConfig struct {
 	AuditUserName   string `json:"audit_user_name" gorm:"column:audit_user_name;type:varchar(64);default:'';comment:审核人名称;"`
 	HandleUserIds   string `json:"handle_user_ids" gorm:"column:handle_user_ids;type:varchar(255);default:'';comment:处理人,多选id逗号分隔;"`
 	HandleUserNames string `json:"handle_user_names" gorm:"column:handle_user_names;type:varchar(500);default:'';comment:处理人名称,多选id逗号分隔;"`
+}
+
+func (m *CronConfig) TableName() string {
+	return "cron_config"
 }
 
 func (m *CronConfig) GetProtocolName() string {

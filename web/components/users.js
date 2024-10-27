@@ -1,6 +1,6 @@
 var MyUsers = Vue.extend({
     template: `<el-main>
-        <el-button type="text" @click="addBox(true)" v-if="$auth_tag.user_add">添加用户</el-button>
+        <el-button type="text" @click="addBox(true)" v-if="$auth_tag.user_set">添加用户</el-button>
         <el-table :data="list">
             <el-table-column property="sort" label="序号"></el-table-column>
             <el-table-column property="username" label="用户名"></el-table-column>
@@ -30,7 +30,11 @@ var MyUsers = Vue.extend({
                 <el-form-item label="密码">
                     <el-input v-model="form.data.password" placeholder="默认值 123456"></el-input>
                 </el-form-item>
-                
+                <el-form-item label="角色*">
+                    <el-select v-model="form.data.role_ids" multiple filterable clearable>
+                        <el-option v-for="item in dic_role" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="addBox(false)">取 消</el-button>
@@ -46,6 +50,7 @@ var MyUsers = Vue.extend({
     name: "MyUsers",
     data(){
         return {
+            dic_role:[],
             list:[],
             page:{},
             listParam:{
@@ -69,10 +74,19 @@ var MyUsers = Vue.extend({
     mounted(){
         console.log("sql_source mounted")
         this.getList()
+        this.getDic()
     },
 
     // 具体方法
     methods:{
+        getDic(){
+            let types = [
+                Enum.dicRole,
+            ]
+            api.dicList(types,(res) =>{
+                this.dic_role = res[Enum.dicRole]
+            })
+        },
         // 列表
         getList(){
             api.innerGet("/user/list", this.listParam, (res)=>{
@@ -101,8 +115,12 @@ var MyUsers = Vue.extend({
                 body.password = '123456'
             }
             body.sort = Number(body.sort)
+            let path = "/user/set"
+            if (body.id != this.$user.id){
+                path += "?auth_type=set"
+            }
 
-            api.innerPost("/user/set", body, (res) =>{
+            api.innerPost(path, body, (res) =>{
                 if (!res.status){
                     return this.$message.error(res.message)
                 }

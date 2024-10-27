@@ -7,6 +7,7 @@ import (
 type DataBaseConf struct {
 	Driver string       `yaml:"driver"`
 	Mysql  *MysqlSource `yaml:"mysql"`
+	Sqlite *Sqlite      `json:"sqlite"`
 }
 
 type MysqlSource struct {
@@ -16,6 +17,11 @@ type MysqlSource struct {
 	Password string `json:"password"`
 	Port     string `json:"port"`
 	Debug    bool   `yaml:"debug"`
+}
+
+type Sqlite struct {
+	Path  string `json:"path"`
+	Debug bool   `yaml:"debug"`
 }
 
 var dbConf DataBaseConf

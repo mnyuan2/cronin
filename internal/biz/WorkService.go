@@ -44,8 +44,10 @@ func (dm *WorkService) Table(r *pb.WorkTableRequest) (resp *pb.WorkTableReply, e
 	case "created":
 		w.Eq("create_user_id", dm.user.UserId)
 	case "draft":
-		w.Raw("(create_user_id IN (?) OR FIND_IN_SET(?,handle_user_ids))", dm.user.UserId, dm.user.UserId).
-			Eq("status", models.ConfigStatusDisable)
+		w.Sub(func(sub *db.Where) {
+			sub.Eq("create_user_id", dm.user.UserId).
+				FindInSet("handle_user_ids", dm.user.UserId, db.OrOption())
+		}).Eq("status", models.ConfigStatusDisable)
 	default:
 		return resp, nil
 	}
@@ -60,7 +62,6 @@ SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GRO
 	if len(list) == 0 {
 		return resp, nil
 	}
-
 	envs, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicEnv)
 	if err != nil {
 		return nil, err

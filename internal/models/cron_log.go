@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// 废弃
 type CronLog struct {
 	Id         int     `json:"id" gorm:"column:id;type:int(11);primary_key;comment:主键;"`
 	Env        string  `json:"env" gorm:"column:env;type:varchar(32);index:conf_id,priority:10;comment:环境;"`

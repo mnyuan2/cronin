@@ -69,6 +69,7 @@
         }
     })
     Vue.prototype.$auth_tag = cache.getAuthTags()
+    Vue.prototype.$user = cache.getUser()
     // 复制文本到剪切板
     Vue.prototype.copyToClipboard = function (title, text) {
         let msg = this.$message

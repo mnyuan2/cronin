@@ -192,6 +192,23 @@ func TestTemplateJson(t *testing.T) {
 
 }
 
+// 模板抛出错误
+func TestTemplateErr(t *testing.T) {
+	// 我可以将这个数据作为输入，通过模板语法确定某个变量的值，从而确定结果是否符合预期。
+	tmpl := "[[if ne .a 0]]\n      [[- errorf `错误 %s %v` `数值` 5 -]]\n[[end]]"
+
+	//buf := bytes.NewBuffer([]byte{})
+	param := map[string]any{"a": 1}
+
+	buf, err := DefaultStringTemplate().SetParam(param).Execute([]byte(tmpl))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("模板输出", string(buf))
+	// 可以根据这个输出，如果空白就是错误，仅接收 true 这个特定结果 为成功。
+	fmt.Println(param)
+}
+
 // 模板方式 json 响应处理
 func TestTemplateJsonResult(t *testing.T) {
 	// 我可以将这个数据作为输入，通过模板语法确定某个变量的值，从而确定结果是否符合预期。
