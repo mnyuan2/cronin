@@ -4,11 +4,18 @@ import (
 	"reflect"
 )
 
+const (
+	DriverMysql  = "mysql"
+	DriverSqlite = "sqlite"
+)
+
 type whereOptions struct {
 	// 是否必须, 如果为true ,忽略空值
 	required bool
 	// 默认的空值
 	emptyVal interface{}
+	// 链接符
+	withSpace string
 }
 
 func (w whereOptions) isZero(value interface{}) bool {
@@ -33,7 +40,9 @@ func (w whereOptions) isZero(value interface{}) bool {
 }
 
 func ApplyOptions(opts ...Option) *whereOptions {
-	whereOpts := &whereOptions{}
+	whereOpts := &whereOptions{
+		withSpace: AndWithSpace,
+	}
 
 	for _, item := range opts {
 		item.apply(whereOpts)
@@ -71,4 +80,15 @@ func RequiredOption() Option {
 // 但是存在一些特殊请空, 必须空值是-1时, 此时可以通过该方法,指定空值, 当data为该值时,查询条件会被忽略
 func EmptyValOption(emptyVal interface{}) Option {
 	return emptyValOption{emptyVal: emptyVal}
+}
+
+type withSpace string
+
+func (o withSpace) apply(opt *whereOptions) {
+	opt.withSpace = string(o)
+}
+
+// or 条件
+func OrOption() Option {
+	return withSpace(OrWithSpace)
 }

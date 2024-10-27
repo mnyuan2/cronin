@@ -1,7 +1,9 @@
 package db
 
 import (
+	"cron/internal/basic/config"
 	"fmt"
+	"gorm.io/gorm"
 	"reflect"
 	"strconv"
 	"strings"
@@ -17,28 +19,43 @@ const (
 	OpLt        = "<"
 	OpLte       = "<="
 )
+const (
+	AndWithSpace = " AND "
+	OrWithSpace  = " OR "
+)
+
+// WhereExpr 表达式元素
+type WhereExpr struct {
+	sql  string
+	vars []any
+	with string
+}
 
 // Where 查询条件构建器
 type Where struct {
-	wheres []string
-	values []interface{}
+	driver string
+	wheres []WhereExpr
+	//values []interface{}
 
 	// 其它条款
 	clauses map[string]interface{}
 }
 
 func NewWhere() *Where {
-	return &Where{}
+	return &Where{
+		driver: config.DbConf().Driver,
+	}
 }
 
 // 原始的查询
 // @query 原始的查询条件, 必须带?号,开头不用 AND, 支持多个查询条件组合, 例如 name = ? AND id > ?
 // @args 参数的值
 func (builder *Where) Raw(query string, args ...interface{}) *Where {
-	builder.wheres = append(builder.wheres, query)
-	if len(args) > 0 {
-		builder.values = append(builder.values, args...)
-	}
+	builder.wheres = append(builder.wheres, WhereExpr{
+		sql:  query,
+		vars: args,
+		with: AndWithSpace,
+	})
 
 	return builder
 }
@@ -49,6 +66,9 @@ func (builder *Where) Raw(query string, args ...interface{}) *Where {
 // @param value 数据值, value可传入基础类型的切片或者数组,或者逗号隔开的字符串,当值为空值时,忽略该查询条件
 func (builder *Where) FindInSet(field string, value interface{}, options ...Option) *Where {
 	opt := ApplyOptions(options...)
+	if builder.driver == DriverSqlite {
+		return builder.findInSetSqlite(field, value, opt)
+	}
 	kind := reflect.TypeOf(value).Kind()
 
 	if kind == reflect.Slice || kind == reflect.Array {
@@ -66,7 +86,10 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 			}
 			where += " )"
 
-			builder.wheres = append(builder.wheres, where)
+			builder.wheres = append(builder.wheres, WhereExpr{
+				sql:  where,
+				with: opt.withSpace,
+			})
 		}
 	} else {
 		if opt.required || !opt.isZero(value) {
@@ -85,11 +108,17 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 					}
 					where += " )"
 
-					builder.wheres = append(builder.wheres, where)
+					builder.wheres = append(builder.wheres, WhereExpr{
+						sql:  where,
+						with: opt.withSpace,
+					})
 				}
 			} else {
 				// 单个值的情况
-				builder.wheres = append(builder.wheres, fmt.Sprintf("FIND_IN_SET(%v,%v)", value, field))
+				builder.wheres = append(builder.wheres, WhereExpr{
+					sql:  fmt.Sprintf("FIND_IN_SET(%v,%v)", value, field),
+					with: opt.withSpace,
+				})
 			}
 		}
 	}
@@ -97,9 +126,26 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 	return builder
 }
 
+// findInSetSqlite sqlite 兼容版本 find_in_set
+func (builder *Where) findInSetSqlite(field string, value any, opt *whereOptions) *Where {
+	kind := reflect.TypeOf(value).Kind()
+	if kind == reflect.Slice || kind == reflect.Array {
+		// 待补充...
+	} else {
+		if opt.required || !opt.isZero(value) {
+			builder.wheres = append(builder.wheres, WhereExpr{
+				sql:  fmt.Sprintf("INSTR(',' || %s || ',', ',?,')>0", field),
+				vars: []any{value},
+				with: opt.withSpace,
+			})
+		}
+	}
+	return builder
+}
+
 // 构建json 路径in查询
-func (builder *Where) JsonPathIn(field string, values interface{}, options ...Option) *Where {
-	//opt := ApplyOptions(options...)
+func (builder *Where) JsonPathIn(field string, values any, options ...Option) *Where {
+	opt := ApplyOptions(options...)
 
 	args := []string{}
 	switch values.(type) {
@@ -120,17 +166,43 @@ func (builder *Where) JsonPathIn(field string, values interface{}, options ...Op
 			str += "'$.\"" + v + "\"',"
 		}
 
-		_where := fmt.Sprintf("JSON_CONTAINS_PATH(%s, 'one', %s)", field, strings.Trim(str, ","))
-		builder.wheres = append(builder.wheres, _where)
+		builder.wheres = append(builder.wheres, WhereExpr{
+			sql:  fmt.Sprintf("JSON_CONTAINS_PATH(%s, 'one', %s)", field, strings.Trim(str, ",")),
+			with: opt.withSpace,
+		})
 	}
 	return builder
 }
 
 // JsonIndexEq json查询kv相等 查询
 //
-//	示例： json_search(tags_key, 'one', 'config_id') = json_search(tags_val, 'one', '8')
+//	mysql 示例： json_search(tags_key, 'one', 'config_id') = json_search(tags_val, 'one', '8')
 func (builder *Where) JsonIndexEq(keyField, valField string, key, val any, options ...Option) *Where {
-	builder.Raw(fmt.Sprintf("json_search(%s, 'one', ?) = json_search(%s,'one', ?)", keyField, valField), key, val)
+	opt := ApplyOptions(options...)
+	if builder.driver == DriverSqlite {
+		// 需要在原查询form 后面增加 ,json_each(keyField) k,json_each(valField) v 才能生效，且没有使用字段条件时行会被拆分，不好用不建议使用。
+		builder.wheres = append(builder.wheres, WhereExpr{
+			sql:  fmt.Sprintf("%s.value = ? and %s.value = ? and k.fullkey = v.fullkey", keyField, valField),
+			vars: []any{key, val},
+			with: opt.withSpace,
+		})
+	} else {
+		builder.wheres = append(builder.wheres, WhereExpr{
+			sql:  fmt.Sprintf("json_search(%s, 'one', ?) = json_search(%s,'one', ?)", keyField, valField),
+			vars: []any{key, val},
+			with: opt.withSpace,
+		})
+	}
+	return builder
+}
+
+// json包含查询
+func (builder *Where) JsonContains(field, path string, val any, options ...Option) *Where {
+	if builder.driver == DriverMysql {
+		builder.Raw(fmt.Sprintf("json_contains(%s, ?, '%s')", field, path), val)
+	} else if builder.driver == DriverSqlite {
+		builder.Raw(fmt.Sprintf("json_extract(%s, '%s') = ?", field, path), val)
+	}
 	return builder
 }
 
@@ -184,6 +256,7 @@ func (builder *Where) Lte(field string, value interface{}, options ...Option) *W
 
 // Func
 func (builder *Where) Sub(subFn func(sub *Where), options ...Option) *Where {
+	opt := ApplyOptions(options...)
 	subWhere := NewWhere()
 	subFn(subWhere)
 	_where, values := subWhere.Build()
@@ -195,8 +268,11 @@ func (builder *Where) Sub(subFn func(sub *Where), options ...Option) *Where {
 		//	item.or = true
 		//}
 
-		builder.wheres = append(builder.wheres, _where)
-		builder.values = append(builder.values, values...)
+		builder.wheres = append(builder.wheres, WhereExpr{
+			sql:  _where,
+			vars: values,
+			with: opt.withSpace,
+		})
 	}
 	return builder
 }
@@ -208,9 +284,13 @@ func (builder *Where) Len() int {
 
 // 开始构建, 生成查询语句以及参数
 func (builder *Where) Build() (whereStr string, args []interface{}) {
-	// 固定加上1=1， 防止外部查询条件还需要判断
-	builder.wheres = append([]string{"1 = 1"}, builder.wheres...)
-	return strings.Join(builder.wheres, " AND "), builder.values
+	whereStr = "1=1" // 固定加上1=1， 防止外部查询条件还需要判断
+	for _, item := range builder.wheres {
+		whereStr += item.with + item.sql
+		args = append(args, item.vars...)
+	}
+
+	return whereStr, args
 }
 
 // 将数据添加到 where 条件
@@ -229,8 +309,11 @@ func (builder *Where) op(field string, op string, value interface{}, options ...
 	if kind == reflect.Slice || kind == reflect.Array {
 		valueOf := reflect.ValueOf(value)
 		if opt.required || valueOf.Len() > 0 {
-			builder.wheres = append(builder.wheres, fmt.Sprintf("%v %v ?", field, op))
-			builder.values = append(builder.values, value)
+			builder.wheres = append(builder.wheres, WhereExpr{
+				sql:  fmt.Sprintf("%v %v ?", field, op),
+				vars: []any{value},
+				with: opt.withSpace,
+			})
 		}
 	} else {
 		if opt.required || !opt.isZero(value) {
@@ -239,10 +322,15 @@ func (builder *Where) op(field string, op string, value interface{}, options ...
 				if value, ok := value.(string); ok {
 					appendVal = "%" + value + "%"
 				}
+			} else if value, ok := value.(string); ok {
+				appendVal = gorm.Expr(fmt.Sprintf("'%s'", value)) // sqlite 字符串条件必须使用单引号
 			}
 
-			builder.wheres = append(builder.wheres, fmt.Sprintf("%v %v ?", field, op))
-			builder.values = append(builder.values, appendVal)
+			builder.wheres = append(builder.wheres, WhereExpr{
+				sql:  fmt.Sprintf("%v %v ?", field, op),
+				vars: []any{appendVal},
+				with: opt.withSpace,
+			})
 		}
 	}
 

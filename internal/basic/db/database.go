@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"gorm.io/driver/clickhouse"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,8 +25,12 @@ func New(ctx context.Context) *MyDB {
 	once.Do(func() {
 		conf := config.DbConf()
 		switch conf.Driver {
-		case "mysql":
+		case DriverMysql:
 			if _db = Conn(conf.Mysql); _db.Error != nil {
+				panic(_db.Error)
+			}
+		case DriverSqlite:
+			if _db = ConnSqlite(conf.Sqlite); _db.Error != nil {
 				panic(_db.Error)
 			}
 		default:
@@ -53,6 +60,44 @@ func Conn(conf *config.MysqlSource) *gorm.DB {
 		db.AddError(fmt.Errorf("连接池设置异常 %w", err))
 	} else if conf.Debug { // 调试模式
 		db = db.Debug()
+	}
+
+	return db
+}
+
+// 链接 sqlite
+func ConnSqlite(conf *config.Sqlite) *gorm.DB {
+	if conf.Path == "" {
+		panic("sqlite dbpath is empty !")
+	}
+	path := strings.TrimSpace(conf.Path)
+	path = strings.TrimSuffix(path, "/")
+
+	// 存储路径不存在，自动创建
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err := os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			panic("sqlite path mkdir error: " + err.Error())
+		}
+	}
+
+	db, err := gorm.Open(sqlite.Open(path+"/cronin.db"), &gorm.Config{})
+	if err != nil {
+		db.AddError(err)
+	} else {
+		// ping
+		data := map[string]any{}
+		err := db.Raw("SELECT SQLITE_VERSION()").Scan(&data).Error
+		if err != nil {
+			db.AddError(err)
+		} else {
+			for k, v := range data {
+				fmt.Println("	", k, *v.(*any))
+			}
+			if conf.Debug {
+				db = db.Debug()
+			}
+		}
 	}
 
 	return db

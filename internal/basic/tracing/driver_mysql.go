@@ -256,10 +256,12 @@ func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
 		s.endTime = time.Now()
 	}
 
-	tagsKey, tagsVal := make([]string, len(s.tags)), make([]string, len(s.tags))
+	//tagsKey, tagsVal := make([]string, len(s.tags)), make([]string, len(s.tags))
+	tagsKv := make([]string, len(s.tags))
 	for i, item := range s.tags {
-		tagsKey[i] = string(item.Key)
-		tagsVal[i] = item.Value.Emit()
+		//tagsKey[i] = string(item.Key)
+		//tagsVal[i] = item.Value.Emit()
+		tagsKv[i] = fmt.Sprintf("%s=%s", item.Key, item.Value.Emit())
 	}
 	// 执行日志的写入
 	data := &models.CronLogSpan{
@@ -277,8 +279,9 @@ func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
 	data.ParentSpanId, _ = gen.ParseID(s.parentSpanId.String())
 	data.Tags, _ = jsoniter.Marshal(s.tags)
 	data.Logs, _ = jsoniter.Marshal(s.logs)
-	data.TagsKey, _ = jsoniter.Marshal(tagsKey)
-	data.TagsVal, _ = jsoniter.Marshal(tagsVal)
+	//data.TagsKey, _ = jsoniter.Marshal(tagsKey)
+	//data.TagsVal, _ = jsoniter.Marshal(tagsVal)
+	data.TagsKV, _ = jsoniter.Marshal(tagsKv)
 
 	mysqlQueue <- *data
 }

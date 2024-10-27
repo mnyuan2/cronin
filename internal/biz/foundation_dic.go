@@ -203,7 +203,8 @@ func (dm *FoundationService) SystemInfo(r *pb.SystemInfoRequest) (resp *pb.Syste
 	}
 	// 查默认环境
 	envData := &DicGetItem{}
-	err = db.New(dm.ctx).Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE scene='env' and status=2 and json_contains(content, '2', '$.default');`).Scan(&envData).Error
+	w, args := db.NewWhere().Eq("scene", "env").Eq("status", 2).JsonContains("content", "$.default", 2).Build()
+	err = db.New(dm.ctx).Raw(`SELECT id, name as 'key', title as name FROM cron_setting WHERE `+w, args...).Scan(&envData).Error
 	if err != nil {
 		return resp, fmt.Errorf("环境查询异常,%w", err)
 	}
