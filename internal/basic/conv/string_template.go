@@ -37,6 +37,7 @@ func DefaultStringTemplate() *StringTemplate {
 		rightDelim: "]]",
 		funcs: map[string]any{
 			// json 编码
+			//  废弃 建议使用 json_encode
 			"jsonString": func(val any) any {
 				v := reflect.ValueOf(val)
 				switch v.Kind() {
@@ -48,6 +49,7 @@ func DefaultStringTemplate() *StringTemplate {
 				}
 			},
 			// json 编码2次
+			//  后面废弃 使用 json_encode
 			"jsonString2": func(val any) any {
 				v := reflect.ValueOf(val)
 				switch v.Kind() {
@@ -68,6 +70,19 @@ func DefaultStringTemplate() *StringTemplate {
 				data := map[string]any{}
 				err := jsoniter.UnmarshalFromString(str, &data)
 				return data, err
+			},
+			// 编码为 json 字符串
+			"json_encode": func(val any) (string, error) {
+				v := reflect.ValueOf(val)
+				switch v.Kind() {
+				case reflect.Map, reflect.Slice:
+					return jsoniter.MarshalToString(val)
+				case reflect.String:
+					value := strings.ReplaceAll(val.(string), `"`, `\"`)
+					return value, nil
+				default:
+					return fmt.Sprintf("%v", val), nil
+				}
 			},
 			// encodeURIComponent 遵循 RFC3986 url编码
 			"rawurlencode": func(param string) string {
@@ -138,8 +153,8 @@ func DefaultStringTemplate() *StringTemplate {
 			},
 			// 字符串查最左找计算，并将结果替换原字符串
 			//  参数1: string raw 原始字符串
-			//  参数1: string regex 正则表达式，提取字符串中的数字，示例：`(\d+)(\D*$)`
-			//  参数1: string 对数字进行计算的公式，示例 +1
+			//  参数2: string regex 正则表达式，提取字符串中的数字，示例：`(\d+)(\D*$)`
+			//  参数3: string 对数字进行计算的公式，示例 +1
 			//  返回： 计算结果替换后的字符串
 			"str_replace_calc": func(raw, regex, expr string) (str string, err error) {
 				matches := regexp.MustCompile(regex).FindStringSubmatch(raw)
@@ -154,6 +169,27 @@ func DefaultStringTemplate() *StringTemplate {
 				matches[1] = strconv.FormatFloat(val.(float64), 'f', -1, 64)
 				str = raw[:len(raw)-len(matches[0])] + matches[1] + matches[2]
 				return str, nil
+			},
+			// 字符串切割并过滤指定元素
+			//  参数1: string str 原始字符串
+			//  参数2: string sep 分隔符
+			//  参数3: string filter 过滤字符串，正则表示(空格字符串忽略)；符合条件的元素会被过滤掉
+			"str_slice_filter": func(str, sep string, param ...string) (out []string, err error) {
+				var filter *regexp.Regexp
+				out, pl := []string{}, len(param)
+				if pl > 0 && param[0] != "" {
+					if filter, err = regexp.Compile(param[0]); err != nil {
+						return nil, fmt.Errorf("过滤正则输入有误，%s", err.Error())
+					}
+				}
+				list := strings.Split(str, sep)
+				for _, v := range list {
+					if filter != nil && filter.MatchString(v) {
+						continue
+					}
+					out = append(out, v)
+				}
+				return out, nil
 			},
 		},
 	}

@@ -40,7 +40,7 @@ func (m *ApiV5) FileGet(handler *Handler, r *FileGetRequest) (res *FileGetRespon
 	defer func() {
 		handler.endTime = time.Now()
 	}()
-	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/contents/%s", apiV5BaseUrl, r.Owner, r.Repo, url.QueryEscape(r.Path)))
+	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/contents/%s", apiV5BaseUrl, r.Owner, r.Repo, url.PathEscape(r.Path)))
 	params := url.Values{}
 	if m.conf.GetAccessToken() != "" {
 		params.Add("access_token", m.conf.GetAccessToken())
@@ -83,7 +83,7 @@ func (m *ApiV5) FileUpdate(handler *Handler, r *FileUpdateRequest) (res *FileUpd
 	defer func() {
 		handler.endTime = time.Now()
 	}()
-	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/contents/%s", apiV5BaseUrl, r.Owner, r.Repo, url.QueryEscape(r.Path)))
+	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/contents/%s", apiV5BaseUrl, r.Owner, r.Repo, url.PathEscape(r.Path)))
 
 	request := map[string]any{
 		"content": r.EncodeContent(),

@@ -82,6 +82,7 @@ func (dm *UserService) Set(r *pb.UserSetRequest) (resp *pb.UserSetReply, err err
 		one.Account = r.Account
 		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
+
 	}
 
 	one.UpdateDt = ti.String()

@@ -38,8 +38,8 @@ var MyVarParams = Vue.extend({
             <h4>系统内置函数</h4>
             <p>
                 <ul>
-                    <li><b>jsonString</b> &nbsp; json数据转字符串，示例：{"a":"A","b":{"b1":"B1","B2":22},"c":["c1","c2"]}</li>
-                    <li><b>jsonString2</b> &nbsp; json数据转字符串2次，示例: {\\"a\\":\\"A\\",\\"b\\":{\\"b1\\":\\"B1\\",\\"B2\\":22},\\"c\\":[\\"c1\\",\\"c2\\"]}</li>
+<!--                    <li><b>jsonString</b> &nbsp; json数据转字符串，示例：{"a":"A","b":{"b1":"B1","B2":22},"c":["c1","c2"]}</li>-->
+<!--                    <li><b>jsonString2</b> &nbsp; json数据转字符串2次，示例: {\\"a\\":\\"A\\",\\"b\\":{\\"b1\\":\\"B1\\",\\"B2\\":22},\\"c\\":[\\"c1\\",\\"c2\\"]}</li>-->
                     <li><b>json_decode<code>(string str) any</code></b> &nbsp; json字段解析，非规范json字符串抛出异常</li>
                     <li><b>rawurlencode<code>(string str) string</code></b> &nbsp; 字符串进行 url（RFC1738）编码，用于保护文字字符不被解释为特殊的URL分隔符。
                         <ul>

@@ -46,6 +46,8 @@ var MyConfigForm = Vue.extend({
                             <el-select v-model="form.command.http.method" placeholder="method" slot="prepend" style="width: 70px;">
                                 <el-option label="GET" value="GET"></el-option>
                                 <el-option label="POST" value="POST"></el-option>
+                                <el-option label="PUT" value="PUT"></el-option>
+                                <el-option label="DELETE" value="DELETE"></el-option>
                             </el-select>
                         </el-input>
                     </el-form-item>
@@ -600,7 +602,7 @@ var MyConfigForm = Vue.extend({
                                 path: '',
                                 content: '',
                                 message: '',
-                                branch: ''
+                                branch: this.preference.git.branch ?? '',
                             }
                         }
                         break
@@ -883,10 +885,10 @@ var MyConfigForm = Vue.extend({
             if (oldData.git == null){
                 oldData.git = {
                     link_id: "",
-                    owner: this.preference.owner ?? '',
-                    project: this.preference.repo ?? '',
+                    owner: this.preference.git.owner ?? '',
+                    project: this.preference.git.repo ?? '',
                     path: [""],
-                    ref: "",
+                    ref: this.preference.git.branch ?? '',
                 }
             }
             oldData.is_batch = oldData.is_batch.toString()

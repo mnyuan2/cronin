@@ -168,6 +168,7 @@ type SettingMessageRunReply struct {
 type SettingPreferenceSetRequest struct {
 	Pipeline *SettingPreferencePipeline `json:"pipeline"`
 	Git      *SettingPreferenceGit      `json:"git"`
+	Other    *SettingPreferenceOther    `json:"other"`
 }
 type SettingPreferencePipeline struct {
 	Interval            int `json:"interval"`
@@ -177,6 +178,10 @@ type SettingPreferenceGit struct {
 	OwnerRepo []*SettingPreferenceGitOwner `json:"owner_repo"`
 	Owner     string                       `json:"owner"`
 	Repo      string                       `json:"repo"`
+	Branch    string                       `json:"branch"`
+}
+type SettingPreferenceOther struct {
+	ConfigSelectType int `json:"config_select_type"`
 }
 type SettingPreferenceGitOwner struct {
 	Owner string                      `json:"owner"`
@@ -192,4 +197,5 @@ type SettingPreferenceGetRequest struct{}
 type SettingPreferenceGetReply struct {
 	Pipeline *SettingPreferencePipeline `json:"pipeline"`
 	Git      *SettingPreferenceGit      `json:"git"`
+	Other    *SettingPreferenceOther    `json:"other"`
 }

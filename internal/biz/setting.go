@@ -66,6 +66,9 @@ func (dm *SettingService) PreferenceGet(r *pb.SettingPreferenceGetRequest) (resp
 	resp = &pb.SettingPreferenceGetReply{
 		Pipeline: &pb.SettingPreferencePipeline{},
 		Git:      &pb.SettingPreferenceGit{OwnerRepo: []*pb.SettingPreferenceGitOwner{}},
+		Other: &pb.SettingPreferenceOther{
+			ConfigSelectType: models.TypeCycle,
+		},
 	}
 
 	da := data.NewCronSettingData(dm.ctx)

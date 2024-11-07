@@ -32,7 +32,9 @@ func (m *CronPipelineData) Set(data *models.CronPipeline) error {
 		return m.db.Where("id=?", data.Id).Omit("entry_id", "env").Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
-		return m.db.Omit("status_dt").Create(data).Error
+		data.StatusDt = data.CreateDt
+		data.StatusRemark = "新增"
+		return m.db.Create(data).Error
 	}
 }
 
