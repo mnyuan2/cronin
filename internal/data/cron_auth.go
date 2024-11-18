@@ -57,8 +57,9 @@ var authList = []*Permission{
 	{Id: 151, Path: "/receive/list", Title: "列表", Group: "接收", Type: AuthTypeGrant, Tag: "receive_list"},
 	{Id: 152, Path: "/receive/set", Title: "新增/编辑", Group: "接收", Type: AuthTypeGrant, Tag: "receive_set"},
 	{Id: 153, Path: "/receive/change_status", Title: "提交/停用", Group: "接收", Type: AuthTypeGrant, Tag: "receive_status"},
-	{Id: 154, Path: "/receive/detail", Title: "详情", Group: "接收", Type: AuthTypeGrant},
-	{Id: 155, Path: "/receive/webhook", Title: "开放钩子", Group: "接收", Type: AuthTypeOpen},
+	{Id: 154, Path: "/receive/change_status?auth_type=audit", Title: "审核", Group: "接收", Type: AuthTypeGrant, Tag: "receive_audit"},
+	{Id: 155, Path: "/receive/detail", Title: "详情", Group: "接收", Type: AuthTypeGrant},
+	{Id: 156, Path: "/receive/webhook/:key", Title: "开放钩子", Group: "接收", Type: AuthTypeOpen},
 
 	//140~149 任务
 	{Id: 140, Path: "/job/events", Title: "sse事件", Group: "注册任务", Type: AuthTypeLogin},

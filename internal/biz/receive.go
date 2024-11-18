@@ -7,12 +7,17 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
+	"cron/internal/basic/tracing"
+	"cron/internal/basic/util"
+	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"crypto/md5"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"log"
 	"strings"
 	"time"
@@ -193,6 +198,9 @@ func (dm *ReceiveService) ChangeStatus(r *pb.ReceiveChangeStatusRequest) (resp *
 		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject && conf.Status != models.ConfigStatusFinish && conf.Status != models.ConfigStatusError {
 			return nil, fmt.Errorf("错误状态请求")
 		}
+		if conf.ConfigIds == nil || len(conf.ConfigIds) == 0 {
+			return nil, fmt.Errorf("请至少指定一个匹配任务")
+		}
 	case models.ConfigStatusDisable: // 草稿、停用
 		//NewTaskService(config.MainConf()).DelPipeline(conf)
 		//conf.EntryId = 0
@@ -324,15 +332,154 @@ func (dm *ReceiveService) Webhook(r *pb.ReceiveWebhookRequest) (resp *pb.Receive
 		简单方案是，针对每一个第三方一个独立接口。
 			这样灵活性太低了，可以写一个预解析方案，由用户自己去处理。
 	*/
-	//if r.Id <= 0 {
-	//	return nil, errors.New("用户不得为空")
-	//}
+	if r.Id <= 0 {
+		return nil, errs.New(nil, pb.ParamNotFound, "未指定 key")
+	}
 
-	//_data := data.NewCronReceiveData(dm.ctx)
-	//one, err := _data.GetOne(r.Id)
-	//if err != nil {
-	//	return nil, err
-	//}
+	one, err := data.NewCronReceiveData(dm.ctx).GetOne(r.Id)
+	if err != nil {
+		return nil, err
+	}
+	if one.Status != models.ConfigStatusActive {
+		return nil, errs.New(nil, pb.ParamNotFound, "请确认规则是否被启用")
+	}
+
+	// 解析接收
+	b, err := conv.DefaultStringTemplate().SetParam(map[string]any{
+		"request_body": r.Body,
+	}).Execute([]byte(one.ReceiveTmpl))
+	if err != nil {
+		return nil, errs.New(err, pb.OperationFailure, "接收模板解析失败")
+	}
+
+	param := &dtos.ReceiveWebHook{}
+	if err = jsoniter.Unmarshal(b, param); err != nil {
+		return nil, errs.New(err, pb.OperationFailure, "接收模板解析结果错误")
+	}
+
+	// 如果上面失败，不记录日志，下面开始记录日志
+	// 开始执行任务（参考手动执行任务）(下面的内容应该转入异步执行了，因为消息已经接收成功了)
+	if len(param.Dataset) > 0 {
+		go dm.run(context.Background(), one, param)
+	}
 
 	return &pb.ReceiveWebhookReply{}, nil
+}
+
+// 任务执行
+func (dm *ReceiveService) run(ctx context.Context, one *models.CronReceive, param *dtos.ReceiveWebHook) (err errs.Errs) {
+	tracer := tracing.Tracer(one.Env+"-cronin", trace.WithInstrumentationAttributes(
+		attribute.String("driver", "mysql"),
+		attribute.String("env", one.Env),
+	))
+
+	ctx1, span := tracer.Start(context.Background(), "job-receive", trace.WithAttributes(
+		attribute.Int("ref_id", one.Id),
+		attribute.String("env", one.Env),
+		attribute.String("component", "receive"),
+	))
+	defer func() {
+		if err != nil {
+			span.SetStatus(tracing.StatusError, err.Desc())
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		} else if er := util.PanicInfo(recover()); er != "" {
+			span.SetStatus(tracing.StatusError, "执行异常")
+			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
+		} else {
+			span.SetStatus(tracing.StatusOk, "")
+		}
+		//rawId := cron.EntryID(one.EntryId)
+		//e := cronRun.Entry(rawId)
+		//if e.ID == rawId {
+		//	cronRun.Remove(e.ID)
+		//}
+		//one.EntryId = 0
+
+		span.End()
+	}()
+
+	ctx, cancel := context.WithCancelCause(ctx1)
+	defer cancel(err)
+	runTime := time.Now()
+
+	// 匹配任务
+	if one.RuleConfig == nil {
+		return
+	}
+	rulesRaw := []*pb.ReceiveRuleItem{}
+	if er := jsoniter.Unmarshal(one.RuleConfig, &rulesRaw); err != nil {
+		return errs.New(er, "规则任务序列化错误")
+	}
+	confIds := []int{}
+	ruleSelected := []*pb.ReceiveRuleItem{}
+	for _, rule := range rulesRaw { // 以规则配置的顺序优先
+		ll, rl := len(rule.Rule), 0
+		for _, item := range param.Dataset {
+			for _, r := range rule.Rule { // 规则需要完全匹配
+				//这里应该类似map中去找
+				if val, ok := item[r.Key]; ok && val != "" && val == r.Value {
+					rl++
+				}
+			}
+			if ll > 0 && ll == rl {
+				for _, p := range rule.Param { // 参数匹配替换
+					if val, ok := item[p.Key]; ok && val != "" {
+						p.Value = val
+					}
+				}
+				ruleSelected = append(ruleSelected, rule)
+				confIds = append(confIds, rule.Config.Id)
+			}
+		}
+	}
+
+	// 加载最新任务信息
+	w := db.NewWhere().Eq("env", one.Env).In("id", confIds)
+	list, er := data.NewCronConfigData(ctx).List(w, len(confIds))
+	if er != nil {
+		return errs.New(er, "任务查询错误")
+	}
+	listMap := map[int]*models.CronConfig{}
+	for _, item := range list {
+		listMap[item.Id] = item
+	}
+
+	// 执行任务
+	for _, rule := range ruleSelected {
+		conf, ok := listMap[rule.Config.Id]
+		if !ok { // 极端情况下，这里可能存在匹配不上; 说明任务已经被弃用，那就不要执行了。
+			continue
+		}
+		p := map[string]any{}
+		for _, item := range rule.Param {
+			p[item.Key] = item.Value
+		}
+
+		//if item.Status != models.ConfigStatusActive && item.Status != models.ConfigStatusFinish {
+		//	if job.pipeline.ConfigDisableAction == models.DisableActionStop {
+		//		job.conf.messagePush(ctx, enum.StatusDisable, "任务非激活", []byte(fmt.Sprintf("%s-%s", item.Name, temp.GetStatusName())), time.Since(job.conf.runTime).Seconds())
+		//		return
+		//	} else if job.pipeline.ConfigDisableAction == models.DisableActionOmit {
+		//		continue
+		//	}
+		//}
+		j := NewJobConfig(conf)
+
+		_, er := j.Running(ctx, "接收任务", p)
+		if er != nil {
+			j.messagePush(ctx, enum.StatusDisable, er.Desc()+" 接收任务", []byte(err.Error()), time.Since(runTime).Seconds())
+			// 这里要确认一下是否继续执行下去。
+			if one.ConfigErrAction == models.ErrActionStop {
+				return
+			}
+		}
+		if one.Interval > 0 {
+			if err = j.Sleep(ctx, time.Duration(one.Interval)*time.Second); err != nil {
+				return
+			}
+		}
+	}
+	// 结束语
+	//job.conf.messagePush(ctx, enum.StatusActive, "完成", nil, time.Since(job.conf.runTime).Seconds())
+	return nil
 }

@@ -7,7 +7,7 @@ var MyReceiveForm = Vue.extend({
            
             <el-form-item prop="plate" label-width="76px">
                 <span slot="label" style="white-space: nowrap;">
-                    接收解析<br/>
+                    接收模板<br/>
                     <el-tooltip effect="dark" content="实现的参数会传入设置过参数的任务中，点击查看更多" placement="top-start">
                         <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                     </el-tooltip>
@@ -20,18 +20,26 @@ var MyReceiveForm = Vue.extend({
                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
                 <div id="config-selected-box" class="sort-drag-box">
                     <div class="input-box" v-for="(conf,conf_index) in form.rule_config" @mouseover="configDetailPanel(conf, true)" @mouseout="configDetailPanel(conf, false)">
-                        <i class="el-icon-more-outline drag"></i>
-                        <b class="b">{{conf.type_name}}</b>-
-                        <b>{{conf.name}}</b>-
-                        <b class="b">{{conf.protocol_name}}</b>
-                        <el-button :type="statusTypeName(conf.status)" size="mini" plain round disabled>{{conf.status_name}}</el-button>
-                        <el-divider direction="vertical"></el-divider>
-                        (<el-tooltip v-for="(var_p,var_i) in conf.var_fields" effect="dark" :content="var_p.remark" placement="top-start">
-                            <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}<span class="info-2">={{var_p.value}}</span></code>
-                        </el-tooltip>)
-                        <span style="margin-left: 4px;" v-show="conf.view_panel">
-                            <i class="el-icon-view hover" @click="configDetailBox(conf)"></i>
-                        </span>
+                        <div class="drag">
+                            <i class="el-icon-more-outline " style="transform: rotate(90deg);"></i>
+                        </div>
+                        
+                        <div>
+                            <b class="b">{{conf.config.type_name}}</b>-<b>{{conf.config.name}}</b>-<b class="b">{{conf.config.protocol_name}}</b>
+                            <el-button :type="statusTypeName(conf.config.status)" size="mini" plain round disabled>{{conf.config.status_name}}</el-button>
+                            <el-divider direction="vertical"></el-divider>
+                            (<el-tooltip v-for="(var_p,var_i) in conf.config.var_fields" effect="dark" :content="var_p.remark" placement="top-start">
+                                <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}<span class="info-2">={{var_p.value}}</span></code>
+                            </el-tooltip>)
+                            <span style="margin-left: 4px;" v-show="conf.view_panel">
+                                <i class="el-icon-view hover" @click="configDetailBox(conf.config)"></i>
+                                <i class="el-icon-setting hover" @click="ruleConfigBox(conf_index)"></i>
+                            </span>
+                        </div>
+                        <el-row style="margin-left:8px">
+                            <el-col :span="12">任务：<b class="b" v-for="re in conf.rule">{{re.key}}:{{re.value}}</b></el-col>
+                            <el-col :span="12">入参：<b class="b" v-for="pm in conf.param">{{pm.key}}:{{pm.value}}</b></el-col>
+                        </el-row>
                         <span class="input-header">
                             <i class="el-icon-close" @click="removeAt(conf_index)"></i>
                         </span>
@@ -80,7 +88,6 @@ var MyReceiveForm = Vue.extend({
             </el-form-item>
         </el-form>
         <div class="el-dialog__footer">
-<!--            <el-button @click="configRun()" class="left" size="small">执行一下</el-button>-->
             <el-button size="small" @click="close()">取 消</el-button>
             <el-button type="primary" size="small" @click="submitForm()" v-if="(form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject) && $auth_tag.pipeline_set">保存草稿</el-button>
         </div>
@@ -123,15 +130,42 @@ var MyReceiveForm = Vue.extend({
         <el-dialog title="任务详情" :visible.sync="config_detail.show" :close-on-click-modal="false" class="config-form-box" :modal="false">
             <my-config-form v-if="config_detail.show" :request="{detail:config_detail.detail,disabled:true}" @close="configDetailBox()"></my-config-form>
         </el-dialog>
+        
+        <el-dialog title="任务关联设置" :visible.sync="rule_config_box.show" :close-on-click-modal="false" class="config-form-box" :modal="false" width="500px">
+            <el-form :model="rule_config_box.form" size="small">
+                <el-form-item label="任务匹配">
+                    <el-input class="input-input" v-for="(rule_v,rule_i) in rule_config_box.form.rule" v-model="rule_v.value" placeholder="匹配值">
+                        <el-select v-model="rule_v.key" placeholder="匹配字段" slot="prepend" @input="e=>inputChangeArrayPush(e,rule_i,rule_config_box.form.rule)">
+                            <el-option v-for="fd in dic.field" :label="fd.key" :value="fd.key">
+                                <span style="float: left">{{fd.key}}</span>
+                                <span style="float: right; color: #8492a6; font-size: 13px">{{fd.name}}</span>
+                            </el-option>
+                        </el-select>
+                        <el-button slot="append" icon="el-icon-delete" @click="arrayDelete(rule_i, rule_config_box.form.rule)"></el-button>
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="入参匹配">
+                    <br/>
+                    <el-row v-for="(param_v,param_i) in rule_config_box.form.param">
+                        <el-input v-model="param_v.key" disabled style="width: 146px;"></el-input>
+                        <el-select v-model="param_v.value" placeholder="匹配字段" style="width: 280px;">
+                            <el-option v-for="fd in dic.field" :label="fd.key" :value="fd.key">
+                                <span style="float: left">{{fd.key}}</span>
+                                <span style="float: right; color: #8492a6; font-size: 13px">{{fd.name}}</span>
+                            </el-option>
+                        </el-select>
+                        <el-tooltip effect="dark" :content="param_v.remark" placement="top-start">
+                            <i class="el-icon-info info-2"></i>
+                        </el-tooltip>
+                    </el-row>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button size="small" @click="ruleConfigBox(-1)">取 消</el-button>
+                <el-button type="primary" size="small" @click="ruleConfigConfirm">确 定</el-button>
+            </span>
+        </el-dialog>
     </div>`,
-
-    // StatusDisable: 1, // 草稿
-    // StatusAudited: 5, // 待审核
-    // StatusReject: 6, // 6 驳回
-    // StatusActive: 2, // 2 激活
-    // StatusFinish: 3, // 完成
-    // StatusError: 4, // 错误
-    // StatusDelete: 9, // 删除
 
     name: "MyReceiveForm",
     props: {
@@ -145,17 +179,10 @@ var MyReceiveForm = Vue.extend({
             dic:{
                 user: [],
                 msg: [],
+                field: [],
             },
             // 表单
             form:{},
-            hintSpec: "* * * * * *",
-            // 日期选择器设置
-            pickerOptions: {
-                disabledDate(time){
-                    return time.getTime() < Date.now() - 8.64e7
-                },
-                selectableRange: "00:00:00 - 23:01:59",
-            },
             // 任务弹窗
             config:{
                 boxShow:false,
@@ -165,6 +192,12 @@ var MyReceiveForm = Vue.extend({
             config_detail:{
                 show:false,
                 detail:{}
+            },
+            // 任务关联规则
+            rule_config_box:{
+                show:false,
+                index: -1,
+                form:{}
             },
             // 消息设置弹窗
             msgSet:{
@@ -180,24 +213,9 @@ var MyReceiveForm = Vue.extend({
             sort: null,
         }
     },
-    watch:{
-        "form.spec":{
-            handler(v){
-                if (this.form.type == 2){ // 年月日的变化控制
-                    let cur = moment()
-                    if (moment(v).format('YYYY-MM-DD') == cur.format('YYYY-MM-DD')){
-                        this.pickerOptions.selectableRange = `${cur.format('HH:mm:ss')} - 23:59:59`
-                    }else{
-                        this.pickerOptions.selectableRange = "00:00:00 - 23:59:59"
-                    }
-                }
-            }
-        }
-    },
     created(){
         this.getDic()
         this.getPreference()
-
     },
     // 模块初始化
     mounted(){
@@ -237,7 +255,7 @@ var MyReceiveForm = Vue.extend({
             row.config_err_action = row.config_err_action.toString()
             return row
         },
-        // 表单提交 流水线
+        // 表单提交
         submitForm(){
             if (this.form.name == ''){
                 return this.$message.error('请输入任务名称')
@@ -252,7 +270,7 @@ var MyReceiveForm = Vue.extend({
                 name: data.name,
                 type: Number(data.type),
                 spec: data.spec,
-                var_params: data.var_params,
+                receive_tmpl: data.receive_tmpl,
                 config_ids: [],
                 rule_config:data.rule_config,
                 remark: data.remark,
@@ -262,7 +280,7 @@ var MyReceiveForm = Vue.extend({
                 config_err_action: Number(data.config_err_action),
             }
             data.rule_config.forEach(function (item,index) {
-                body.config_ids.push(item.id)
+                body.config_ids.push(item.config.id)
             })
             if (body.interval < 0){
                 body.interval = 0
@@ -347,9 +365,10 @@ var MyReceiveForm = Vue.extend({
         },
         // 枚举
         getDic(){
-            api.dicList([Enum.dicUser, Enum.dicMsg],(res) =>{
+            api.dicList([Enum.dicUser, Enum.dicMsg, Enum.dicReceiveDataField],(res) =>{
                 this.dic.user = res[Enum.dicUser]
                 this.dic.msg = res[Enum.dicMsg]
+                this.dic.field = res[Enum.dicReceiveDataField]
             })
         },
 
@@ -363,9 +382,7 @@ var MyReceiveForm = Vue.extend({
                 console.log("选中元素",)
                 this.config.running = true
                 this.$refs.selection.selected.forEach((item)=>{
-                    temp = copyJSON(item)
-                    temp.view_panel = false
-                    this.form.rule_config.push(temp)
+                    this.form.rule_config.push({rule:[],param:[],config:copyJSON(item), view_panel: false})
                 })
                 this.config.boxShow = false
                 this.config.running = false
@@ -398,7 +415,7 @@ var MyReceiveForm = Vue.extend({
                 this.config_detail.detail = {}
                 return
             }
-            api.innerGet('/config/detail', {id: detail.id, var_params: this.form.var_params}, (res)=>{
+            api.innerGet('/config/detail', {id: detail.id}, (res)=>{
                 if (!res.status){
                     return this.$message.error(res.message)
                 }
@@ -416,35 +433,50 @@ var MyReceiveForm = Vue.extend({
                 this.form.rule_config.splice(idx, 1);
             }).catch(() => {/*取消*/});
         },
-        // 执行一下
-        configRun(){
-            let data = copyJSON(this.form)
-            // 主要是强制类型
-            let body = {
-                id: data.id,
-                name: data.name,
-                type: Number(data.type),
-                spec: data.spec,
-                // protocol: Number(data.protocol),
-                // command: data.command,
-                remark: data.remark,
+        // 任务关联盒子
+        ruleConfigBox(index){
+            let data = copyJSON(this.form.rule_config[index]??{})
+            if (!data.config){
+                this.rule_config_box.show = false
+                this.rule_config_box.index = -1
+                this.rule_config_box.form = {}
+                return
             }
-            // body.command.sql.err_action = Number(body.command.sql.err_action)
-            // body.command.sql.source.id = Number(body.command.sql.source.id)
 
-            api.innerPost("/pipeline/run", body, (res)=>{
-                if (!res.status){
-                    return this.$message({
-                        message: res.message,
-                        type: 'error',
-                        duration: 6000
-                    })
-                }
-                return this.$message.success("ok."+res.data.result)
+            if (data.rule == null || data.rule.length == 0){
+                data.rule = [{key:'',value:''}]
+            }else{
+                data.rule.push({key:'',value:''})
+            }
+
+            // 解析配置里面的参数
+            let old_param_map = {}
+            data.param.forEach(function (item) {
+                old_param_map[item.key] = item.value
             })
+            let param = []
+            data.config.var_fields.forEach(function (item) {
+                // 入参key / 匹配字段 / 入参描述
+                param.push({key:item.key,value:old_param_map[item.key]??'',remark:item.remark})
+            })
+            data.param = param
+
+            this.rule_config_box.show = true
+            this.rule_config_box.index = Number(index)
+            this.rule_config_box.form = data
+            console.log('rule_config_box.form', data)
         },
-        close(is_change=false){
-            this.$emit('close', {is_change:is_change})
+        // 关联设置确认
+        ruleConfigConfirm(){
+            let data = copyJSON(this.rule_config_box.form)
+            data.rule = data.rule.filter(function (rule) {
+                return rule.key !== undefined && rule.key != '' && rule.value != ''
+            })
+            data.param = data.param.filter(function (param) {
+                return param.key !== undefined && param.key != '' && param.value != ''
+            })
+            this.form.rule_config[this.rule_config_box.index] = data
+            this.rule_config_box.show = false
         },
         // 获取偏好
         getPreference(){
@@ -454,6 +486,9 @@ var MyReceiveForm = Vue.extend({
                 }
                 this.preference = res.data
             },{async: false})
+        },
+        close(is_change=false){
+            this.$emit('close', {is_change:is_change})
         },
     }
 })

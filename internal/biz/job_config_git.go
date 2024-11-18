@@ -35,6 +35,8 @@ func (job *JobConfig) gitFunc(ctx context.Context, r *pb.CronGit) (resp []byte, 
 
 	for i, e := range r.Events {
 		switch e.Id {
+		case enum.GitEventPullsIsMerge:
+			resp, err = job.PRIsMerge(ctx, api, e.PRIsMerge)
 		case enum.GitEventPullsMerge:
 			resp, err = job.PRMerge(ctx, api, e.PRMerge)
 		case enum.GitEventFileUpdate:
@@ -145,6 +147,32 @@ func (job *JobConfig) handlerLog(name string, h *gitee.Handler, err errs.Errs) {
 	}
 
 	span.End(trace.WithTimestamp(h.EndTime()))
+}
+
+// pr 是否合并
+func (job *JobConfig) PRIsMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
+	h := gitee.NewHandler(ctx)
+	defer func() {
+		job.handlerLog("PRMerge", h, err)
+	}()
+
+	num, er := strconv.Atoi(r.Number)
+	if er != nil {
+		return nil, errs.New(er, "pr编号输入有误")
+	}
+
+	request := &gitee.PullsMergeRequest{
+		BaseRequest: gitee.BaseRequest{
+			Owner: r.Owner,
+			Repo:  r.Repo,
+		},
+		Number: int32(num),
+	}
+	res, er := api.PullsIsMerge(h, request)
+	if er != nil {
+		return []byte(res.HtmlUrl), errs.New(er)
+	}
+	return []byte(res.HtmlUrl + "   " + res.Message), nil
 }
 
 // pr 合并

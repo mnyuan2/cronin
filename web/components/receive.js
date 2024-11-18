@@ -74,7 +74,7 @@ var MyReceive = Vue.extend({
             <el-table-column prop="name" label="任务名称">
                 <div slot-scope="{row}" style="display: flex;">
                     <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
-                        <router-link :to="{path:'/config_detail',query:{id:row.id, type:'pipeline'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                        <router-link :to="{path:'/config_detail',query:{id:row.id, type:'receive'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
                     </span>
                     <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
                         <i  class="el-icon-edit hover" @click="setShow(row)" title="编辑"></i>
@@ -86,7 +86,7 @@ var MyReceive = Vue.extend({
                 <template slot-scope="scope">
                     <el-tooltip placement="top-start">
                         <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
-                        <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'pipeline')">{{scope.row.status_name}}</el-botton>
+                        <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'receive')">{{scope.row.status_name}}</el-botton>
                     </el-tooltip>
                 </template>
             </el-table-column>
@@ -318,7 +318,12 @@ var MyReceive = Vue.extend({
                 this.set_box.detail = {}
             }else{
                 this.set_box.title= '编辑接收规则'
-                this.set_box.detail = row
+                api.innerGet('/receive/detail', {id: row.id}, (res)=>{
+                    if (!res.status){
+                        return this.$message.error(res.message)
+                    }
+                    this.set_box.detail = res.data
+                },{async:false})
             }
         },
         formClose(e){

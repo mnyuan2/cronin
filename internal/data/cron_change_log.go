@@ -683,7 +683,7 @@ func (h *ChangeLogHandle) Build() *models.CronChangeLog {
 		h.log.Content, _ = jsoniter.MarshalToString(content)
 		return h.log
 	} else if h.log.RefType == "receive" {
-		h.log.RefId = h.line[1].Id
+		h.log.RefId = h.rece[1].Id
 		content := h.diffReceive(h.rece[0], h.rece[1])
 		if len(content) == 0 {
 			return nil

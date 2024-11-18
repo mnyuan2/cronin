@@ -4,6 +4,8 @@ import (
 	"cron/internal/biz"
 	"cron/internal/pb"
 	"github.com/gin-gonic/gin"
+	"io"
+	"strconv"
 )
 
 // 列表
@@ -43,6 +45,10 @@ func routerReceiveSet(ctx *gin.Context) {
 // 详情
 func routerReceiveDetail(ctx *gin.Context) {
 	r := &pb.ReceiveDetailRequest{}
+	if err := ctx.BindQuery(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
 	user, err := GetUser(ctx)
 	if err != nil {
 		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
@@ -70,11 +76,26 @@ func routerReceiveChangeStatus(ctx *gin.Context) {
 
 // 接收钩子
 func routerReceiveWebhook(ctx *gin.Context) {
+	var err error
+	// 这里的接受结构体无法预定义，只能统一作为一个字符串接受
 	r := &pb.ReceiveWebhookRequest{}
-	if err := ctx.BindJSON(r); err != nil {
+	r.Body, err = io.ReadAll(ctx.Request.Body)
+	if err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
+	id := ctx.Param("key")
+	if id == "" {
+		NewReply(ctx).SetError(pb.ParamError, "接受key未指定").RenderJson()
+		return
+	}
+	// 后续可以扩展支持字符串
+	r.Id, err = strconv.Atoi(id)
+	if err != nil {
+		NewReply(ctx).SetError(pb.ParamError, "key解析有误，请确认是否为数值").RenderJson()
+		return
+	}
+
 	rep, err := biz.NewReceiveService(ctx.Request.Context(), nil).Webhook(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

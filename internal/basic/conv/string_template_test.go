@@ -187,6 +187,33 @@ func TestStrSliceFilter(t *testing.T) {
 	}
 }
 
+func TestStrFindMap(t *testing.T) {
+	strs := []string{
+		"https://gitee.com/mnyuan/cronin/pulls/15",
+		"cronin/hotfix/user_3",
+		"cronin/hotfix/user_3{serA,serB}",
+	}
+	for i, str := range strs {
+		temp := DefaultStringTemplate().SetParam(map[string]any{"data": str})
+		if i == 0 {
+			b, e := temp.Execute([]byte("[[json_encode (str_find_map .data `https://gitee.com/(.+)/([^/]+)/pulls/(\\d+)` `owner,repo,number,type:pr`)]]"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			fmt.Println(i, string(b))
+		} else {
+			b, e := temp.Execute([]byte("[[json_encode (str_find_map .data `([^/]+)(?:.*)(?:/|\\{(.*)\\})` `repo,service,type:jenkins`)]]"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			fmt.Println(i, string(b))
+		}
+	}
+
+	//resMap["type"] = "pr"
+	//fmt.Println(resMap)
+}
+
 func TestTemplateJson(t *testing.T) {
 	data := map[string]any{
 		"a": map[string]string{"a1": "A1", "a2": "a2"},

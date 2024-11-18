@@ -160,6 +160,7 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicGitEvent:
 		items = []*pb.DicGetItem{
 			{Id: enum.GitEventPullsCreate, Name: enum.GitEventMap[enum.GitEventPullsCreate]},
+			{Id: enum.GitEventPullsIsMerge, Name: enum.GitEventMap[enum.GitEventPullsIsMerge]},
 			{Id: enum.GitEventPullsMerge, Name: enum.GitEventMap[enum.GitEventPullsMerge]},
 			{Id: enum.GitEventFileUpdate, Name: enum.GitEventMap[enum.GitEventFileUpdate]},
 		}
@@ -185,6 +186,15 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			{Id: models.ProtocolSql, Name: models.ProtocolMap[models.ProtocolSql]},
 			{Id: models.ProtocolJenkins, Name: models.ProtocolMap[models.ProtocolJenkins]},
 			{Id: models.ProtocolGit, Name: models.ProtocolMap[models.ProtocolGit]},
+		}
+	case enum.DicReceiveDataField:
+		items = []*pb.DicGetItem{
+			{Key: "owner", Name: "空间"},
+			{Key: "repo", Name: "仓库"},
+			{Key: "number", Name: "序号"},
+			{Key: "type", Name: "类型"},
+			{Key: "service", Name: "服务"},
+			// 后续根据情况补充
 		}
 	}
 

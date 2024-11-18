@@ -64,7 +64,6 @@ type ReceiveDetailRequest struct {
 // 接收配置 响应
 type ReceiveDetailReply struct {
 	Id                      int                `json:"id"`
-	EntryId                 int                `json:"entry_id"`
 	Name                    string             `json:"name"`
 	Remark                  string             `json:"remark"`
 	Status                  int                `json:"status"`
@@ -80,7 +79,7 @@ type ReceiveDetailReply struct {
 	TopErrorNumber          int                `json:"top_error_number"`
 	UpdateDt                string             `json:"update_dt"`
 	CreateDt                string             `json:"create_dt"`
-	VarParams               string             `json:"var_params"`
+	ReceiveTmpl             string             `json:"receive_tmpl"`
 	ConfigIds               []int              `json:"config_ids"`
 	RuleConfig              []*ReceiveRuleItem `json:"rule_config"`
 	MsgSet                  []*CronMsgSet      `json:"msg_set"`
@@ -101,6 +100,8 @@ type ReceiveChangeStatusReply struct {
 
 // 接收配置 触发钩子 请求
 type ReceiveWebhookRequest struct {
+	Id   int    `json:"id"`
+	Body []byte `json:"body"`
 }
 
 // 接收配置 触发钩子 响应

@@ -106,6 +106,56 @@ func DefaultStringTemplate() *StringTemplate {
 			"string": func(any any) string {
 				return fmt.Sprintf("%v", any)
 			},
+			// 合并 slice，返回新的 slice
+			//  多个参数的类型定义必须一致
+			"append_slice": func(slice ...any) (any, error) {
+				values := reflect.ValueOf(slice)
+				if values.Index(0).Elem().Kind() != reflect.Slice {
+					return nil, fmt.Errorf("param 1 not slice")
+				}
+
+				newValues := reflect.MakeSlice(values.Index(0).Elem().Type(), 0, 0) // 创建一个空的原元素
+				for i := 0; i < values.Len(); i++ {
+					value := values.Index(0)
+					if newValues.Kind() != values.Kind() {
+						return nil, fmt.Errorf("param %v type inconsistency", i+1)
+					}
+					newValues = reflect.AppendSlice(newValues, value.Elem())
+				}
+
+				list := newValues.Interface()
+				return list, nil
+			},
+			// 此方法目前处于试验阶段，应该找一种更通用的方法来声明元素。
+			"make": func(t string) any {
+				switch t {
+				case "int":
+					return int(0)
+				case "[]map[string]any":
+					return []map[string]any{}
+				default:
+					return nil
+				}
+			},
+			"append": func(slice any, elems ...any) (any, error) {
+				values := reflect.ValueOf(slice)
+				if values.Kind() != reflect.Slice {
+					return nil, fmt.Errorf("param 1 not slice")
+				}
+				k := values.Type().Elem().Kind()
+				//fmt.Println(k.String(), values.Type().String())
+
+				for i, item := range elems {
+					val := reflect.ValueOf(item)
+					if val.Kind() != k {
+						return nil, fmt.Errorf("param %v type inconsistency", i+2)
+					}
+					values = reflect.Append(values, val)
+				}
+
+				list := values.Interface()
+				return list, nil
+			},
 			// 获取时间
 			//  参数1：string duration 持续时间字符串，示例 "300ms", "-1.5h" 或 "2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".
 			"time": func(param ...any) (ti time.Time, err error) { // 1.相对时间、2.时间戳、3.时间字符串；
@@ -169,6 +219,29 @@ func DefaultStringTemplate() *StringTemplate {
 				matches[1] = strconv.FormatFloat(val.(float64), 'f', -1, 64)
 				str = raw[:len(raw)-len(matches[0])] + matches[1] + matches[2]
 				return str, nil
+			},
+			// 字符串查找并转map
+			//  @param string raw 原始字符串
+			//  @param string regex 正则匹配表达式
+			//  @param string fields 输出结果keys, 多个key逗号相隔 与匹配结果顺序一致
+			//  @return map[string]any
+			"str_find_map": func(raw string, regex string, fields string) (out map[string]any, err error) {
+				if fields == "" {
+					return nil, errors.New("fields 不得为空")
+				}
+				matches := regexp.MustCompile(regex).FindStringSubmatch(raw)
+				l := len(matches) - 1
+				out = map[string]any{}
+				fs := strings.Split(fields, ",")
+				for i, f := range fs {
+					kv := strings.Split(f, ":")
+					if l > i {
+						out[kv[0]] = matches[i+1]
+					} else if len(kv) > 1 {
+						out[kv[0]] = kv[1] // 默认值
+					}
+				}
+				return out, nil
 			},
 			// 字符串切割并过滤指定元素
 			//  参数1: string str 原始字符串

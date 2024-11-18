@@ -180,11 +180,12 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 		return nil, errs.New(er, "command 解析错误")
 	}
 	for _, item := range resp.Command.Git.Events {
-		if item.FileUpdate == nil || item.FileUpdate.Content == "" {
-			continue
+		if item.FileUpdate != nil {
+			if item.FileUpdate.Content != "" {
+				content, _ := base64.StdEncoding.DecodeString(item.FileUpdate.Content)
+				item.FileUpdate.Content = string(content)
+			}
 		}
-		content, _ := base64.StdEncoding.DecodeString(item.FileUpdate.Content)
-		item.FileUpdate.Content = string(content)
 	}
 	if one.MsgSet != nil {
 		if er := jsoniter.Unmarshal(one.MsgSet, &resp.MsgSet); er != nil {

@@ -15,25 +15,25 @@ func TestReceiveTapd(t *testing.T) {
     "search": null,
     "event": {
         "workspace_id": "55358509",
-        "user": "王*国",
+        "user": "王**",
         "object_type": "bug",
         "id": "1155358509001031184",
         "timestamp": 1724661810,
         "timestamp_micro": 1724661810181,
         "new": {
-            "current_owner": "王*国;",
+            "current_owner": "王**;",
             "flows": "new|in_progress|resolved|verified|reopened|in_progress|resolved|verified",
             "id": "1155358509001031184",
-            "lastmodify": "王*国",
+            "lastmodify": "王**",
             "modified": "2024-08-26 16:43:29",
             "status": "verified",
             "verify_time": "2024-08-26 16:43:29"
         },
         "old": {
-            "current_owner": "刘*虹;",
+            "current_owner": "刘**;",
             "flows": "new|in_progress|resolved|verified|reopened|in_progress|resolved",
             "id": "1155358509001031184",
-            "lastmodify": "刘*虹",
+            "lastmodify": "刘**",
             "modified": "2024-08-26 16:43:28",
             "status": "resolved",
             "verify_time": null
@@ -54,7 +54,7 @@ func TestReceiveTapd(t *testing.T) {
             "confirmer": null,
             "created": "2024-08-26 16:38:34",
             "created_from": null,
-            "current_owner": "王*国;",
+            "current_owner": "王**;",
             "custom_field_10": "",
             "custom_field_100": "",
             "custom_field_101": "",
@@ -265,7 +265,7 @@ func TestReceiveTapd(t *testing.T) {
             "custom_plan_field_7": "0",
             "custom_plan_field_8": "0",
             "custom_plan_field_9": "0",
-            "de": "王立国;",
+            "de": "王**;",
             "deadline": null,
             "delayed": "0",
             "description": "<p>***<\/p>",
@@ -276,7 +276,7 @@ func TestReceiveTapd(t *testing.T) {
             "estimate": null,
             "exceed": "0",
             "feature": null,
-            "fixer": "王*国",
+            "fixer": "王**",
             "flows": "new|in_progress|resolved|verified|reopened|in_progress|resolved|verified",
             "follower": "",
             "frequency": "",
@@ -285,7 +285,7 @@ func TestReceiveTapd(t *testing.T) {
             "issue_id": null,
             "iteration_id": "0",
             "label": null,
-            "lastmodify": "王*国",
+            "lastmodify": "王**",
             "markdown_description": null,
             "milestone": null,
             "modified": "2024-08-26 16:43:29",
@@ -293,7 +293,7 @@ func TestReceiveTapd(t *testing.T) {
             "originphase": "",
             "os": "",
             "parent_id": null,
-            "participator": "王*国;刘*虹",
+            "participator": "王**;刘**",
             "platform": "",
             "priority": "insignificant",
             "progress": "0",
@@ -303,7 +303,7 @@ func TestReceiveTapd(t *testing.T) {
             "release_id": null,
             "remain": "0",
             "reopen_time": "2024-08-26 16:43:02",
-            "reporter": "王*国",
+            "reporter": "王**",
             "resolution": "fixed",
             "resolved": "2024-08-26 16:43:22",
             "severity": "",
@@ -339,12 +339,24 @@ func TestReceiveTapd(t *testing.T) {
 		"request": str,
 	}
 	temp := `[[$data := json_decode .request]]
+[[$project := str_slice_filter $data.event.object_info.custom_field_four " " "^\\s*$"]]
+[[$pr := str_slice_filter $data.event.object_info.custom_field_five " " "^\\s*$"]]
+[[$dataset := make "[]map[string]any"]]
+
+[[range $pr]]
+	[[$dataset = append $dataset (str_find_map . "https://gitee.com/(.+)/([^/]+)/pulls/(\\d+)" "owner,repo,number,type:pr")]]
+[[end]]
+[[range $project]]
+	[[$dataset = append $dataset (str_find_map . "([^/]+)(?:.*)(?:/|\\{(.*)\\})" "repo,service,type:jenkins")]]
+[[end]]
+
 {
 	"user": "[[$data.event.user]]",
 	"type": "[[$data.event.object_type]]",
 	"event": "[[$data.event.event_key]]",
-	"project": [[json_encode (str_slice_filter $data.event.object_info.custom_field_four " " "^\\s*$")]],
-	"pr": [[json_encode (str_slice_filter $data.event.object_info.custom_field_five " " "^\\s*$")]]
+	"project": [[json_encode $project]],
+	"pr": [[json_encode $pr]],
+	"dataset": [[json_encode $dataset]]
 }`
 	b, e := conv.DefaultStringTemplate().SetParam(p).Execute([]byte(temp))
 	if e != nil {
