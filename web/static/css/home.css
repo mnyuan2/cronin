@@ -18,6 +18,9 @@ h3,h2,h4,.h3{
 .h3{
     font-size: 22px;
 }
+.h4{
+    font-size: 18px;
+}
 p{
     font-size: 14px;
     color: #444950;
@@ -198,6 +201,18 @@ i.el-alert__icon{
 .is-light.el-alert--info {
     background-color: #f4f4f5 !important;
 }
+.task-item-icon{
+    display: inline;
+    min-width: 10px;
+    border-radius: 3px;
+    padding: 3px 4px 3px;
+    vertical-align: text-bottom;
+    font-size: 12px;
+    font-style: normal;
+    color: #fff;
+    text-align: center;
+    zoom: .7;
+}
 
 /*搜索框*/
 .search-form .el-form-item {
@@ -265,6 +280,9 @@ i.el-alert__icon{
 /*}*/
 .input-input .el-input-group__prepend{
     background: #fff;
+}
+.input-input .el-input-group__prepend:has(.is-disabled){
+    background-color: #F5F7FA;
 }
 .input-input .el-input-group__prepend input{
     padding: 0;
@@ -436,13 +454,13 @@ i.el-alert__icon{
 }
 
 .sort-drag-box .drag{
-    /*transform: rotate(90deg);*/
     cursor: n-resize;
     position: absolute;
     left: 0;
     top: 0;
-    bottom: 0;
-    line-height: 400%;
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 .sort-drag-box .item-drag-current{
     background: #c8ebfb !important;

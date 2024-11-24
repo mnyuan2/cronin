@@ -76,7 +76,12 @@ func (job *JobPipeline) parse(conf *models.CronPipeline) error {
 // 执行任务
 func (job *JobPipeline) Run() {
 	var err errs.Errs
-	ctx1, span := job.tracer.Start(context.Background(), "job-pipeline", trace.WithAttributes(attribute.Int("ref_id", job.pipeline.Id)))
+	ctx1, span := job.tracer.Start(context.Background(), "job-pipeline", trace.WithAttributes(
+		attribute.Int("ref_id", job.pipeline.Id),
+		attribute.String("env", job.pipeline.Env),
+		attribute.String("component", "pipeline"),
+		attribute.String("name", job.pipeline.Name),
+	))
 	defer func() {
 		job.conf.isRun = false
 		status, remark := 0, ""
@@ -118,10 +123,6 @@ func (job *JobPipeline) Run() {
 	job.conf.ctxCancel = cancel
 	job.conf.isRun = true
 	job.conf.runTime = time.Now()
-	span.SetAttributes(
-		attribute.String("env", job.pipeline.Env),
-		attribute.String("component", "pipeline"),
-	)
 
 	// 欢迎语
 	job.conf.messagePush(ctx, 0, "开始", nil, 0)

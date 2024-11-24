@@ -183,13 +183,13 @@ var MyReceive = Vue.extend({
         this.getList()
         // 添加指定事件监听
         this.env = cache.getEnv()
-        // this.$sse.addEventListener(this.env.env+".exec.queue", this.execQueue)
-        // this.$sse.addEventListener(this.env.env+'.register.queue', this.registerQueue)
+        this.$sse.addEventListener(this.env.env+".exec.queue", this.execQueue)
+        this.$sse.addEventListener(this.env.env+'.register.queue', this.registerQueue)
     },
     beforeDestroy(){
         // 销毁指定事件监听
-        // this.$sse.removeEventListener(this.env.env+".exec.queue", this.execQueue)
-        // this.$sse.removeEventListener(this.env.env+".register.queue", this.registerQueue)
+        this.$sse.removeEventListener(this.env.env+".exec.queue", this.execQueue)
+        this.$sse.removeEventListener(this.env.env+".register.queue", this.registerQueue)
     },
     // 具体方法
     methods:{
@@ -334,7 +334,7 @@ var MyReceive = Vue.extend({
             }
         },
         configLogBox(item){
-            let tags = {ref_id:item.id, component:""}
+            let tags = {ref_id:item.id, component:"receive"}
             this.config_log_box.tags = tags
             this.config_log_box.title = item.name+' 日志'
             this.config_log_box.show = true

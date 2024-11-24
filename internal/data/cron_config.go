@@ -39,7 +39,8 @@ func (m *CronConfigData) Set(data *models.CronConfig) error {
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	if data.Id > 0 {
 		return m.db.Where("id=?", data.Id).
-			Omit("id", "entry_id", "env").
+			Select("name", "spec", "protocol", "command", "remark", "update_dt", "type", "msg_set", "var_fields",
+				"after_tmpl", "command_hash", "msg_set_hash", "var_fields_hash", "after_sleep", "err_retry_num", "audit_user_id", "audit_user_name").
 			Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
@@ -51,7 +52,9 @@ func (m *CronConfigData) ChangeStatus(data *models.CronConfig, remark string) er
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	data.StatusDt = data.UpdateDt
 	data.StatusRemark = remark
-	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id", "handle_user_ids").Updates(data).Error
+	return m.db.Where("id=?", data.Id).
+		Select("status", "status_remark", "status_dt", "update_dt", "entry_id", "handle_user_ids", "handle_user_names", "audit_user_id", "audit_user_name").
+		Updates(data).Error
 }
 
 func (m *CronConfigData) SetEntryId(data *models.CronConfig) error {

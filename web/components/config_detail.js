@@ -11,7 +11,7 @@ var MyConfigDetail = Vue.extend({
                 <template slot="label">状态描述</template>
                 <div style="font-size: 12px;color: #909399;">{{detail.status_dt}}<el-divider direction="vertical"></el-divider>{{detail.status_remark}}</div>
             </el-descriptions-item>
-            <el-descriptions-item v-if="detail.type!=5">
+            <el-descriptions-item v-if="detail.type!=5 && req.type != 'receive'">
                 <template slot="label">执行时间</template>
                 {{detail.spec}}
             </el-descriptions-item>
@@ -19,11 +19,11 @@ var MyConfigDetail = Vue.extend({
                 <template slot="label">协议</template>
                 {{detail.protocol_name}}
             </el-descriptions-item>
-            <el-descriptions-item>
+            <el-descriptions-item v-if="req.type == 'config'">
                 <template slot="label">类型</template>
                 {{detail.type_name}}
             </el-descriptions-item>
-            <el-descriptions-item  span="3">
+            <el-descriptions-item span="3">
                 <template slot="label">消息</template>
                 <div>
                    <el-row class="input-box" v-for="(msg,msg_index) in detail.msg_set" v-html="msg.descrition" style="padding: 2px 4px;"></el-row>
@@ -61,6 +61,7 @@ var MyConfigDetail = Vue.extend({
                     </span>
                     <el-dropdown-menu slot="dropdown">
                         <el-dropdown-item @click.native="copyToClipboard('标题&链接',detail.share_url)">复制标题&链接</el-dropdown-item>
+                        <el-dropdown-item @click.native="copyToClipboard('webhook 链接',detail.webhook_url)" v-if="req.type=='receive'">复制 webhook 链接</el-dropdown-item>
                     </el-dropdown-menu>
                 </el-dropdown>
                 <p v-if="detail.remark">{{detail.remark}}</p>
@@ -86,9 +87,9 @@ var MyConfigDetail = Vue.extend({
                     
                     <el-descriptions-item span="2">
                         <template slot="label">细节</template>
-                        <el-form size="mini" disabled class="detail">
+                        <el-form size="small" disabled class="detail">
                             <div v-if="detail.protocol_name == 'http'">
-                                <el-form-item label="" class="http_url_box" size="mini">
+                                <el-form-item label="" class="http_url_box">
                                     <el-input v-model="detail.command.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
                                         <el-select v-model="detail.command.http.method" placeholder="请选请求方式" slot="prepend">
                                             <el-option label="GET" value="GET"></el-option>
@@ -96,12 +97,12 @@ var MyConfigDetail = Vue.extend({
                                         </el-select>
                                     </el-input>
                                 </el-form-item>
-                                <el-form-item label="请求Header" class="http_header_box" size="mini" v-if="detail.command.http.header">
+                                <el-form-item label="请求Header" class="http_header_box" v-if="detail.command.http.header.length">
                                     <el-input v-for="(header_v,header_i) in detail.command.http.header" v-model="header_v.value" v-if="header_v.key">
                                         <el-input v-model="header_v.key" slot="prepend"></el-input>
                                     </el-input>
                                 </el-form-item>
-                                <el-form-item label="请求Body参数" size="mini" v-if="detail.command.http.body != ''">
+                                <el-form-item label="请求Body参数" v-if="detail.command.http.body != ''">
                                     <el-input type="textarea" v-model="detail.command.http.body" rows="4"></el-input>
                                 </el-form-item>
                             </div>
@@ -185,6 +186,33 @@ var MyConfigDetail = Vue.extend({
                                     </div>
                                 </div>
                             </div>
+                            
+                            <div v-if="detail.protocol_name == 'receive'">
+                                <p>webhook: <b class="b">{{detail.webhook_url}}</b> <span class="info-2">激活后有效</span></p>
+                                <div class="input-box">
+                                    <pre style="min-height: 200px;"><code>{{detail.receive_tmpl}}</code></pre>
+                                </div>
+                                <p>任务执行间隔<b class="b">{{detail.interval}}/秒</b> 任务停用时<b class="b">{{detail.config_disable_action_name}}</b> 任务执行错误时<b class="b">{{detail.config_err_action_name}}</b></p>
+                                <div class="sort-drag-box">
+                                    <div class="input-box" v-for="(conf,conf_index) in detail.rule_config" @mouseover="configDetailPanel(conf, true)" @mouseout="configDetailPanel(conf, false)">
+                                        <div>
+                                            <b class="b">{{conf.config.type_name}}</b>-<b>{{conf.config.name}}</b>-<b class="b">{{conf.config.protocol_name}}</b>
+                                            <el-button :type="statusTypeName(conf.config.status)" size="mini" plain round disabled>{{conf.config.status_name}}</el-button>
+                                            <el-divider direction="vertical"></el-divider>
+                                            (<el-tooltip v-for="(var_p,var_i) in conf.config.var_fields" effect="dark" :content="var_p.remark" placement="top-start">
+                                                <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}<span class="info-2">={{var_p.value}}</span></code>
+                                            </el-tooltip>)
+                                            <span style="margin-left: 4px;" v-show="conf.view_panel">
+                                                <i class="el-icon-view hover" @click="configDetailBox(conf.config)" title="查看任务信息"></i>
+                                            </span>
+                                        </div>
+                                        <el-row style="margin:3px 0 0 8px">
+                                            <el-col :span="12">任务：<b class="b" v-for="re in conf.rule">{{re.key}}:{{re.value}}</b></el-col>
+                                            <el-col :span="12">入参：<b class="b" v-for="pm in conf.param">{{pm.key}}:{{pm.value}}</b></el-col>
+                                        </el-row>
+                                    </div>
+                                </div>
+                            </div>
                         </el-form>
                     </el-descriptions-item>
                 </el-descriptions>
@@ -224,6 +252,9 @@ var MyConfigDetail = Vue.extend({
         </el-dialog>
         <el-drawer title="编辑流水线" :visible.sync="detail_form_box.show && req.type=='pipeline'" size="60%" :before-close="formClose">
             <my-pipeline-form v-if="detail_form_box.show && req.type==='pipeline'" :request="{detail:detail}" @close="formClose"></my-pipeline-form>
+        </el-drawer>
+        <el-drawer title="编辑接收" :visible.sync="detail_form_box.show && req.type=='receive'" size="60%" :before-close="formClose">
+            <my-receive-form v-if="detail_form_box.show && req.type==='receive'" :request="{detail:detail}" @close="formClose"></my-receive-form>
         </el-drawer>
         <el-dialog title="任务详情" :visible.sync="config_detail.show" :close-on-click-modal="false" class="config-form-box" :modal="false">
             <my-config-form v-if="config_detail.show" :request="{detail:config_detail.detail,disabled:true}" @close="configDetailBox()"></my-config-form>
@@ -342,6 +373,12 @@ var MyConfigDetail = Vue.extend({
                     res.data.configs.forEach((item2)=>{
                         item2.view_panel = false
                     })
+                }else if (this.req.type === 'receive'){
+                    res.data.protocol_name = this.req.type
+                    res.data.rule_config.forEach((item2)=>{
+                        item2.view_panel = false
+                    })
+                    res.data.webhook_url = window.location.origin+"/receive/webhook/"+(res.data.alias != '' ? res.data.alias : res.data.id)
                 }
                 if (res.data.msg_set){
                     res.data.msg_set.forEach((item)=>{

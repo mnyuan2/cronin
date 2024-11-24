@@ -25,9 +25,6 @@ var MyConfigForm = Vue.extend({
         <el-form-item label-width="50px" v-show="form.var_fields.length" style="padding-right: 96px">
             <span slot="label" style="white-space: nowrap;">
                 参数
-                <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
-                    <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
-                </el-tooltip>
             </span>
             <div class="input-box">
                 <span class="input-header"><i class="el-icon-edit" @click="biggerShow(true)"></i></span>
@@ -340,7 +337,7 @@ var MyConfigForm = Vue.extend({
                     <el-autocomplete v-model="gitSet.data.pr_is_merge.owner" :fetch-suggestions="preferenceGitSuggestions" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-autocomplete>
                 </el-form-item>
                 <el-form-item label="仓库*">
-                    <el-autocomplete v-model="gitSet.data.pr_is_merge.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.pr_merge.owner)" placeholder="仓库路径"></el-autocomplete>
+                    <el-autocomplete v-model="gitSet.data.pr_is_merge.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.pr_is_merge.owner)" placeholder="仓库路径"></el-autocomplete>
                 </el-form-item>
                 <el-form-item label="PR 编号*">
                     <el-input v-model="gitSet.data.pr_is_merge.number" placeholder="本仓库PR的序数"></el-input>
@@ -818,6 +815,9 @@ var MyConfigForm = Vue.extend({
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
             body.command.git.link_id = Number(body.command.git.link_id)
+            body.command.http.header = body.command.http.header.filter(function (item) {
+                return item['key'] !== undefined &&  item.key !== ''
+            })
             body.after_sleep = Number(body.after_sleep)
             body.err_retry_num = Number(body.err_retry_num)
 
@@ -1113,6 +1113,9 @@ var MyConfigForm = Vue.extend({
 
         // 更多设置弹窗
         biggerShow(show = true){
+            if (this.request.disabled){
+                return
+            }
             this.bigger_set.show = show === true
             if (this.bigger_set.show){
                 let form  = {
@@ -1250,7 +1253,7 @@ var MyConfigForm = Vue.extend({
                     data.desc = '完善中...'
                     break
                 case 8:
-                    data.desc = '<b>pr是否合并</b> <a href="https://gitee.com/${data.pr_is_merge.owner}/${data.pr_is_merge.repo}/pulls/${data.pr_is_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> <b class="b">${data.pr_is_merge.owner}/${data.pr_is_merge.repo}</b>/pulls/<b class="b">${data.pr_is_merge.number}</b>'
+                    data.desc = `<b>pr是否合并</b> <a href="https://gitee.com/${data.pr_is_merge.owner}/${data.pr_is_merge.repo}/pulls/${data.pr_is_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> <b class="b">${data.pr_is_merge.owner}/${data.pr_is_merge.repo}</b>/pulls/<b class="b">${data.pr_is_merge.number}</b>`
                     break
                 case 9:
                     data.desc = `<b>pr合并</b> <a href="https://gitee.com/${data.pr_merge.owner}/${data.pr_merge.repo}/pulls/${data.pr_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> <b class="b">${data.pr_merge.owner}/${data.pr_merge.repo}</b>/pulls/<b class="b">${data.pr_merge.number}</b> <b class="b">${this.gitSet.gitMergeTypeList[data.pr_merge.merge_method]}</b>  ${data.pr_merge.prune_source_branch===true?'<b class="b">删除提交分支</b>':''}`+

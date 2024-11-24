@@ -194,6 +194,8 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			{Key: "number", Name: "序号"},
 			{Key: "type", Name: "类型"},
 			{Key: "service", Name: "服务"},
+			{Key: "custom_1", Name: "自定义1"},
+			{Key: "custom_2", Name: "自定义2"},
 			// 后续根据情况补充
 		}
 	}

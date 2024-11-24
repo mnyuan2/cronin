@@ -5,6 +5,7 @@ type ReceiveWebHook struct {
 	Type    string              `json:"type"`
 	Event   string              `json:"event"`
 	Dataset []map[string]string `json:"dataset"`
+	TraceId string              `json:"trace_id"`
 }
 
 type ReceiveWebHookData struct {

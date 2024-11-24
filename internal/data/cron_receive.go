@@ -51,7 +51,9 @@ func (m *CronReceiveData) ChangeStatus(data *models.CronReceive, remark string) 
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	data.StatusDt = data.UpdateDt
 	data.StatusRemark = remark
-	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "handle_user_ids").Updates(data).Error
+	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt",
+		"handle_user_ids", "handle_user_names", "audit_user_id", "audit_user_name").
+		Updates(data).Error
 }
 
 func (m *CronReceiveData) GetOne(Id int) (data *models.CronReceive, err error) {

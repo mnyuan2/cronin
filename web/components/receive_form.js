@@ -1,29 +1,28 @@
 var MyReceiveForm = Vue.extend({
     template: `<div class="pipeline-form">
-        <el-form :model="form">
+        <el-form :model="form" size="small">
             <el-form-item label="名称*" label-width="76px">
                 <el-input v-model="form.name"></el-input>
             </el-form-item>
-           
-            <el-form-item prop="plate" label-width="76px">
-                <span slot="label" style="white-space: nowrap;">
-                    接收模板<br/>
-                    <el-tooltip effect="dark" content="实现的参数会传入设置过参数的任务中，点击查看更多" placement="top-start">
-                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
-                    </el-tooltip>
-                </span>
-                <el-input type="textarea" v-model="form.receive_tmpl" :rows="8" placeholder="接收参数解析模板，输出指定格式 json"></el-input>
-                <div class="info-2">有效结果：{"x":"xx"}</div>
+            <el-form-item label="别名" label-width="76px">
+                <el-input v-model="form.alias" placeholder="webhook别名，为 字母、数字、-_ 的组合"></el-input>
+            </el-form-item>
+            <el-form-item label="接收模板*" label-width="76px">
+                <div class="input-box">
+                    <pre style="min-height: 200px;"><code>{{form.receive_tmpl}}</code></pre>
+                    <span class="input-header">
+                        <i class="el-icon-edit" @click="tmpl_box.show = true"></i>
+                    </span>
+                </div>
             </el-form-item>
             
-            <el-form-item label="任务" label-width="76px">
+            <el-form-item label="任务*" label-width="76px">
                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
                 <div id="config-selected-box" class="sort-drag-box">
                     <div class="input-box" v-for="(conf,conf_index) in form.rule_config" @mouseover="configDetailPanel(conf, true)" @mouseout="configDetailPanel(conf, false)">
                         <div class="drag">
-                            <i class="el-icon-more-outline " style="transform: rotate(90deg);"></i>
+                            <i class="el-icon-more-outline" style="transform: rotate(90deg);"></i>
                         </div>
-                        
                         <div>
                             <b class="b">{{conf.config.type_name}}</b>-<b>{{conf.config.name}}</b>-<b class="b">{{conf.config.protocol_name}}</b>
                             <el-button :type="statusTypeName(conf.config.status)" size="mini" plain round disabled>{{conf.config.status_name}}</el-button>
@@ -32,16 +31,16 @@ var MyReceiveForm = Vue.extend({
                                 <code v-if="var_p.key != ''" style="padding: 0 2px;margin: 0 4px;cursor:pointer;color: #445368;background: #f9fdff;position: relative;"><span style="position: absolute;left: -6px;bottom: -2px;">{{var_i>0 ? ',': ''}}</span>{{var_p.key}}<span class="info-2">={{var_p.value}}</span></code>
                             </el-tooltip>)
                             <span style="margin-left: 4px;" v-show="conf.view_panel">
-                                <i class="el-icon-view hover" @click="configDetailBox(conf.config)"></i>
-                                <i class="el-icon-setting hover" @click="ruleConfigBox(conf_index)"></i>
+                                <i class="el-icon-view hover" @click="configDetailBox(conf.config)" title="查看任务信息"></i>
+                                <i class="el-icon-setting hover" @click="ruleConfigBox(conf_index)" title="设置关联匹配"></i>
                             </span>
                         </div>
-                        <el-row style="margin-left:8px">
+                        <el-row style="margin:3px 0 0 8px">
                             <el-col :span="12">任务：<b class="b" v-for="re in conf.rule">{{re.key}}:{{re.value}}</b></el-col>
                             <el-col :span="12">入参：<b class="b" v-for="pm in conf.param">{{pm.key}}:{{pm.value}}</b></el-col>
                         </el-row>
                         <span class="input-header">
-                            <i class="el-icon-close" @click="removeAt(conf_index)"></i>
+                            <i class="el-icon-close" @click="removeAt(conf_index)" title="移除任务"></i>
                         </span>
                     </div>
                 </div>
@@ -92,6 +91,33 @@ var MyReceiveForm = Vue.extend({
             <el-button type="primary" size="small" @click="submitForm()" v-if="(form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject) && $auth_tag.pipeline_set">保存草稿</el-button>
         </div>
         
+        <!-- 模板编辑弹窗 -->
+        <el-dialog title="接收模板" :visible.sync="tmpl_box.show" top="10vh" class="config-select-wrap" :modal="false" :show-close="false">
+            <span slot="title">接收模板
+                <el-tooltip effect="dark" content="实现的参数会传入设置过参数的任务中，点击查看更多" placement="top-start">
+                    <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                </el-tooltip>
+            </span>
+            <el-row>
+                <el-input type="textarea" v-model="form.receive_tmpl" :rows="10" placeholder="接收解析模板，需返回指定json字符串结果"></el-input>
+            </el-row>
+            <el-row style="text-align: center;padding: 14px 0px 0px;">
+                <el-button size="small" type="primary" @click="tmpl_box.show = false">确定</el-button>
+            </el-row>
+            <el-row>
+                <p class="h4">模板响应样例</p>
+                <div class="input-box">
+                    <pre><code>{{tmpl_box.help.json}}</code></pre>
+                </div>
+                <el-table :data="tmpl_box.help.table" style="width: 100%">
+                    <el-table-column prop="field" label="字段"></el-table-column>
+                    <el-table-column prop="type" label="类型" ></el-table-column>
+                    <el-table-column prop="required" label="必填"></el-table-column>
+                    <el-table-column prop="desc" label="描述"></el-table-column>
+                </el-table>
+            </el-row>
+        </el-dialog>
+        
         <!-- 任务选择弹窗 -->
         <el-dialog title="任务选择" :visible.sync="config.boxShow" width="60%" top="10vh" class="config-select-wrap" :modal="false">
             <my-config-select v-if="config.boxShow" ref="selection"></my-config-select>
@@ -101,6 +127,7 @@ var MyReceiveForm = Vue.extend({
                 <el-button size="medium" type="primary" @click="configSelectBox('confirm')" :disabled="config.running">添加</el-button>
             </div>
         </el-dialog>
+        
         <!-- 推送设置弹窗 -->
         <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false" :modal="false">
             <el-form :model="msgSet" :inline="true" size="mini">
@@ -183,6 +210,28 @@ var MyReceiveForm = Vue.extend({
             },
             // 表单
             form:{},
+            // 接收模板弹窗
+            tmpl_box:{
+                show:false,
+                help:{
+                    json:"{\n" +
+                        "    \"dataset\": [\n" +
+                        "        {\"type\":\"jenkins\", \"repo\":\"kobe\", \"service\":\"stock\"},\n" +
+                        "        {\"type\":\"pr\", \"repo\":\"kobe\", \"owner\":\"stock\", \"number\":\"123\"}\n" +
+                        "    ]\n" +
+                        "}",
+                    table:[
+                        {field:'dataset', type:'array', required:'是',desc:'匹配数据集'},
+                        {field:'dataset.owner', type:'string', required:'否',desc:'空间'},
+                        {field:'dataset.repo', type:'string', required:'否',desc:'仓库'},
+                        {field:'dataset.number', type:'string', required:'否',desc:'序号'},
+                        {field:'dataset.type', type:'string', required:'否',desc:'类型'},
+                        {field:'dataset.service', type:'string', required:'否',desc:'服务'},
+                        {field:'dataset.custom_1', type:'string', required:'否',desc:'自定义1'},
+                        {field:'dataset.custom_2', type:'string', required:'否',desc:'自定义2'},
+                    ],
+                },
+            },
             // 任务弹窗
             config:{
                 boxShow:false,
@@ -231,7 +280,8 @@ var MyReceiveForm = Vue.extend({
         addData(){
             return  {
                 id: 0,
-                name: "",
+                name: '',
+                alias: '',
                 type: '2',
                 config_ids:[], // 任务id集合
                 rule_config:[], // 任务集合
@@ -268,6 +318,7 @@ var MyReceiveForm = Vue.extend({
             let body = {
                 id: data.id,
                 name: data.name,
+                alias: data.alias,
                 type: Number(data.type),
                 spec: data.spec,
                 receive_tmpl: data.receive_tmpl,
@@ -293,6 +344,7 @@ var MyReceiveForm = Vue.extend({
                 this.close(true)
             })
         },
+
 
         // 推送弹窗
         msgBoxShow(index, oldData){
@@ -402,7 +454,6 @@ var MyReceiveForm = Vue.extend({
                         this.form.rule_config= oldlist
                         console.log("拖拽后",that.form.rule_config, this, t)
                     })
-
                 })
             })
         },

@@ -135,6 +135,40 @@ func (t *mysqlIDGenerator) ParseID(hexStr string) (string, error) {
 	return normalStr.String(), nil // 返回转换后的正常字符串
 }
 
+// 提取传入的 trace id
+func Extract(traceId string) trace.SpanStartOption {
+	ids := strings.Split(traceId, ":")
+	if len(ids) < 3 {
+		return nil
+	}
+	hex := fmt.Sprintf("%032x", ids[0]) // 32位
+	traceID, _ := trace.TraceIDFromHex(hex)
+	spanIDHex := fmt.Sprintf("%016x", ids[1]) // 16位
+	spanID, _ := trace.SpanIDFromHex(spanIDHex)
+
+	lk := &trace.Link{
+		SpanContext: trace.SpanContext{}.WithTraceID(traceID).WithSpanID(spanID),
+		Attributes:  []attribute.KeyValue{},
+	}
+
+	return trace.WithLinks(*lk)
+}
+
+// 构建注入 trace id
+func Inject(s trace.Span) string {
+	switch val := s.(type) {
+	case *MysqlSpan:
+		tr := val.traceId.String()
+		sp := val.spanId.String()
+		traceId, _ := gen.ParseID(tr)
+		spanId, _ := gen.ParseID(sp)
+		return fmt.Sprintf("%s:%s:0000000000000000:1", traceId, spanId)
+	default:
+		return fmt.Sprintf("%+v", s)
+	}
+
+}
+
 func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	conf := trace.NewSpanStartConfig(opts...)
 	span := &MysqlSpan{
@@ -149,9 +183,10 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 		span.startTime = time.Now()
 	}
 	span.tags = append(span.tags, conf.Attributes()...)
-	for _, tag := range span.tags {
-		if tag.Key == "ref_id" {
-			span.refId = fmt.Sprintf("%v", tag.Value.AsInterface())
+	for _, item := range conf.Links() {
+		if item.SpanContext.HasTraceID() && !span.traceId.IsValid() {
+			span.traceId = item.SpanContext.TraceID()
+			span.parentSpanId = item.SpanContext.SpanID()
 		}
 	}
 
@@ -160,7 +195,9 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 		env:       t.env,
 		nonce:     t.nonce,
 	}
-	if parent := ctx.Value("mysql_span"); parent != nil {
+	if span.traceId.IsValid() {
+		span.spanId = gen.NewSpanID(ctx, span.traceId)
+	} else if parent := ctx.Value("mysql_span"); parent != nil {
 		span.traceId = parent.(*MysqlSpan).traceId
 		span.parentSpanId = parent.(*MysqlSpan).spanId
 		span.spanId = gen.NewSpanID(ctx, span.traceId)
@@ -262,6 +299,9 @@ func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
 		//tagsKey[i] = string(item.Key)
 		//tagsVal[i] = item.Value.Emit()
 		tagsKv[i] = fmt.Sprintf("%s=%s", item.Key, item.Value.Emit())
+		if item.Key == "ref_id" {
+			s.refId = fmt.Sprintf("%v", item.Value.AsInterface())
+		}
 	}
 	// 执行日志的写入
 	data := &models.CronLogSpan{
@@ -295,4 +335,8 @@ func (*MysqlSpan) SetName(string) {}
 // TracerProvider returns a No-Op TracerProvider.
 func (*MysqlSpan) TracerProvider() trace.TracerProvider {
 	return nil
+}
+
+func (s *MysqlSpan) String() string {
+	return Inject(s)
 }

@@ -107,7 +107,7 @@ func ConnSqlite(conf *config.Sqlite) *gorm.DB {
 //
 //	资料：https://github.com/go-gorm/clickhouse
 func ConnClickhouse(conf *config.MysqlSource) *gorm.DB {
-	dsn := fmt.Sprintf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=10s&read_timeout=20s",
+	dsn := fmt.Sprintf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=10s",
 		conf.Username, conf.Password, conf.Hostname, conf.Port, conf.Database)
 	// 连接数据库
 	db, err := gorm.Open(clickhouse.Open(dsn), &gorm.Config{})

@@ -1,6 +1,6 @@
 var MyPipelineForm = Vue.extend({
     template: `<div class="pipeline-form">
-        <el-form :model="form">
+        <el-form :model="form" size="small">
             <el-form-item label="名称*" label-width="76px">
                 <el-input v-model="form.name"></el-input>
             </el-form-item>
@@ -35,7 +35,9 @@ var MyPipelineForm = Vue.extend({
                 <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
                 <div id="config-selected-box" class="sort-drag-box">
                     <div class="input-box" v-for="(conf,conf_index) in form.configs" @mouseover="configDetailPanel(conf, true)" @mouseout="configDetailPanel(conf, false)">
-                        <i class="el-icon-more-outline drag"></i>
+                        <div class="drag">
+                            <i class="el-icon-more-outline" style="transform: rotate(90deg);"></i>
+                        </div>
                         <b class="b">{{conf.type_name}}</b>-
                         <b>{{conf.name}}</b>-
                         <b class="b">{{conf.protocol_name}}</b>

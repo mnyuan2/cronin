@@ -339,15 +339,18 @@ func TestReceiveTapd(t *testing.T) {
 		"request": str,
 	}
 	temp := `[[$data := json_decode .request]]
-[[$project := str_slice_filter $data.event.object_info.custom_field_four " " "^\\s*$"]]
-[[$pr := str_slice_filter $data.event.object_info.custom_field_five " " "^\\s*$"]]
-[[$dataset := make "[]map[string]any"]]
+[[$project := slice_filter (str_split $data.event.object_info.custom_field_four " ") "^\\s*$"]]
+[[$pr := slice_filter (str_split $data.event.object_info.custom_field_five " ") "^\\s*$"]]
+[[$dataset := make "[]map[string]string"]]
 
 [[range $pr]]
-	[[$dataset = append $dataset (str_find_map . "https://gitee.com/(.+)/([^/]+)/pulls/(\\d+)" "owner,repo,number,type:pr")]]
+	[[$dataset = append $dataset (slice_combine (str_find . "https://gitee.com/(.+)/([^/]+)/pulls/(\\d+)") "" "owner" "repo" "number" "type:pr")]]
 [[end]]
 [[range $project]]
-	[[$dataset = append $dataset (str_find_map . "([^/]+)(?:.*)(?:/|\\{(.*)\\})" "repo,service,type:jenkins")]]
+	[[$temp_list := map_split (slice_combine (str_find . "([^/]+)(?:.*)(?:/|\\{(.*)\\})") "" "repo" "service" "type:jenkins") "," "service"]]
+	[[range $temp_list]]
+		[[$dataset = append $dataset .]]
+	[[end]]
 [[end]]
 
 {

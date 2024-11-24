@@ -153,12 +153,15 @@ func (job *JobConfig) handlerLog(name string, h *gitee.Handler, err errs.Errs) {
 func (job *JobConfig) PRIsMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
 	h := gitee.NewHandler(ctx)
 	defer func() {
-		job.handlerLog("PRMerge", h, err)
+		job.handlerLog("PRIsMerge", h, err)
 	}()
 
 	num, er := strconv.Atoi(r.Number)
 	if er != nil {
 		return nil, errs.New(er, "pr编号输入有误")
+	}
+	if r.Owner == "" || r.Repo == "" || num == 0 {
+		return nil, errs.New(nil, "必填参数不足")
 	}
 
 	request := &gitee.PullsMergeRequest{

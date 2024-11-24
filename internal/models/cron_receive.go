@@ -4,6 +4,7 @@ type CronReceive struct {
 	Id                  int    `json:"id" gorm:"column:id;type:INTEGER;primary_key;comment:主键;"`
 	Env                 string `json:"env" gorm:"column:env;type:varchar(32);index:receive_env;comment:环境;"`
 	Name                string `json:"name" gorm:"column:name;type:varchar(255);default:'';comment:名称;"`
+	Alias               string `json:"alias" gorm:"column:alias;type:varchar(32);index:receive_alias;default:'';comment:别名;"`
 	Remark              string `json:"remark" gorm:"column:remark;type:varchar(255);comment:备注;"`
 	ReceiveTmpl         string `json:"receive_tmpl" gorm:"column:receive_tmpl;type:varchar(3072);default:'';comment:接收模板;"`
 	ConfigIds           []byte `json:"config_ids" gorm:"column:config_ids;type:json;default:null;comment:任务id集合;"`

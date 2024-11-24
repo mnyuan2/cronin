@@ -84,16 +84,15 @@ func routerReceiveWebhook(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
-	id := ctx.Param("key")
-	if id == "" {
+	key := ctx.Param("key")
+	if key == "" {
 		NewReply(ctx).SetError(pb.ParamError, "接受key未指定").RenderJson()
 		return
 	}
-	// 后续可以扩展支持字符串
-	r.Id, err = strconv.Atoi(id)
+
+	r.Id, err = strconv.Atoi(key)
 	if err != nil {
-		NewReply(ctx).SetError(pb.ParamError, "key解析有误，请确认是否为数值").RenderJson()
-		return
+		r.Alias = key
 	}
 
 	rep, err := biz.NewReceiveService(ctx.Request.Context(), nil).Webhook(r)

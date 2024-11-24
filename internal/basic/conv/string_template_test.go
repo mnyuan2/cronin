@@ -178,7 +178,7 @@ func TestStrSliceFilter(t *testing.T) {
 		"  Text  ",    // 也包含可见字符
 	}
 	for i, str := range strs {
-		b, e := DefaultStringTemplate().SetParam(map[string]any{"data": str}).Execute([]byte("[[json_encode (str_slice_filter .data ` ` `^\\s*$`)]]"))
+		b, e := DefaultStringTemplate().SetParam(map[string]any{"data": str}).Execute([]byte("[[json_encode (slice_filter (str_split .data ` `) `^\\s*$`)]]"))
 		if e != nil {
 			t.Fatal(e)
 		}

@@ -334,27 +334,29 @@ func (m *ApiV5) PullsIsMerge(handler *Handler, r *PullsMergeRequest) (res *Pulls
 	}
 
 	resp, err := http.Get(u.String())
+	res = &PullsMergeResponse{
+		HtmlUrl: fmt.Sprintf("https://gitee.com/%s/%s/pulls/%v", r.Owner, r.Repo, r.Number),
+	}
 
 	handler.OnGeneral(http.MethodGet, u.String(), resp.StatusCode)
 	handler.OnRequestHeader(resp.Request.Header)
 	handler.OnResponseHeader(resp.Header)
 
 	if err != nil {
-		return nil, fmt.Errorf("请求失败，%w", err)
+		return res, fmt.Errorf("请求失败，%w", err)
 	}
 	defer resp.Body.Close()
 
 	respByte, er := io.ReadAll(resp.Body)
 	handler.OnResponseBody(respByte)
 	if er != nil {
-		return nil, fmt.Errorf("响应获取失败，%w", err)
+		return res, fmt.Errorf("响应获取失败，%w", err)
 	}
-	res = &PullsMergeResponse{}
+
 	_ = jsoniter.Unmarshal(respByte, res)
-	res.HtmlUrl = fmt.Sprintf("https://gitee.com/%s/%s/pulls/%v", r.Owner, r.Repo, r.Number)
 
 	if resp.StatusCode != http.StatusOK { // {"message":"此 Pull Request 未通过设置的审查"}、{"message":"此 Pull Request 未通过设置的测试"}
-		return nil, errors.New(res.Message)
+		return res, errors.New(res.Message)
 	}
 	return res, nil
 }
@@ -367,6 +369,10 @@ func (m *ApiV5) PullsMerge(handler *Handler, r *PullsMergeRequest) (res *PullsMe
 	defer func() {
 		handler.endTime = time.Now()
 	}()
+	res = &PullsMergeResponse{
+		HtmlUrl: fmt.Sprintf("https://gitee.com/%s/%s/pulls/%v", r.Owner, r.Repo, r.Number),
+	}
+
 	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/pulls/%v/merge", apiV5BaseUrl, r.Owner, r.Repo, r.Number))
 	reqByte, _ := jsoniter.Marshal(map[string]any{
 		"access_token": m.conf.GetAccessToken(),
@@ -377,7 +383,7 @@ func (m *ApiV5) PullsMerge(handler *Handler, r *PullsMergeRequest) (res *PullsMe
 
 	req, err := http.NewRequest(http.MethodPut, u.String(), bytes.NewBuffer(reqByte))
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 	req.Header.Set("Content-Type", "application/json;charset=UTF-8")
 	resp, err := http.DefaultClient.Do(req)
@@ -388,21 +394,19 @@ func (m *ApiV5) PullsMerge(handler *Handler, r *PullsMergeRequest) (res *PullsMe
 	handler.OnResponseHeader(resp.Header)
 
 	if err != nil {
-		return nil, fmt.Errorf("请求失败，%w", err)
+		return res, fmt.Errorf("请求失败，%w", err)
 	}
 	defer resp.Body.Close()
 
 	respByte, er := io.ReadAll(resp.Body)
 	handler.OnResponseBody(respByte)
 	if er != nil {
-		return nil, fmt.Errorf("响应获取失败，%w", err)
+		return res, fmt.Errorf("响应获取失败，%w", err)
 	}
-	res = &PullsMergeResponse{}
 	_ = jsoniter.Unmarshal(respByte, res)
-	res.HtmlUrl = fmt.Sprintf("https://gitee.com/%s/%s/pulls/%v", r.Owner, r.Repo, r.Number)
 
 	if resp.StatusCode != http.StatusOK { // {"message":"此 Pull Request 未通过设置的审查"}、{"message":"此 Pull Request 未通过设置的测试"}
-		return nil, errors.New(res.Message)
+		return res, errors.New(res.Message)
 	}
 	return res, nil
 }

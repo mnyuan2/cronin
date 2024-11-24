@@ -37,6 +37,7 @@ type ReceiveListItem struct {
 type ReceiveSetRequest struct {
 	Id                  int                `json:"id"`                    // 主键
 	Name                string             `json:"name"`                  // 任务名称
+	Alias               string             `json:"alias"`                 // 别名
 	ConfigIds           []int              `json:"config_ids"`            // 任务id集合
 	RuleConfig          []*ReceiveRuleItem `json:"rule_config"`           // 任务集合
 	ConfigDisableAction int                `json:"config_disable_action"` //
@@ -65,6 +66,7 @@ type ReceiveDetailRequest struct {
 type ReceiveDetailReply struct {
 	Id                      int                `json:"id"`
 	Name                    string             `json:"name"`
+	Alias                   string             `json:"alias"`
 	Remark                  string             `json:"remark"`
 	Status                  int                `json:"status"`
 	StatusName              string             `json:"status_name"`
@@ -84,8 +86,11 @@ type ReceiveDetailReply struct {
 	RuleConfig              []*ReceiveRuleItem `json:"rule_config"`
 	MsgSet                  []*CronMsgSet      `json:"msg_set"`
 	CreateUserId            int                `json:"create_user_id"`
+	CreateUserName          string             `json:"create_user_name"`
 	AuditUserId             int                `json:"audit_user_id"`
+	AuditUserName           string             `json:"audit_user_name"`
 	HandleUserIds           []int              `json:"handle_user_ids"`
+	HandleUserNames         string             `json:"handle_user_names"`
 }
 
 // 接收配置 状态
@@ -100,10 +105,12 @@ type ReceiveChangeStatusReply struct {
 
 // 接收配置 触发钩子 请求
 type ReceiveWebhookRequest struct {
-	Id   int    `json:"id"`
-	Body []byte `json:"body"`
+	Id    int    `json:"id"`
+	Alias string `json:"alias"`
+	Body  []byte `json:"body"`
 }
 
 // 接收配置 触发钩子 响应
 type ReceiveWebhookReply struct {
+	Message string `json:"message"`
 }

@@ -133,6 +133,8 @@ func DefaultStringTemplate() *StringTemplate {
 					return int(0)
 				case "[]map[string]any":
 					return []map[string]any{}
+				case "[]map[string]string":
+					return []map[string]string{}
 				default:
 					return nil
 				}
@@ -140,15 +142,13 @@ func DefaultStringTemplate() *StringTemplate {
 			"append": func(slice any, elems ...any) (any, error) {
 				values := reflect.ValueOf(slice)
 				if values.Kind() != reflect.Slice {
-					return nil, fmt.Errorf("param 1 not slice")
+					return nil, fmt.Errorf("method append param 1 not slice")
 				}
-				k := values.Type().Elem().Kind()
-				//fmt.Println(k.String(), values.Type().String())
-
+				k := values.Type().Elem()
 				for i, item := range elems {
 					val := reflect.ValueOf(item)
-					if val.Kind() != k {
-						return nil, fmt.Errorf("param %v type inconsistency", i+2)
+					if k != val.Type() {
+						return nil, fmt.Errorf("method append param %v type inconsistency(%s != %s)", i+2, k.String(), val.Type().String())
 					}
 					values = reflect.Append(values, val)
 				}
@@ -220,49 +220,116 @@ func DefaultStringTemplate() *StringTemplate {
 				str = raw[:len(raw)-len(matches[0])] + matches[1] + matches[2]
 				return str, nil
 			},
-			// 字符串查找并转map
+			// 字符串查找
 			//  @param string raw 原始字符串
 			//  @param string regex 正则匹配表达式
 			//  @param string fields 输出结果keys, 多个key逗号相隔 与匹配结果顺序一致
 			//  @return map[string]any
-			"str_find_map": func(raw string, regex string, fields string) (out map[string]any, err error) {
-				if fields == "" {
-					return nil, errors.New("fields 不得为空")
-				}
+			"str_find": func(raw string, regex string) (out []string, err error) {
 				matches := regexp.MustCompile(regex).FindStringSubmatch(raw)
-				l := len(matches) - 1
-				out = map[string]any{}
-				fs := strings.Split(fields, ",")
-				for i, f := range fs {
-					kv := strings.Split(f, ":")
-					if l > i {
-						out[kv[0]] = matches[i+1]
-					} else if len(kv) > 1 {
-						out[kv[0]] = kv[1] // 默认值
-					}
-				}
-				return out, nil
+				return matches, nil
 			},
-			// 字符串切割并过滤指定元素
+			// 字符串切割  str_slice_filter
 			//  参数1: string str 原始字符串
 			//  参数2: string sep 分隔符
-			//  参数3: string filter 过滤字符串，正则表示(空格字符串忽略)；符合条件的元素会被过滤掉
-			"str_slice_filter": func(str, sep string, param ...string) (out []string, err error) {
-				var filter *regexp.Regexp
-				out, pl := []string{}, len(param)
-				if pl > 0 && param[0] != "" {
-					if filter, err = regexp.Compile(param[0]); err != nil {
-						return nil, fmt.Errorf("过滤正则输入有误，%s", err.Error())
-					}
-				}
+			"str_split": func(str, sep string) []string {
 				list := strings.Split(str, sep)
+				return list
+			},
+
+			// 切片过滤
+			//  参数1: []string data 原始切片数据
+			//  参数3: string filter 过滤字符串，正则表示；符合条件的元素会被过滤掉
+			"slice_filter": func(data any, filter string) (any, error) {
+				// 目前仅支持字符串切片，后期根据需求扩展
+				list, ok := data.([]string)
+				if !ok {
+					return data, nil
+				}
+				regex, err := regexp.Compile(filter)
+				if err != nil {
+					return nil, fmt.Errorf("过滤正则输入有误，%s", err.Error())
+				}
+				newData := []string{}
 				for _, v := range list {
-					if filter != nil && filter.MatchString(v) {
+					if regex.MatchString(v) {
 						continue
 					}
-					out = append(out, v)
+					newData = append(newData, v)
 				}
-				return out, nil
+				return newData, nil
+			},
+
+			// slice 组合成 map
+			//  @param []string list 原始切片数据
+			//  @param string keys 字段集合，特殊字段："k"常规字段输入、""空值表示忽略元素、"k:v"分号后面为默认值，原元素不存在或为空会启用。
+			"slice_combine": func(list []string, keys ...string) map[string]string {
+				// 目前仅支持字符串切片，后期根据需求扩展
+				l := len(list) - 1
+				out := map[string]string{}
+				for i, key := range keys {
+					if key == "" {
+						continue
+					}
+					kv := strings.Split(key, ":")
+					val := ""
+					if len(kv) > 1 {
+						val = kv[1]
+					}
+					if i <= l {
+						if v := list[i]; v != "" && v != "0" {
+							val = v
+						}
+					}
+					out[kv[0]] = val
+				}
+				return out
+			},
+
+			// map value 字符串按指定字符切割，并将结果生成新的map
+			//  参数1: map data 原始map
+			//  参数2: string sep 分隔符
+			//  参数3: string keys 指定匹配字段，默认所有字段（注意匹配字段值必须为字符串）
+			"map_split": func(data any, sep string, keys ...any) (any, error) {
+				last := reflect.ValueOf(data)
+				// 确保原始值是一个 map
+				if last.Kind() != reflect.Map {
+					return nil, fmt.Errorf("map_slice 参数 1 必须为map")
+				}
+				if len(keys) == 0 {
+					for _, k := range last.MapKeys() {
+						keys = append(keys, k.Interface())
+					}
+				}
+
+				values := reflect.MakeSlice(reflect.SliceOf(last.Type()), 0, 0)
+				for _, key := range keys {
+					f, v := last.MapIndex(reflect.ValueOf(key)), ""
+					if f.Type().Kind() == reflect.Interface {
+						v = f.Elem().String()
+					} else {
+						v = f.String()
+					}
+					if ok := strings.Contains(v, sep); !ok {
+						continue
+					}
+					list := strings.Split(v, sep)
+					for _, item := range list {
+						// 克隆 map， 并将指定字段替换。
+						cloneValue := reflect.MakeMap(last.Type())
+						for _, key := range last.MapKeys() {
+							value := last.MapIndex(key)
+							cloneValue.SetMapIndex(key, value)
+						}
+						cloneValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(item))
+						values = reflect.Append(values, cloneValue)
+						last = cloneValue
+					}
+				}
+				if values.Len() == 0 {
+					values = reflect.Append(values, last)
+				}
+				return values.Interface(), nil
 			},
 		},
 	}
