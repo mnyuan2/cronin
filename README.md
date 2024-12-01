@@ -39,13 +39,17 @@ cronin 是企业内部任务管理平台，支持linux、windows服务器；具�
 
 ### 文档
 * [任务设置](https://gitee.com/mnyuan/cronin/blob/master/work/config_set.md)
-* 流水线设置
+* [流水线设置](https://gitee.com/mnyuan/cronin/blob/master/work/pipeline_set.md)
 * [人员设置](https://gitee.com/mnyuan/cronin/blob/master/work/user_set.md)
 * [消息设置](https://gitee.com/mnyuan/cronin/blob/master/work/message_template_set.md)
 * [链接设置](https://gitee.com/mnyuan/cronin/blob/master/work/source_set.md)
 * 环境设置
 
+
+#### 博文
+* [如何实现jenkins、sql、redis、git等工具的一体化自动发布？](https://juejin.cn/post/7416270933790228495)
 * [tapd与cronin对接实现自动发bug单](https://my.oschina.net/mnyuan/blog/16570220)
+
 
 ### 安装
 #### 一、 获取程序包
@@ -71,6 +75,8 @@ GOOS=linux go build -ldflags "-X main.version=v0.xx -X main.isBuildResource=true
 入口页地址： http://127.0.0.1:9003/
 
 默认账号：root / 123456
+
+演示地址：http://cronin.mnyuan.com/login
 
 
 ### 捐助与支持
