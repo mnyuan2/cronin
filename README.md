@@ -45,6 +45,7 @@ cronin 是企业内部任务管理平台，支持linux、windows服务器；具�
 * [链接设置](https://gitee.com/mnyuan/cronin/blob/master/work/source_set.md)
 * 环境设置
 
+* [tapd与cronin对接实现自动发bug单](https://my.oschina.net/mnyuan/blog/16570220)
 
 ### 安装
 #### 一、 获取程序包
