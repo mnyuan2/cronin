@@ -180,11 +180,12 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 		return nil, errs.New(er, "command 解析错误")
 	}
 	for _, item := range resp.Command.Git.Events {
-		if item.FileUpdate == nil || item.FileUpdate.Content == "" {
-			continue
+		if item.FileUpdate != nil {
+			if item.FileUpdate.Content != "" {
+				content, _ := base64.StdEncoding.DecodeString(item.FileUpdate.Content)
+				item.FileUpdate.Content = string(content)
+			}
 		}
-		content, _ := base64.StdEncoding.DecodeString(item.FileUpdate.Content)
-		item.FileUpdate.Content = string(content)
 	}
 	if one.MsgSet != nil {
 		if er := jsoniter.Unmarshal(one.MsgSet, &resp.MsgSet); er != nil {
@@ -255,7 +256,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if err != nil {
 			return nil, err
 		}
-		if d.Status == enum.StatusActive {
+		if d.Status == models.ConfigStatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
 		g.SetType(models.LogTypeUpdateDiy).OldConfig(*d)
@@ -344,11 +345,13 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 	}
 
-	if d.Status != enum.StatusDisable { // 编辑后，单子都是草稿
-		d.Status = enum.StatusDisable
+	if d.Status != models.ConfigStatusDisable { // 编辑后，单子都是草稿
+		d.Status = models.ConfigStatusDisable
 		d.StatusRemark = "编辑"
 		d.StatusDt = time.Now().Format(time.DateTime)
 	}
+	d.AuditUserId = 0
+	d.AuditUserName = ""
 	d.Name = r.Name
 	d.Spec = r.Spec
 	d.Protocol = r.Protocol
@@ -422,13 +425,11 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 				return nil, err
 			}
 		}
+		conf.AuditUserId = 0
+		conf.AuditUserName = ""
 	case models.ConfigStatusDisable: // 草稿、停用
-		if conf.Type != models.TypeModule {
-			if conf.Status == models.ConfigStatusActive { // 启用 到 停用 要关闭执行中的对应任务；
-				NewTaskService(config.MainConf()).Del(conf)
-				conf.EntryId = 0
-			}
-		}
+		NewTaskService(config.MainConf()).Del(conf)
+		conf.EntryId = 0
 	case models.ConfigStatusActive: // 激活、通过
 		if conf.Status != models.ConfigStatusDisable &&
 			conf.Status != models.ConfigStatusAudited &&

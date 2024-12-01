@@ -3,7 +3,6 @@ package db
 import (
 	"cron/internal/basic/config"
 	"fmt"
-	"gorm.io/gorm"
 	"reflect"
 	"strconv"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 const (
 	OpEqual     = "="
+	OpNEQ       = "!="
 	OpIn        = "IN"
 	OpLike      = "LIKE"
 	OpFindInSet = "FIND_IN_SET"
@@ -199,7 +199,7 @@ func (builder *Where) JsonIndexEq(keyField, valField string, key, val any, optio
 // json包含查询
 func (builder *Where) JsonContains(field, path string, val any, options ...Option) *Where {
 	if builder.driver == DriverMysql {
-		builder.Raw(fmt.Sprintf("json_contains(%s, ?, '%s')", field, path), val)
+		builder.Raw(fmt.Sprintf("json_contains(%s, ?, '%s')", field, path), fmt.Sprintf("%v", val))
 	} else if builder.driver == DriverSqlite {
 		builder.Raw(fmt.Sprintf("json_extract(%s, '%s') = ?", field, path), val)
 	}
@@ -214,6 +214,11 @@ func (builder *Where) Equal(field string, value interface{}, options ...Option) 
 // Equal·等于 的简写方法
 func (builder *Where) Eq(field string, value interface{}, options ...Option) *Where {
 	return builder.op(field, OpEqual, value, options...)
+}
+
+// not equal 不等于
+func (builder *Where) Neq(field string, value interface{}, options ...Option) *Where {
+	return builder.op(field, OpNEQ, value, options...)
 }
 
 // 当传入的Value为空值时,忽略该查询条件
@@ -322,8 +327,8 @@ func (builder *Where) op(field string, op string, value interface{}, options ...
 				if value, ok := value.(string); ok {
 					appendVal = "%" + value + "%"
 				}
-			} else if value, ok := value.(string); ok {
-				appendVal = gorm.Expr(fmt.Sprintf("'%s'", value)) // sqlite 字符串条件必须使用单引号
+				//} else if value, ok := value.(string); ok {
+				//	appendVal = gorm.Expr(fmt.Sprintf("'%s'", value)) // sqlite 条件字符串值必须使用单引号包裹，但程序双引号又能查询出结果，只是转手动查询双引号无结果？
 			}
 
 			builder.wheres = append(builder.wheres, WhereExpr{

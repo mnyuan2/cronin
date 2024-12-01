@@ -37,6 +37,7 @@ func DefaultStringTemplate() *StringTemplate {
 		rightDelim: "]]",
 		funcs: map[string]any{
 			// json 编码
+			//  废弃 建议使用 json_encode
 			"jsonString": func(val any) any {
 				v := reflect.ValueOf(val)
 				switch v.Kind() {
@@ -48,6 +49,7 @@ func DefaultStringTemplate() *StringTemplate {
 				}
 			},
 			// json 编码2次
+			//  后面废弃 使用 json_encode
 			"jsonString2": func(val any) any {
 				v := reflect.ValueOf(val)
 				switch v.Kind() {
@@ -68,6 +70,19 @@ func DefaultStringTemplate() *StringTemplate {
 				data := map[string]any{}
 				err := jsoniter.UnmarshalFromString(str, &data)
 				return data, err
+			},
+			// 编码为 json 字符串
+			"json_encode": func(val any) (string, error) {
+				v := reflect.ValueOf(val)
+				switch v.Kind() {
+				case reflect.Map, reflect.Slice:
+					return jsoniter.MarshalToString(val)
+				case reflect.String:
+					value := strings.ReplaceAll(val.(string), `"`, `\"`)
+					return value, nil
+				default:
+					return fmt.Sprintf("%v", val), nil
+				}
 			},
 			// encodeURIComponent 遵循 RFC3986 url编码
 			"rawurlencode": func(param string) string {
@@ -90,6 +105,56 @@ func DefaultStringTemplate() *StringTemplate {
 			},
 			"string": func(any any) string {
 				return fmt.Sprintf("%v", any)
+			},
+			// 合并 slice，返回新的 slice
+			//  多个参数的类型定义必须一致
+			"append_slice": func(slice ...any) (any, error) {
+				values := reflect.ValueOf(slice)
+				if values.Index(0).Elem().Kind() != reflect.Slice {
+					return nil, fmt.Errorf("param 1 not slice")
+				}
+
+				newValues := reflect.MakeSlice(values.Index(0).Elem().Type(), 0, 0) // 创建一个空的原元素
+				for i := 0; i < values.Len(); i++ {
+					value := values.Index(0)
+					if newValues.Kind() != values.Kind() {
+						return nil, fmt.Errorf("param %v type inconsistency", i+1)
+					}
+					newValues = reflect.AppendSlice(newValues, value.Elem())
+				}
+
+				list := newValues.Interface()
+				return list, nil
+			},
+			// 此方法目前处于试验阶段，应该找一种更通用的方法来声明元素。
+			"make": func(t string) any {
+				switch t {
+				case "int":
+					return int(0)
+				case "[]map[string]any":
+					return []map[string]any{}
+				case "[]map[string]string":
+					return []map[string]string{}
+				default:
+					return nil
+				}
+			},
+			"append": func(slice any, elems ...any) (any, error) {
+				values := reflect.ValueOf(slice)
+				if values.Kind() != reflect.Slice {
+					return nil, fmt.Errorf("method append param 1 not slice")
+				}
+				k := values.Type().Elem()
+				for i, item := range elems {
+					val := reflect.ValueOf(item)
+					if k != val.Type() {
+						return nil, fmt.Errorf("method append param %v type inconsistency(%s != %s)", i+2, k.String(), val.Type().String())
+					}
+					values = reflect.Append(values, val)
+				}
+
+				list := values.Interface()
+				return list, nil
 			},
 			// 获取时间
 			//  参数1：string duration 持续时间字符串，示例 "300ms", "-1.5h" 或 "2h45m". 有效的时间单位是 "ns", "us" (or "µs"), "ms", "s", "m", "h".
@@ -138,8 +203,8 @@ func DefaultStringTemplate() *StringTemplate {
 			},
 			// 字符串查最左找计算，并将结果替换原字符串
 			//  参数1: string raw 原始字符串
-			//  参数1: string regex 正则表达式，提取字符串中的数字，示例：`(\d+)(\D*$)`
-			//  参数1: string 对数字进行计算的公式，示例 +1
+			//  参数2: string regex 正则表达式，提取字符串中的数字，示例：`(\d+)(\D*$)`
+			//  参数3: string 对数字进行计算的公式，示例 +1
 			//  返回： 计算结果替换后的字符串
 			"str_replace_calc": func(raw, regex, expr string) (str string, err error) {
 				matches := regexp.MustCompile(regex).FindStringSubmatch(raw)
@@ -154,6 +219,117 @@ func DefaultStringTemplate() *StringTemplate {
 				matches[1] = strconv.FormatFloat(val.(float64), 'f', -1, 64)
 				str = raw[:len(raw)-len(matches[0])] + matches[1] + matches[2]
 				return str, nil
+			},
+			// 字符串查找
+			//  @param string raw 原始字符串
+			//  @param string regex 正则匹配表达式
+			//  @param string fields 输出结果keys, 多个key逗号相隔 与匹配结果顺序一致
+			//  @return map[string]any
+			"str_find": func(raw string, regex string) (out []string, err error) {
+				matches := regexp.MustCompile(regex).FindStringSubmatch(raw)
+				return matches, nil
+			},
+			// 字符串切割  str_slice_filter
+			//  参数1: string str 原始字符串
+			//  参数2: string sep 分隔符
+			"str_split": func(str, sep string) []string {
+				list := strings.Split(str, sep)
+				return list
+			},
+
+			// 切片过滤
+			//  参数1: []string data 原始切片数据
+			//  参数3: string filter 过滤字符串，正则表示；符合条件的元素会被过滤掉
+			"slice_filter": func(data any, filter string) (any, error) {
+				// 目前仅支持字符串切片，后期根据需求扩展
+				list, ok := data.([]string)
+				if !ok {
+					return data, nil
+				}
+				regex, err := regexp.Compile(filter)
+				if err != nil {
+					return nil, fmt.Errorf("过滤正则输入有误，%s", err.Error())
+				}
+				newData := []string{}
+				for _, v := range list {
+					if regex.MatchString(v) {
+						continue
+					}
+					newData = append(newData, v)
+				}
+				return newData, nil
+			},
+
+			// slice 组合成 map
+			//  @param []string list 原始切片数据
+			//  @param string keys 字段集合，特殊字段："k"常规字段输入、""空值表示忽略元素、"k:v"分号后面为默认值，原元素不存在或为空会启用。
+			"slice_combine": func(list []string, keys ...string) map[string]string {
+				// 目前仅支持字符串切片，后期根据需求扩展
+				l := len(list) - 1
+				out := map[string]string{}
+				for i, key := range keys {
+					if key == "" {
+						continue
+					}
+					kv := strings.Split(key, ":")
+					val := ""
+					if len(kv) > 1 {
+						val = kv[1]
+					}
+					if i <= l {
+						if v := list[i]; v != "" && v != "0" {
+							val = v
+						}
+					}
+					out[kv[0]] = val
+				}
+				return out
+			},
+
+			// map value 字符串按指定字符切割，并将结果生成新的map
+			//  参数1: map data 原始map
+			//  参数2: string sep 分隔符
+			//  参数3: string keys 指定匹配字段，默认所有字段（注意匹配字段值必须为字符串）
+			"map_split": func(data any, sep string, keys ...any) (any, error) {
+				last := reflect.ValueOf(data)
+				// 确保原始值是一个 map
+				if last.Kind() != reflect.Map {
+					return nil, fmt.Errorf("map_slice 参数 1 必须为map")
+				}
+				if len(keys) == 0 {
+					for _, k := range last.MapKeys() {
+						keys = append(keys, k.Interface())
+					}
+				}
+
+				values := reflect.MakeSlice(reflect.SliceOf(last.Type()), 0, 0)
+				for _, key := range keys {
+					f, v := last.MapIndex(reflect.ValueOf(key)), ""
+					if f.Type().Kind() == reflect.Interface {
+						v = f.Elem().String()
+					} else {
+						v = f.String()
+					}
+					if ok := strings.Contains(v, sep); !ok {
+						continue
+					}
+					list := strings.Split(v, sep)
+					for _, item := range list {
+						// 克隆 map， 并将指定字段替换。
+						cloneValue := reflect.MakeMap(last.Type())
+						for _, key := range last.MapKeys() {
+							value := last.MapIndex(key)
+							cloneValue.SetMapIndex(key, value)
+						}
+						cloneValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(item))
+						values = reflect.Append(values, cloneValue)
+						last = cloneValue
+					}
+				}
+				if values.Len() == 0 {
+					values = reflect.Append(values, last)
+				}
+				return values.Interface(), nil
 			},
 		},
 	}

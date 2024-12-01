@@ -115,8 +115,11 @@ type CronPipelineDetailReply struct {
 	Configs                 []*CronConfigListItem `json:"configs"`
 	MsgSet                  []*CronMsgSet         `json:"msg_set"`
 	CreateUserId            int                   `json:"create_user_id"`
+	CreateUserName          string                `json:"create_user_name"`
 	AuditUserId             int                   `json:"audit_user_id"`
+	AuditUserName           string                `json:"audit_user_name"`
 	HandleUserIds           []int                 `json:"handle_user_ids"` // 处理人
+	HandleUserNames         string                `json:"handle_user_names"`
 }
 
 // 状态变更

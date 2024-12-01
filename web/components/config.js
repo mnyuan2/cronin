@@ -8,6 +8,7 @@ var MyConfig = Vue.extend({
             </div>
             <ol>
                 <li v-for="item in queue.exec">
+                    <span v-html="taskItemIcon(item)"></span>
                     <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
                     <p style="margin: 0;color: #909399;line-height: 100%;font-size: 12px;">
                         ({{durationTransform(item.duration, 's')}}) 
@@ -23,6 +24,7 @@ var MyConfig = Vue.extend({
             </div>
             <ol>
                 <li v-for="item in queue.register">
+                    <span v-html="taskItemIcon(item)"></span>
                     <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
                 </li>
             </ol>
@@ -888,6 +890,15 @@ var MyConfig = Vue.extend({
                 return
             }
             this.queue.register = data
+        },
+        taskItemIcon(row){
+            if (row.ref_type == 'config'){
+                return '<i class="task-item-icon" style="background: #28ab80;">c</i>'
+            }else if (row.ref_type == 'pipeline'){
+                return '<i class="task-item-icon" style="background: #5c88c5;">p</i>'
+            }else if(row.ref_type == 'receive'){
+                return '<i class="task-item-icon" style="background: #182b50;">r</i>'
+            }
         },
     }
 })

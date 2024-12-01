@@ -10,6 +10,7 @@ const (
 	// pr commit信息 6
 	// pr commit文件列表 7
 	// pr 是否合并 8
+	GitEventPullsIsMerge = 8 // pr是否合并
 	// pr 合并 9
 	GitEventPullsMerge = 9 // pr合并
 	// pr 审查确认 10
@@ -116,7 +117,8 @@ const (
 )
 
 var GitEventMap = map[int]string{
-	GitEventPullsCreate: "pr创建",
-	GitEventPullsMerge:  "pr合并",
-	GitEventFileUpdate:  "文件更新",
+	GitEventPullsCreate:  "pr创建",
+	GitEventPullsIsMerge: "pr校验是否合并",
+	GitEventPullsMerge:   "pr合并",
+	GitEventFileUpdate:   "文件更新",
 }

@@ -32,3 +32,19 @@ func httpJobStop(ctx *gin.Context) {
 	rep, err := biz.NewJobService(ctx.Request.Context(), user).Stop(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+// 任务钩子
+func httpJobWebhook(ctx *gin.Context) {
+	r := &pb.JobStopRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewJobService(ctx.Request.Context(), user).Stop(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

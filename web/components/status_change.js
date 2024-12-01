@@ -1,7 +1,7 @@
 var MyStatusChange = Vue.extend({
     template: `<el-dialog :title="info.name" :visible.sync="request.show" :show-close="false" class="status-change-warp" width="540px">
         <el-tabs tab-position="left">
-            <el-tab-pane v-if="(info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError) && (($auth_tag.config_status && type=='config') || ($auth_tag.pipeline_status && type=='pipeline'))">
+            <el-tab-pane v-if="info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError">
                 <span slot="label" ><el-button plain size="mini" round>待审核</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -32,7 +32,7 @@ var MyStatusChange = Vue.extend({
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
-            <el-tab-pane v-if="(info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError || info.status==Enum.StatusAudited) && (($auth_tag.config_audit && type=='config') || ($auth_tag.pipeline_audit && type=='pipeline'))">
+            <el-tab-pane v-if="info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError || info.status==Enum.StatusAudited">
                 <span slot="label"><el-button plain size="mini" round>{{info.status==Enum.StatusAudited ?'通过':'激活'}}</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -158,6 +158,8 @@ var MyStatusChange = Vue.extend({
                 path = '/config/change_status'
             }else if (this.type == 'pipeline'){
                 path = '/pipeline/change_status'
+            }else if (this.type == 'receive'){
+                path = '/receive/change_status'
             }else{
                 return this.$message.warning('业务类型错误！')
             }

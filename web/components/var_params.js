@@ -17,7 +17,7 @@ var MyVarParams = Vue.extend({
             <p> &nbsp; &nbsp; &nbsp; &nbsp; 使用 range 语句遍历一个变量的值</p>
             <p><code>[[if .Condition]]...[[end]]</code></p>
             <p> &nbsp; &nbsp; &nbsp; &nbsp; 根据 if 条件判断是否输出某个内容，相关比较运算符：eq（==）、ne（!=）、lt（<）、le（<=）、gt（>）、ge（>=）</p>
-            <p> &nbsp; &nbsp; &nbsp; &nbsp; 完整样例：<code>[[if .Condition]] A [[else if .Condition]] B [[else]] C [[end]]</code></p>
+            <p> &nbsp; &nbsp; &nbsp; &nbsp; 完整样例：<code>[[if eq 1 2]] A [[else if ne 1 2]] B [[else]] C [[end]]</code> 输出 <code>B</code></p>
             <p><code>[[$var := \`data\`]][[$var]]</code></p>
             <p> &nbsp; &nbsp; &nbsp; &nbsp; 模板内申明变量、使用变量;</p>
             <p> &nbsp; &nbsp; &nbsp; &nbsp; 案例：<code>[[$data := json_decode \`{"code":"2","msg":"业务处理失败"}\`]][[if ne $data.code \`0\`]][[$data.msg]][[end]]</code> 输出 <code>业务处理失败</code></p>
@@ -38,9 +38,10 @@ var MyVarParams = Vue.extend({
             <h4>系统内置函数</h4>
             <p>
                 <ul>
-                    <li><b>jsonString</b> &nbsp; json数据转字符串，示例：{"a":"A","b":{"b1":"B1","B2":22},"c":["c1","c2"]}</li>
-                    <li><b>jsonString2</b> &nbsp; json数据转字符串2次，示例: {\\"a\\":\\"A\\",\\"b\\":{\\"b1\\":\\"B1\\",\\"B2\\":22},\\"c\\":[\\"c1\\",\\"c2\\"]}</li>
-                    <li><b>json_decode<code>(string str) any</code></b> &nbsp; json字段解析，非规范json字符串抛出异常</li>
+<!--                    <li><b>jsonString</b> &nbsp; json数据转字符串，示例：{"a":"A","b":{"b1":"B1","B2":22},"c":["c1","c2"]}</li>-->
+<!--                    <li><b>jsonString2</b> &nbsp; json数据转字符串2次，示例: {\\"a\\":\\"A\\",\\"b\\":{\\"b1\\":\\"B1\\",\\"B2\\":22},\\"c\\":[\\"c1\\",\\"c2\\"]}</li>-->
+                    <li><b>json_decode<code>(string str) any</code></b> &nbsp; 解析 json 字符串，非规范json字符串抛出异常</li>
+                    <li><b>json_encode<code>(data any) string</code></b> &nbsp; 编码为 json 字符串，非规范json字符串抛出异常</li>
                     <li><b>rawurlencode<code>(string str) string</code></b> &nbsp; 字符串进行 url（RFC1738）编码，用于保护文字字符不被解释为特殊的URL分隔符。
                         <ul>
                             <li>示例：<code>[[rawurlencode \`Hello World!\`]]</code> 输出 <code>Hello%20World%21</code> 这里的空格被编码为%20，感叹号被编码为%21</li>
@@ -73,6 +74,14 @@ var MyVarParams = Vue.extend({
                     </li>
                     <li><b>float64<code>(any val) float64</code></b> 转浮点数</li>
                     <li><b>string<code>(any val) string</code></b> 转字符串</li>
+                    <li><b>make</b><code>(type string) any</code> 指定类型初始化数据
+                        <ul>
+                            <li>示例：<code>[[$dataset := make \`[]map[string]string\`]]</code> 输出 <code>$dataset = []map[string]string{}</code></li>
+                            <li>提示：方法处于 Alpha 阶段，目前仅支持 []map[string]string 输入</li>
+                        </ul>
+                    </li>
+                    <li><b>append</b><code>(slice []any, elems ...any)</code> 将元素追加到切片末尾</li>
+                    <li><b>append_slice</b><code>(slice []any, sliceN ...[]any)</code> 将多个切片合并为一个新的切片</li>
                     <li><b>str_replace_calc<code>(str string, regex string, expr string) string</code></b> 正则匹配字符串计算后替换
                         <ul>
                             <li>参数1：str 被搜索的值</li>
@@ -80,6 +89,37 @@ var MyVarParams = Vue.extend({
                             <li>参数3：expr 计算公式</li>
                             <li>示例：<code>[[str_replace_calc \`release_v3.5.87.25 abc\` \`(\\d+)(\\D*$)\` \`+1\`]]</code> 输出 <code>release_v3.5.87.26 abc</code> 方法找到了字符串最左的数值并进行+1运算</li>
                         </ul>   
+                    </li>
+                    <li><b>str_find</b><code>(raw string, regex string) []string</code> 字符串匹配查找
+                        <ul>
+                            <li>参数1：raw 被搜索的值</li>
+                            <li>参数2：regex 正则匹配表达式</li>
+                            <li>返回：匹配到的结果（slice）集合</li>
+                            <li>示例：<code>[[str_find \`repo3/feature/sm0810{ser_a,ser_b}\` \`([^/]+)(?:.*)(?:/|\\{(.*)\\})\`]]</code> 输出 <code>["repo3/feature/sm0810{ser_a,ser_b}","repo3","ser_a,ser_b"]</code></li>
+                        </ul>
+                    </li>
+                    <li><b>str_split</b><code>(raw string, sep string) []string</code> 以 sep 分隔符将 raw 字符串进行拆分</li>
+                    <li><b>slice_filter</b><code>(slice []string, filter string) []string</code> 过滤 slice 匹配元素
+                        <ul>
+                            <li>参数1：slice 目标切片数据</li>
+                            <li>参数2：filter 过滤正则表达式</li>
+                            <li>示例：<pre>[[$data := []string{"","\\r\\n","abc"}]] <br/>[[slice_filter $data \`^\s*$\`]] <br/>输出  (其中不可见字符元素被过滤掉了)<br/>[]string{"abc"}</pre></li>
+                        </ul>
+                    </li>
+                    <li><b>slice_combine</b><code>(slice []string, keys ...string) map[string]string</code> 将 slice 与 keys 组合为map结构
+                        <ul>
+                            <li>参数1：slice 目标切片数据</li>
+                            <li>参数2：keys 字段key集合；"".空值表示忽略元素、"key:val".分号后面为默认值，原元素不存在或为空会启用</li>
+                            <li>示例：<pre>[[$data := []string{"a1","b1"}]] <br>[[slice_combine $data \`\` \`B\` \`C:c1\`]] <br/>输出 (key1.空字符串忽略、key2=B.正常、key3=C:c1.没有元素但自带默认值补充)<br/>map[string]string{"B":"b1","C":"c1"}</pre></li>
+                        </ul>
+                    </li>
+                    <li><b>map_split</b><code>(data any, sep string, keys ...any) any</code> map value 字符串按指定字符拆分，并将结果生成新的map
+                        <ul>
+                            <li>参数1：data 原始map</li>
+                            <li>参数2：分隔符</li>
+                            <li>参数3：keys 指定字段，默认对所有字段进行分隔符检测</li>
+                            <li>示例： <pre>[[$data := map[string]string{"a":"a1","b":"b1,b2"}]] <br/>[[map_split $data \`,\` \`b\`]] <br>输出  (key=b 元素被分解为两行，key=c 根据自带默认值进行了补充)   <br/>[]map[string]string{<br>{"a":"a1","b":"b1"},<br>{"a":"a1","b":"b2"},<br>}</code></pre></li>
+                        </ul>
                     </li>
                 </ul>
             </p>

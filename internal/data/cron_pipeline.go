@@ -29,10 +29,16 @@ func (m *CronPipelineData) ListPage(where *db.Where, page, size int, list interf
 func (m *CronPipelineData) Set(data *models.CronPipeline) error {
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	if data.Id > 0 {
-		return m.db.Where("id=?", data.Id).Omit("entry_id", "env").Updates(data).Error
+		return m.db.Where("id=?", data.Id).
+			Omit("entry_id", "env").
+			Select("type", "name", "spec", "config_ids", "configs", "config_disable_action", "config_err_action", "remark", "update_dt", "msg_set",
+				"var_params", "interval", "msg_set_hash", "audit_user_id", "audit_user_name").
+			Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
-		return m.db.Omit("status_dt").Create(data).Error
+		data.StatusDt = data.CreateDt
+		data.StatusRemark = "新增"
+		return m.db.Create(data).Error
 	}
 }
 
@@ -40,7 +46,9 @@ func (m *CronPipelineData) ChangeStatus(data *models.CronPipeline, remark string
 	data.UpdateDt = time.Now().Format(conv.FORMAT_DATETIME)
 	data.StatusDt = data.UpdateDt
 	data.StatusRemark = remark
-	return m.db.Where("id=?", data.Id).Select("status", "status_remark", "status_dt", "update_dt", "entry_id", "handle_user_ids").Updates(data).Error
+	return m.db.Where("id=?", data.Id).
+		Select("status", "status_remark", "status_dt", "update_dt", "entry_id", "handle_user_ids", "handle_user_names", "audit_user_id", "audit_user_name").
+		Updates(data).Error
 }
 
 func (m *CronPipelineData) SetEntryId(data *models.CronPipeline) error {

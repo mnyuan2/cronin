@@ -184,7 +184,7 @@ function inputChangeArrayPush(e, index, arr, item){
     if (arr.length-1 <= index){
         arr.push(item) // 追加空元素
     }
-    console.log(e, index, arr, index)
+    // console.log(e, index, arr, index)
 }
 
 /**
@@ -286,7 +286,7 @@ function replaceHash(hash, hashData, search=''){
         str += "#?" + buildSearchParamsString(hashData)
     }
 
-    console.log("hash",str)
+    // console.log("hash",str)
     window.history.replaceState({}, '', str);
 }
 
@@ -322,6 +322,8 @@ const Enum ={
     dicConfigStatus: 1004,
     // 协议类型
     dicProtocolType: 1005,
+    // 1006 接收数据字段
+    dicReceiveDataField: 1006,
     // 1 草稿,停用
     StatusDisable: 1,
     // 5 待审核

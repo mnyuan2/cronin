@@ -165,7 +165,53 @@ func TestStrReplaceCalc(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	fmt.Println(string(b))
+	fmt.Println(str, "\n", p["raw_content"], "|", string(b), "|")
+}
+
+// 字符串切割并过滤不可见字符串元素
+func TestStrSliceFilter(t *testing.T) {
+	strs := []string{
+		"",
+		"   ",         // 只包含空格
+		"\t\n",        // 只包含制表符和换行符
+		"Hello Word!", // 包含可见字符
+		"  Text  ",    // 也包含可见字符
+	}
+	for i, str := range strs {
+		b, e := DefaultStringTemplate().SetParam(map[string]any{"data": str}).Execute([]byte("[[json_encode (slice_filter (str_split .data ` `) `^\\s*$`)]]"))
+		if e != nil {
+			t.Fatal(e)
+		}
+
+		fmt.Println(i, string(b))
+	}
+}
+
+func TestStrFindMap(t *testing.T) {
+	strs := []string{
+		"https://gitee.com/mnyuan/cronin/pulls/15",
+		"cronin/hotfix/user_3",
+		"cronin/hotfix/user_3{serA,serB}",
+	}
+	for i, str := range strs {
+		temp := DefaultStringTemplate().SetParam(map[string]any{"data": str})
+		if i == 0 {
+			b, e := temp.Execute([]byte("[[json_encode (str_find_map .data `https://gitee.com/(.+)/([^/]+)/pulls/(\\d+)` `owner,repo,number,type:pr`)]]"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			fmt.Println(i, string(b))
+		} else {
+			b, e := temp.Execute([]byte("[[json_encode (str_find_map .data `([^/]+)(?:.*)(?:/|\\{(.*)\\})` `repo,service,type:jenkins`)]]"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			fmt.Println(i, string(b))
+		}
+	}
+
+	//resMap["type"] = "pr"
+	//fmt.Println(resMap)
 }
 
 func TestTemplateJson(t *testing.T) {

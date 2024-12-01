@@ -61,8 +61,10 @@ var ConfigTypeMap = map[int]string{
 
 func ProtocolHttpMethodMap() map[string]string {
 	return map[string]string{
-		http.MethodGet:  http.MethodGet,
-		http.MethodPost: http.MethodPost,
+		http.MethodGet:    http.MethodGet,
+		http.MethodPost:   http.MethodPost,
+		http.MethodPut:    http.MethodPut,
+		http.MethodDelete: http.MethodDelete,
 	}
 }
 func ConfTypeMap() map[int]string {

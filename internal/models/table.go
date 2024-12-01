@@ -26,12 +26,12 @@ func AutoMigrate(Db *db.MyDB) {
 		}
 		// 迁移表结构
 		err := Db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
 	} else if config.DbConf().Driver == db.DriverSqlite {
-		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
@@ -97,7 +97,7 @@ func AutoMigrate(Db *db.MyDB) {
 				Id:      1,
 				Name:    "管理员",
 				Remark:  "所有权限",
-				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121",
+				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121,150,151,152,153,154,155",
 				Status:  enum.StatusActive,
 			},
 			{

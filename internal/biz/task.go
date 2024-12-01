@@ -117,7 +117,7 @@ func (dm *TaskService) RegisterMonitor() {
 		mu.Lock()
 		envs = list
 		mu.Unlock()
-		time.Sleep(time.Minute * 10)
+		time.Sleep(time.Minute * 30)
 	}()
 
 	for {
@@ -126,16 +126,21 @@ func (dm *TaskService) RegisterMonitor() {
 		execList := map[string][]*dtos.ExecQueueItem{}
 		registerList := map[string][]*dtos.ExecQueueItem{}
 		for _, v := range list {
-			c, ok := v.Job.(*JobConfig)
-			refType := "config"
-			if !ok {
-				c2, ok := v.Job.(*JobPipeline)
-				if !ok {
-					continue
-				}
-				c = c2.GetConf()
+			refType, c := "", &JobConfig{}
+			switch val := v.Job.(type) {
+			case *JobConfig:
+				refType = "config"
+				c = val
+			case *JobPipeline:
+				c = val.GetConf()
 				refType = "pipeline"
+			case *JobReceive:
+				c = val.GetConf()
+				refType = "receive"
+			default:
+				continue
 			}
+
 			// 区分环境
 			if c.isRun == true {
 				execList[c.conf.Env] = append(execList[c.conf.Env], &dtos.ExecQueueItem{
@@ -231,6 +236,20 @@ func (dm *TaskService) AddPipeline(conf *models.CronPipeline) error {
 	return nil
 }
 
+func (dm *TaskService) AddReceive(conf *models.CronReceive, param *dtos.ReceiveWebHook) (cron.EntryID, error) {
+	j := NewJobReceive(conf, param)
+	s, err := NewScheduleOnceToTime(time.Now().Add(time.Second * 3)) // 默认3秒后执行
+	if err != nil {
+		return 0, err
+	}
+	id := dm.cron.Schedule(s, j)
+	if err != nil {
+		return 0, err
+	}
+	j.SetEntryId(int(id))
+	return id, nil
+}
+
 // 添加单次任务
 func (dm *TaskService) addOnce(spec string, j cron.Job) (cron.EntryID, error) {
 	s, err := NewScheduleOnce(spec)
@@ -242,7 +261,6 @@ func (dm *TaskService) addOnce(spec string, j cron.Job) (cron.EntryID, error) {
 
 // 删除任务
 func (dm *TaskService) Del(conf *models.CronConfig) {
-	log.Printf("移除任务 %v -> %v", conf.Id, conf.EntryId)
 	if conf.EntryId == 0 {
 		return
 	}

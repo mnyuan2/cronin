@@ -81,3 +81,28 @@ func TestOption(t *testing.T) {
 	conf2 := trace.NewSpanStartConfig()
 	fmt.Println(conf2.Timestamp(), conf2.Timestamp().IsZero())
 }
+
+// 跨服务注入
+func TestInject(t *testing.T) {
+	//go MysqlCollectorListen()
+
+	tracer := Tracer("public-cronin", trace.WithInstrumentationAttributes(
+		attribute.String("driver", "mysql"),
+		attribute.String("env", "public"),
+	))
+	// 节点1
+	_, span := tracer.Start(context.Background(), "parent", trace.WithAttributes(
+		attribute.String("tag1", "value"),
+	))
+	traceId := Inject(span) //fmt.Sprintf("%+v", span)
+	fmt.Println(traceId)
+	//span.End()
+
+	// 节点2
+	_, span2 := tracer.Start(context.Background(), "parent", trace.WithAttributes(
+		attribute.String("tag2", "value"),
+	), Extract(traceId))
+
+	fmt.Printf("%+v\n", span2)
+	//span2.End()
+}
