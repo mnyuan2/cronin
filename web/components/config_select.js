@@ -1,6 +1,6 @@
 var MyConfigSelect = Vue.extend({
     template: `<div class="config-select">
-    <el-radio-group v-model="labelType"  @change="changeTab" size="medium">
+    <el-radio-group v-model="list.param.type"  @change="changeTab" size="medium">
         <el-radio-button label="1" :disabled="list.request">周期任务</el-radio-button>
         <el-radio-button label="2" :disabled="list.request">单次任务</el-radio-button>
         <el-radio-button label="5" :disabled="list.request">组件任务</el-radio-button>
@@ -71,7 +71,6 @@ var MyConfigSelect = Vue.extend({
     name: "MyConfigSelect",
     data(){
         return {
-            labelType: '1',
             dic:{
                 user: [],
                 config_status: [],
@@ -92,10 +91,15 @@ var MyConfigSelect = Vue.extend({
                 request: false,
             },
             selected: [],
+            preference:{
+                other: {}
+            },
         }
     },
     // 模块初始化
-    created(){},
+    created(){
+        this.getPreference()
+    },
     // 模块初始化
     mounted(){
         console.log("sql_source mounted")
@@ -144,6 +148,16 @@ var MyConfigSelect = Vue.extend({
                 this.dic.config_status = res[Enum.dicConfigStatus]
                 this.dic.protocol = res[Enum.dicProtocolType]
             })
+        },
+        // 获取偏好
+        getPreference(){
+            api.innerGet("/setting/preference_get", null,res=>{
+                if (!res.status){
+                    return this.$message.error('偏好错误，'+res.message)
+                }
+                this.preference = res.data
+                this.list.param.type = res.data.other.config_select_type.toString()
+            },{async: false})
         },
         close(){
             this.$emit("handleconfirm", this.doc_item.id, this.selectedData)

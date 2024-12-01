@@ -9,8 +9,8 @@ var MyUsers = Vue.extend({
             <el-table-column property="update_dt" label="更新时间"></el-table-column>
             <el-table-column label="操作">
                 <template slot-scope="scope">
-                    <el-button plain @click="detailBox(true, scope.row)">查看</el-button>
-                    <el-button plain @click="detailDelete(scope.row.id)">删除</el-button>
+                    <el-button plain size="small" @click="detailBox(true, scope.row)">查看</el-button>
+                    <el-button plain size="small" @click="detailDelete(scope.row.id)">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>

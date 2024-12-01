@@ -57,6 +57,17 @@ func NewScheduleOnce(dateTime string) (m *ScheduleOnce, err error) {
 	return m, nil
 }
 
+func NewScheduleOnceToTime(t time.Time) (m *ScheduleOnce, err error) {
+	m = &ScheduleOnce{
+		execTime: t,
+	}
+
+	if m.execTime.IsZero() {
+		return nil, errs.New(err, "执行时间格式不规范", errs.ParamError)
+	}
+	return m, nil
+}
+
 // Next 返回下一次执行时间
 //
 //	如果当前时间大于执行时间返回空时间，将不会触发执行；否则将会按返回的时间执行。

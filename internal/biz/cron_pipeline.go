@@ -6,7 +6,6 @@ import (
 	"cron/internal/basic/config"
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
-	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/data"
 	"cron/internal/models"
@@ -115,14 +114,16 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 		if err != nil {
 			return nil, err
 		}
-		if d.Status == enum.StatusActive {
+		if d.Status == models.ConfigStatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
 		g.SetType(models.LogTypeUpdateDiy).OldPipeline(*d)
 	} else {
 		g.SetType(models.LogTypeCreate).OldPipeline(*d)
-		d.Status = enum.StatusDisable
+		d.Status = models.ConfigStatusDisable
 		d.Env = dm.user.Env
+		d.CreateUserId = dm.user.UserId
+		d.CreateUserName = dm.user.UserName
 	}
 
 	if r.VarParams != "" {
@@ -132,6 +133,8 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 		}
 	}
 
+	d.AuditUserId = 0
+	d.AuditUserName = ""
 	d.Name = r.Name
 	d.Spec = r.Spec
 	d.Interval = r.Interval
@@ -142,8 +145,8 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.MsgSetHash = fmt.Sprintf("%x", md5.Sum(d.MsgSet))
 	d.Type = r.Type
-	if d.Status != enum.StatusDisable { // 编辑后，单子都是草稿
-		d.Status = enum.StatusDisable
+	if d.Status != models.ConfigStatusDisable { // 编辑后，单子都是草稿
+		d.Status = models.ConfigStatusDisable
 		d.StatusRemark = "编辑"
 		d.StatusDt = time.Now().Format(time.DateTime)
 	}
@@ -344,6 +347,8 @@ func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusReques
 		if conf.Status != models.ConfigStatusDisable && conf.Status != models.ConfigStatusReject && conf.Status != models.ConfigStatusFinish && conf.Status != models.ConfigStatusError {
 			return nil, fmt.Errorf("错误状态请求")
 		}
+		conf.AuditUserId = 0
+		conf.AuditUserName = ""
 	case models.ConfigStatusDisable: // 草稿、停用
 		NewTaskService(config.MainConf()).DelPipeline(conf)
 		conf.EntryId = 0

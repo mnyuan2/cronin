@@ -7,29 +7,29 @@ var MyMessageTemplate = Vue.extend({
             <el-table-column property="update_dt" label="更新时间"></el-table-column>
             <el-table-column label="操作">
                 <template slot-scope="scope">
-                    <el-button plain @click="initForm(true, scope.row)">编辑</el-button>
-                    <el-button plain @click="deleteSqlSource(scope.row.id)" v-if="$auth_tag.message_set">删除</el-button>
+                    <el-button plain size="small" @click="initForm(true, scope.row)">编辑</el-button>
+                    <el-button plain size="small" @click="deleteSqlSource(scope.row.id)" v-if="$auth_tag.message_set">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
 
         <!--设置弹窗-->
         <el-dialog :title="form.box.title" :visible.sync="form.box.show" :close-on-click-modal="false" append-to-body="true">
-            <el-form :model="form.data" label-position="left" label-width="100px">
+            <el-form :model="form.data" label-position="left" label-width="100px" size="small">
                 <el-form-item label="模板名称">
                     <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
 <!--                http消息-->
                 <el-form-item label="请求地址" class="http_url_box">
-                    <el-input v-model="form.data.template.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
-                        <el-select v-model="form.data.template.http.method" placeholder="请选请求方式" slot="prepend">
+                    <el-input class="input-input" v-model="form.data.template.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
+                        <el-select v-model="form.data.template.http.method" placeholder="请选请求方式" slot="prepend" style="width: 70px;">
                             <el-option label="GET" value="GET"></el-option>
                             <el-option label="POST" value="POST"></el-option>
                         </el-select>
                     </el-input>
                 </el-form-item>
                 <el-form-item label="请求Header" class="http_header_box">
-                    <el-input v-for="(header_v,header_i) in form.data.template.http.header" v-model="header_v.value" placeholder="参数值">
+                    <el-input class="input-input" v-for="(header_v,header_i) in form.data.template.http.header" v-model="header_v.value" placeholder="参数值">
                         <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
                         <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
                     </el-input>
@@ -46,9 +46,9 @@ var MyMessageTemplate = Vue.extend({
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button @click="runForm()" style="float: left;" v-if="$auth_tag.message_set">发送测试</el-button>
-                <el-button @click="initForm(false,'-')">取 消</el-button>
-                <el-button type="primary" @click="submitForm()" v-if="$auth_tag.message_set">确 定</el-button>
+                <el-button @click="runForm()" style="float: left;" v-if="$auth_tag.message_set" size="small">发送测试</el-button>
+                <el-button @click="initForm(false,'-')" size="small">取 消</el-button>
+                <el-button type="primary" @click="submitForm()" v-if="$auth_tag.message_set" size="small">确 定</el-button>
             </div>
         </el-dialog>
     </el-main>`,

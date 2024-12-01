@@ -52,6 +52,12 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.POST("/pipeline/change_status", routerPipelineChangeStatus)
 	r.POST("/pipeline/run", routerPipelineRun)
 
+	r.POST("/receive/set", routerReceiveSet)
+	r.GET("/receive/list", routerReceiveList)
+	r.GET("/receive/detail", routerReceiveDetail)
+	r.POST("/receive/change_status", routerReceiveChangeStatus)
+	r.POST("/receive/webhook/:key", routerReceiveWebhook)
+
 	r.GET("/job/events", func(ctx *gin.Context) {
 		sse.Serve().ServeHTTP(ctx.Writer, ctx.Request)
 	})

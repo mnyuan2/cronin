@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/git"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -28,6 +29,13 @@ func TestUrl(t *testing.T) {
 	fmt.Println(handler)
 	fmt.Println(res)
 	fmt.Println(res.DecodeContent())
+}
+
+func TestPath(t *testing.T) {
+	str := `2024/sm0713/that day.sql`
+	s := url.PathEscape(str)
+	fmt.Println(s)
+	fmt.Println(url.QueryEscape(str))
 }
 
 func TestUser(t *testing.T) {

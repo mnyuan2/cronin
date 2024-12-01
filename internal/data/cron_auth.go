@@ -51,6 +51,16 @@ var authList = []*Permission{
 	{Id: 34, Path: "/pipeline/change_status?auth_type=audit", Title: "审核", Group: "流水线", Type: AuthTypeGrant, Tag: "pipeline_audit"},
 	{Id: 35, Path: "/pipeline/detail", Title: "详情", Group: "流水线", Type: AuthTypeGrant},
 	{Id: 36, Path: "/pipeline/run", Title: "执行一下", Group: "流水线", Type: AuthTypeLogin},
+
+	// 150~159 接收
+	{Id: 150, Path: "/receive/", Title: "接收", Group: "", Type: AuthTypeGrant},
+	{Id: 151, Path: "/receive/list", Title: "列表", Group: "接收", Type: AuthTypeGrant, Tag: "receive_list"},
+	{Id: 152, Path: "/receive/set", Title: "新增/编辑", Group: "接收", Type: AuthTypeGrant, Tag: "receive_set"},
+	{Id: 153, Path: "/receive/change_status", Title: "提交/停用", Group: "接收", Type: AuthTypeGrant, Tag: "receive_status"},
+	{Id: 154, Path: "/receive/change_status?auth_type=audit", Title: "审核", Group: "接收", Type: AuthTypeGrant, Tag: "receive_audit"},
+	{Id: 155, Path: "/receive/detail", Title: "详情", Group: "接收", Type: AuthTypeGrant},
+	{Id: 156, Path: "/receive/webhook/:key", Title: "开放钩子", Group: "接收", Type: AuthTypeOpen},
+
 	//140~149 任务
 	{Id: 140, Path: "/job/events", Title: "sse事件", Group: "注册任务", Type: AuthTypeLogin},
 	{Id: 141, Path: "/job/stop", Title: "终止任务", Group: "注册任务", Type: AuthTypeLogin},
@@ -65,11 +75,11 @@ var authList = []*Permission{
 	// 140~149
 	{Id: 140, Path: "/change_log/list", Title: "列表", Group: "变更日志", Type: AuthTypeLogin},
 
-	{Id: 60, Path: "/setting/", Title: "链接资源", Group: "", Type: AuthTypeGrant},
-	{Id: 61, Path: "/setting/source_list", Title: "列表", Group: "链接资源", Type: AuthTypeGrant, Tag: "source_list"},
-	{Id: 62, Path: "/setting/source_set", Title: "新增/编辑", Group: "链接资源", Type: AuthTypeGrant, Tag: "source_set"},
-	{Id: 63, Path: "/setting/sql_source_change_status", Title: "状态变更", Group: "链接资源", Type: AuthTypeGrant, Tag: "source_status"},
-	{Id: 64, Path: "/setting/source_ping", Title: "链接测试", Group: "链接资源", Type: AuthTypeLogin},
+	{Id: 60, Path: "/setting/", Title: "链接", Group: "", Type: AuthTypeGrant},
+	{Id: 61, Path: "/setting/source_list", Title: "列表", Group: "链接", Type: AuthTypeGrant, Tag: "source_list"},
+	{Id: 62, Path: "/setting/source_set", Title: "新增/编辑", Group: "链接", Type: AuthTypeGrant, Tag: "source_set"},
+	{Id: 63, Path: "/setting/sql_source_change_status", Title: "状态变更", Group: "链接", Type: AuthTypeGrant, Tag: "source_status"},
+	{Id: 64, Path: "/setting/source_ping", Title: "链接测试", Group: "链接", Type: AuthTypeLogin},
 
 	{Id: 70, Path: "/setting/", Title: "环境", Group: "", Type: AuthTypeGrant},
 	{Id: 71, Path: "/setting/env_list", Title: "列表", Group: "环境", Type: AuthTypeGrant, Tag: "env_list"},

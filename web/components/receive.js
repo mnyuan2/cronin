@@ -1,4 +1,4 @@
-var MyPipeline = Vue.extend({
+var MyReceive = Vue.extend({
     template: `<el-container>
         <!--边栏-->
     <el-aside style="padding-top: 10px">
@@ -8,7 +8,6 @@ var MyPipeline = Vue.extend({
             </div>
             <ol>
                 <li v-for="item in queue.exec">
-                    <span v-html="taskItemIcon(item)"></span>
                     <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
                     <p style="margin: 0;color: #909399;line-height: 100%;font-size: 12px;">
                         ({{durationTransform(item.duration, 's')}}) 
@@ -24,7 +23,6 @@ var MyPipeline = Vue.extend({
             </div>
             <ol>
                 <li v-for="item in queue.register">
-                    <span v-html="taskItemIcon(item)"></span>
                     <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
                 </li>
             </ol>
@@ -33,11 +31,9 @@ var MyPipeline = Vue.extend({
     </el-aside>
     <!--主内容-->
     <el-main>
-        <el-menu :default-active="labelType" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
-    <!--                        <el-menu-item index="1" :disabled="listRequest">周期任务</el-menu-item>-->
-    <!--                        <el-menu-item index="2" :disabled="listRequest">单次任务</el-menu-item>-->
+        <el-menu class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
             <div style="float: right">
-                <el-button type="text" @click="setShow()" v-if="$auth_tag.pipeline_set">添加流水线</el-button>
+                <el-button type="text" @click="setShow()" v-if="$auth_tag.receive_set">添加接收规则</el-button>
             </div>
         </el-menu>
         <el-row>
@@ -78,7 +74,7 @@ var MyPipeline = Vue.extend({
             <el-table-column prop="name" label="任务名称">
                 <div slot-scope="{row}" style="display: flex;">
                     <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
-                        <router-link :to="{path:'/config_detail',query:{id:row.id, type:'pipeline'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                        <router-link :to="{path:'/config_detail',query:{id:row.id, type:'receive'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
                     </span>
                     <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
                         <i  class="el-icon-edit hover" @click="setShow(row)" title="编辑"></i>
@@ -90,7 +86,7 @@ var MyPipeline = Vue.extend({
                 <template slot-scope="scope">
                     <el-tooltip placement="top-start">
                         <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
-                        <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'pipeline')">{{scope.row.status_name}}</el-botton>
+                        <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'receive')">{{scope.row.status_name}}</el-botton>
                     </el-tooltip>
                 </template>
             </el-table-column>
@@ -109,8 +105,8 @@ var MyPipeline = Vue.extend({
         
         
         <!-- 流水线设置表单 -->
-        <el-drawer :title="add_box.title" :visible.sync="add_box.show" size="60%" wrapperClosable="false">
-            <my-pipeline-form v-if="add_box.show" :request="{detail:add_box.detail}" @close="formClose"></my-pipeline-form>
+        <el-drawer :title="set_box.title" :visible.sync="set_box.show" size="60%" wrapperClosable="false">
+            <my-receive-form v-if="set_box.show" :request="{detail:set_box.detail}" @close="formClose"></my-receive-form>
         </el-drawer>
         <!-- 任务日志弹窗 -->
         <el-drawer :title="config_log_box.title" :visible.sync="config_log_box.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
@@ -121,7 +117,7 @@ var MyPipeline = Vue.extend({
     </el-main>
 </el-container>
 `,
-    name: "MyPipeline",
+    name: "MyReceive",
     data(){
         return {
             env: {},
@@ -131,7 +127,6 @@ var MyPipeline = Vue.extend({
                 config_status: [],
             },
             sys_info:{},
-            labelType: '2',
             // 列表数据
             list: {
                 items: [],
@@ -156,7 +151,7 @@ var MyPipeline = Vue.extend({
                 exec:[], // 执行队列
                 register:[], // 注册队列
             },
-            add_box: {
+            set_box: {
                 show:false,
                 title: '',
                 detail:{},
@@ -176,7 +171,7 @@ var MyPipeline = Vue.extend({
     },
     // 模块初始化
     created(){
-        setDocumentTitle('流水线管理')
+        setDocumentTitle('接收规则管理')
         this.getDic()
         api.systemInfo((res)=>{
             this.sys_info = res;
@@ -213,9 +208,9 @@ var MyPipeline = Vue.extend({
             if (this.list.request){
                 return this.$message.info('请求执行中,请稍等.');
             }
-            replaceHash('/pipeline', this.list.param)
+            replaceHash('/receive', this.list.param)
             this.list.request = true
-            api.innerGet("/pipeline/list", this.list.param, (res)=>{
+            api.innerGet("/receive/list", this.list.param, (res)=>{
                 this.list.request = false
                 if (!res.status){
                     return this.$message.error(res.message);
@@ -317,24 +312,29 @@ var MyPipeline = Vue.extend({
         },
         // 添加弹窗
         setShow(row=null){
-            this.add_box.show = true
+            this.set_box.show = true
             if (row == null){
-                this.add_box.title= '添加流水线'
-                this.add_box.detail = {}
+                this.set_box.title= '添加接收规则'
+                this.set_box.detail = {}
             }else{
-                this.add_box.title= '编辑流水线'
-                this.add_box.detail = row
+                this.set_box.title= '编辑接收规则'
+                api.innerGet('/receive/detail', {id: row.id}, (res)=>{
+                    if (!res.status){
+                        return this.$message.error(res.message)
+                    }
+                    this.set_box.detail = res.data
+                },{async:false})
             }
         },
         formClose(e){
             console.log("close",e)
-            this.add_box.show = false
+            this.set_box.show = false
             if (e.is_change){
                 this.getList()
             }
         },
         configLogBox(item){
-            let tags = {ref_id:item.id, component:"pipeline"}
+            let tags = {ref_id:item.id, component:"receive"}
             this.config_log_box.tags = tags
             this.config_log_box.title = item.name+' 日志'
             this.config_log_box.show = true
@@ -373,16 +373,7 @@ var MyPipeline = Vue.extend({
             }
             this.queue.register = data
         },
-        taskItemIcon(row){
-            if (row.ref_type == 'config'){
-                return '<i class="task-item-icon" style="background: #28ab80;">c</i>'
-            }else if (row.ref_type == 'pipeline'){
-                return '<i class="task-item-icon" style="background: #5c88c5;">p</i>'
-            }else if(row.ref_type == 'receive'){
-                return '<i class="task-item-icon" style="background: #182b50;">r</i>'
-            }
-        },
     }
 })
 
-Vue.component("MyPipeline", MyPipeline);
+Vue.component("MyReceive", MyReceive);
