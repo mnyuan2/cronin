@@ -5,6 +5,8 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/models"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -59,4 +61,26 @@ func (m *CronReceiveData) ChangeStatus(data *models.CronReceive, remark string) 
 func (m *CronReceiveData) GetOne(Id int) (data *models.CronReceive, err error) {
 	data = &models.CronReceive{}
 	return data, m.db.Where("id=?", Id).Find(data).Error
+}
+
+// Del 删除
+func (m *CronReceiveData) Del(where *db.Where) (count int, err error) {
+	if where.Len() == 0 {
+		return 0, errors.New("未指定 receive 删除条件")
+	}
+	count = 0
+	w, args := where.Build()
+	err = m.db.Model(&models.CronReceive{}).Where(w, args...).Select("count(*)").Find(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	if count == 0 {
+		return count, nil
+	}
+
+	err = m.db.Where(w, args...).Delete(&models.CronReceive{}).Error
+	if err != nil {
+		return 0, fmt.Errorf("删除失败，%w", err)
+	}
+	return count, nil
 }

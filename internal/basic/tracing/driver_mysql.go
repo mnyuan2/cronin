@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/db"
 	"cron/internal/models"
+	"crypto/md5"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,14 +25,23 @@ var gen = &mysqlIDGenerator{}
 
 // 链路日志收集写入程序
 func MysqlCollectorListen() {
-	mysqlQueue = make(chan models.CronLogSpan, 5000)
-	exec := make(chan byte, 10)
+	mysqlQueue = make(chan models.CronLogSpan, 10000)
+	exec := make(chan byte, 100)
 	defer close(mysqlQueue)
 	defer close(exec)
 	go func() {
 		for {
 			time.Sleep(3 * time.Second)
 			exec <- 1
+		}
+	}()
+	go func() { // 增加观测点
+		for range time.Tick(time.Minute * 30) {
+			if len(mysqlQueue) > 2000 {
+				log.Println("[warn] log write queue overstock ", len(mysqlQueue))
+			} else {
+				log.Println("[info] log write queue ok ", len(mysqlQueue))
+			}
 		}
 	}()
 
@@ -95,7 +105,7 @@ func (t *mysqlIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.Spa
 		dayCount.mu.Unlock()
 	}
 
-	id := fmt.Sprintf("%02.2s%010.10v%04.4v", t.env, t.startTime.Unix(), t.nonce)
+	id := md5.Sum(fmt.Appendf(nil, "%s%v%v", t.env, t.startTime.Unix(), t.nonce))
 	hex := fmt.Sprintf("%032x", id) // 32位
 	traceID, _ := trace.TraceIDFromHex(hex)
 	spanID := t.NewSpanID(ctx, traceID)
@@ -160,7 +170,7 @@ func Inject(s trace.Span) string {
 	case *MysqlSpan:
 		tr := val.traceId.String()
 		sp := val.spanId.String()
-		traceId, _ := gen.ParseID(tr)
+		traceId := tr
 		spanId, _ := gen.ParseID(sp)
 		return fmt.Sprintf("%s:%s:0000000000000000:1", traceId, spanId)
 	default:
@@ -314,7 +324,7 @@ func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
 		Env:        s.env,
 		RefId:      s.refId,
 	}
-	data.TraceId, _ = gen.ParseID(s.traceId.String())
+	data.TraceId = s.traceId.String()
 	data.SpanId, _ = gen.ParseID(s.spanId.String())
 	data.ParentSpanId, _ = gen.ParseID(s.parentSpanId.String())
 	data.Tags, _ = jsoniter.Marshal(s.tags)

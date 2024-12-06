@@ -155,6 +155,23 @@ function isJSON(str) {
 }
 
 /**
+ * 解析json字符串
+ * @param str
+ * @returns {{}|any}
+ */
+function parseJSON(str, defaultValue = {}){
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        return defaultValue;
+    }
+}
+
+function stringifyJSON(data){
+    return JSON.stringify(data, null, 4)
+}
+
+/**
  * json深拷贝
  * @param data
  * @returns {any}
@@ -310,6 +327,7 @@ const Enum ={
     dicMsg: 3,
     dicUser: 4,
     dicRole: 5,
+    dicTag: 6,
     dicSqlSource: 11,
     dicJenkinsSource: 12,
     dicGitSource: 13,
@@ -324,6 +342,8 @@ const Enum ={
     dicProtocolType: 1005,
     // 1006 接收数据字段
     dicReceiveDataField: 1006,
+    // 1007 重试模式
+    dicRetryMode: 1007,
     // 1 草稿,停用
     StatusDisable: 1,
     // 5 待审核
@@ -336,13 +356,15 @@ const Enum ={
     StatusFinish: 3,
     // 4 错误
     StatusError: 4,
+    // 8 已关闭（预删除）
+    StatusClosed: 8,
     // 9 删除
     StatusDelete: 9,
 }
 
 function statusTypeName(status){
     switch (Number(status)) {
-        case Enum.StatusDisable:
+        case Enum.StatusClosed:
             return 'info';
         case Enum.StatusActive:
         case Enum.StatusAudited:

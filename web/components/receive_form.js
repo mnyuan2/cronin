@@ -36,7 +36,7 @@ var MyReceiveForm = Vue.extend({
                             </span>
                         </div>
                         <el-row style="margin:3px 0 0 8px">
-                            <el-col :span="12">任务：<b class="b" v-for="re in conf.rule">{{re.key}}:{{re.value}}</b></el-col>
+                            <el-col :span="12">关联：<b class="b" v-for="re in conf.rule">{{re.key}}:{{re.value}}</b></el-col>
                             <el-col :span="12">入参：<b class="b" v-for="pm in conf.param">{{pm.key}}:{{pm.value}}</b></el-col>
                         </el-row>
                         <span class="input-header">
@@ -101,10 +101,10 @@ var MyReceiveForm = Vue.extend({
             <el-row>
                 <el-input type="textarea" v-model="form.receive_tmpl" :rows="10" placeholder="接收解析模板，需返回指定json字符串结果"></el-input>
             </el-row>
-            <el-row style="text-align: center;padding: 14px 0px 0px;">
+            <el-row style="text-align: center;padding: 14px 0px 6px;">
                 <el-button size="small" type="primary" @click="tmpl_box.show = false">确定</el-button>
             </el-row>
-            <el-row>
+            <el-row style="max-height:500px;overflow-y: auto;">
                 <p class="h4">模板响应样例</p>
                 <div class="input-box">
                     <pre><code>{{tmpl_box.help.json}}</code></pre>
@@ -129,29 +129,29 @@ var MyReceiveForm = Vue.extend({
         </el-dialog>
         
         <!-- 推送设置弹窗 -->
-        <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false" :modal="false">
-            <el-form :model="msgSet" :inline="true" size="mini">
-                <el-form-item label="当">
-                    <el-select v-model="msgSet.data.status" style="width: 90px">
-                        <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
+        <el-dialog title="推送设置" :visible.sync="msg_set_box.show" :show-close="false" :close-on-click-modal="false" :modal="false">
+            <el-form :model="msg_set_box.form" :inline="true" size="small">
+                <el-form-item label="当执行">
+                    <el-select v-model="msg_set_box.form.status" multiple style="width: 143px" placeholder="状态">
+                        <el-option v-for="(dic_v,dic_k) in msg_set_box.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
                     </el-select>
                     时
                 </el-form-item>
                 <el-form-item label="发送">
-                    <el-select v-model="msgSet.data.msg_id">
+                    <el-select v-model="msg_set_box.form.msg_id" style="width: 180px" placeholder="模板">
                         <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
                     </el-select>
                     消息
                 </el-form-item>
-                <el-form-item label="并且@用户">
-                    <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
+                <el-form-item label="并且@">
+                    <el-select v-model="msg_set_box.form.notify_user_ids" multiple style="width: 210px" placeholder="人员">
                         <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
                     </el-select>
                 </el-form-item>
             </el-form>
             <span slot="footer" class="dialog-footer">
-                <el-button @click="msgSet.show = false">取 消</el-button>
-                <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
+                <el-button @click="msg_set_box.show = false" size="small">取 消</el-button>
+                <el-button type="primary" @click="msgSetConfirm()" size="small">确 定</el-button>
             </span>
         </el-dialog>
         <el-dialog title="任务详情" :visible.sync="config_detail.show" :close-on-click-modal="false" class="config-form-box" :modal="false">
@@ -160,7 +160,7 @@ var MyReceiveForm = Vue.extend({
         
         <el-dialog title="任务关联设置" :visible.sync="rule_config_box.show" :close-on-click-modal="false" class="config-form-box" :modal="false" width="500px">
             <el-form :model="rule_config_box.form" size="small">
-                <el-form-item label="任务匹配">
+                <el-form-item label="关联匹配">
                     <el-input class="input-input" v-for="(rule_v,rule_i) in rule_config_box.form.rule" v-model="rule_v.value" placeholder="匹配值">
                         <el-select v-model="rule_v.key" placeholder="匹配字段" slot="prepend" @input="e=>inputChangeArrayPush(e,rule_i,rule_config_box.form.rule)">
                             <el-option v-for="fd in dic.field" :label="fd.key" :value="fd.key">
@@ -215,12 +215,16 @@ var MyReceiveForm = Vue.extend({
                 show:false,
                 help:{
                     json:"{\n" +
+                        "    \"title\": \"xxx操作名称\",\n" +
+                        "    \"user\": \"用户名\",\n" +
                         "    \"dataset\": [\n" +
-                        "        {\"type\":\"jenkins\", \"repo\":\"kobe\", \"service\":\"stock\"},\n" +
-                        "        {\"type\":\"pr\", \"repo\":\"kobe\", \"owner\":\"stock\", \"number\":\"123\"}\n" +
+                        "        {\"type\":\"jenkins\", \"repo\":\"B\", \"service\":\"s1\"},\n" +
+                        "        {\"type\":\"pr\", \"repo\":\"B\", \"owner\":\"mnyuan\", \"number\":\"123\"}\n" +
                         "    ]\n" +
                         "}",
                     table:[
+                        {field:'title', type:'string', required:'否',desc:'请求的标题'},
+                        {field:'user', type:'string', required:'否',desc:'请求用户名称'},
                         {field:'dataset', type:'array', required:'是',desc:'匹配数据集'},
                         {field:'dataset.owner', type:'string', required:'否',desc:'空间'},
                         {field:'dataset.repo', type:'string', required:'否',desc:'仓库'},
@@ -249,11 +253,11 @@ var MyReceiveForm = Vue.extend({
                 form:{}
             },
             // 消息设置弹窗
-            msgSet:{
+            msg_set_box:{
                 show: false, // 是否显示
                 title: '添加',
                 index: -1, // 操作行号
-                data: {}, // 实际内容
+                form: {}, // 实际内容
                 statusList:[{id:1,name:"错误"}, {id:2, name:"结束"}, {id:0,name:"开始"}],
             },
             preference:{
@@ -354,7 +358,7 @@ var MyReceiveForm = Vue.extend({
             }
             if (oldData == undefined || index < 0){
                 oldData = {
-                    status: 1,
+                    status: [],
                     msg_id: "",
                     notify_user_ids: [],
                 }
@@ -362,10 +366,10 @@ var MyReceiveForm = Vue.extend({
                 console.log('推送信息异常', oldData)
                 return this.$message.error("推送信息异常");
             }
-            this.msgSet.show = true
-            this.msgSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
-            this.msgSet.title = this.msgSet.index < 0? '添加' : '编辑';
-            this.msgSet.data = copyJSON(oldData)
+            this.msg_set_box.show = true
+            this.msg_set_box.index = Number(index)  // -1.新增、>=0.具体行的编辑
+            this.msg_set_box.title = this.msg_set_box.index < 0? '添加' : '编辑';
+            this.msg_set_box.form = copyJSON(oldData)
         },
         msgSetDel(index){
             if (index === "" || index == null || isNaN(index)){
@@ -378,27 +382,28 @@ var MyReceiveForm = Vue.extend({
         },
         // 推送确认
         msgSetConfirm(){
-            if (this.msgSet.data.msg_id <= 0){
+            if (this.msg_set_box.form.msg_id <= 0){
                 return this.$message.warning("请选择消息模板");
             }
-            let data = this.msgSetBuildDesc(this.msgSet.data)
+            let data = this.msgSetBuildDesc(this.msg_set_box.form)
 
-            if (this.msgSet.index < 0){
+            if (this.msg_set_box.index < 0){
                 this.form.msg_set.push(data)
             }else{
-                this.form.msg_set[this.msgSet.index] = data
+                this.form.msg_set[this.msg_set_box.index] = data
             }
-            this.msgSet.show = false
-            this.msgSet.index = -1
-            this.msgSet.data = {}
+            this.msg_set_box.show = false
+            this.msg_set_box.index = -1
+            this.msg_set_box.form = {}
         },
         // 构建消息设置描述
         msgSetBuildDesc(data){
-            let item1 = this.msgSet.statusList.find(option => option.id === data.status);
-            if (item1){
-                data.status_name = item1.name
-            }
-            let descrition = '<i class="el-icon-bell"></i>当任务<b class="b">'+item1.name+'</b>时'
+            let item1 = this.msg_set_box.statusList.filter((option) => {
+                return data.status.includes(option.id)
+            }).map((item)=>{return item.name});
+            data.status_name = item1.join(',')
+
+            let descrition = '<i class="el-icon-bell"></i>当任务<b class="b">'+data.status_name+'</b>时'
 
             let item2 = this.dic.msg.find(option => option.id === data.msg_id)
             if (item2){
@@ -409,7 +414,7 @@ var MyReceiveForm = Vue.extend({
                 return data.notify_user_ids.includes(option.id);
             }).map((item)=>{return item.name})
             if (item3.length > 0){
-                data.notify_users_name = item3
+                data.notify_users_name = item3.join(',')
                 descrition += '，并且@人员<b class="b">'+data.notify_users_name+'</b>'
             }
             data.descrition = descrition

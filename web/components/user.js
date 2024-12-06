@@ -87,6 +87,7 @@ var MyUser = Vue.extend({
             user:{},
             dic_role: [],
             detail:{},
+            is_change: false,
             set_box:{
                 show: false,
                 form:{}
@@ -117,6 +118,9 @@ var MyUser = Vue.extend({
         this.getDic()
         this.getDetail()
         console.log("user",this.user)
+    },
+    beforeDestroy(){
+        this.close()
     },
 
     // 具体方法
@@ -164,6 +168,7 @@ var MyUser = Vue.extend({
                 }
                 this.setBox(false)
                 this.getDetail()
+                this.is_change = true
                 // api.dicList([Enum.dicUser],()=>{}, true) // 存在变化，更新缓存
             })
         },
@@ -192,6 +197,7 @@ var MyUser = Vue.extend({
                     }
                     return this.$message.success(res.message)
                     this.getDetail()
+                    this.is_change = true
                 })
             }).catch(()=>{
                 // 取消操作
@@ -255,7 +261,7 @@ var MyUser = Vue.extend({
         },
 
         close(){
-            this.$emit('update:visible', false) // 向外传递关闭表示
+            this.$emit('close', {is_change:this.is_change}) // 向外传递关闭表示
         }
     }
 })

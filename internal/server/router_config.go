@@ -24,6 +24,23 @@ func httpList(ctx *gin.Context) {
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
+// 匹配列表
+func httpMatchList(ctx *gin.Context) {
+	r := &pb.CronMatchListRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	user, err := GetUser(ctx)
+	if err != nil {
+		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+		return
+	}
+
+	rep, err := biz.NewCronConfigService(ctx.Request.Context(), user).MatchList(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
 // 任务详情
 func httpConfigDetail(ctx *gin.Context) {
 	r := &pb.CronConfigDetailRequest{}

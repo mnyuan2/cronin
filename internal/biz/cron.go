@@ -27,10 +27,36 @@ func cronInit() {
 			// 异常处理，保证单个任务的panic，不会影响其它任务。
 			cron.Recover(cron.DefaultLogger),
 			// 如果上一个任务还未执行完成，则跳过该次调度
-			cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "上一步还未完成, 跳过:", log.LstdFlags))),
+			SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "上一步还未完成, 跳过:", log.LstdFlags))),
 		),
 	)
 	log.Println("cron 初始化完成")
 	cronRun.Start() // 启动程序；启动之后添加任务也是可以的；
 	//cronRun.Stop() // 停止服务
+}
+
+// SkipIfStillRunning 如果先前的调用仍在运行，跳过对 Job 的调用。它在 Info 级别记录跳转到给定记录器的日志。
+func SkipIfStillRunning(logger cron.Logger) cron.JobWrapper {
+	return func(j cron.Job) cron.Job {
+		var ch = make(chan struct{}, 1)
+		ch <- struct{}{}
+		return cron.FuncJob(func() {
+			select {
+			case v := <-ch:
+				j.Run()
+				ch <- v
+			default:
+				switch val := j.(type) {
+				case *JobConfig:
+					logger.Info(val.conf.Name)
+				case *JobPipeline:
+					logger.Info(val.conf.conf.Name)
+				case *JobReceive:
+					logger.Info(val.conf.conf.Name)
+				default:
+					logger.Info("未知任务类型")
+				}
+			}
+		})
+	}
 }

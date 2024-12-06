@@ -1,7 +1,7 @@
 var MyStatusChange = Vue.extend({
     template: `<el-dialog :title="info.name" :visible.sync="request.show" :show-close="false" class="status-change-warp" width="540px">
         <el-tabs tab-position="left">
-            <el-tab-pane v-if="info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError">
+            <el-tab-pane v-if="status_show.audited">
                 <span slot="label" ><el-button plain size="mini" round>待审核</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -9,13 +9,16 @@ var MyStatusChange = Vue.extend({
                             <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
                         </el-select>
                     </el-form-item>
+                    <el-form-item label="备注">
+                        <el-input type="textarea" v-model="form.status_remark" rows="5"></el-input>
+                    </el-form-item>
                     <el-form-item class="status-change-footer">
                         <el-button @click="close()">取消</el-button>
                         <el-button type="primary" @click="statusSubmit(Enum.StatusAudited)">确定</el-button>
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
-            <el-tab-pane v-if="info.status==Enum.StatusAudited && (($auth_tag.config_audit && type=='config') || ($auth_tag.pipeline_audit && type=='pipeline'))">
+            <el-tab-pane v-if="status_show.reject">
                 <span slot="label"><el-button plain size="mini" round>驳回</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -32,7 +35,7 @@ var MyStatusChange = Vue.extend({
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
-            <el-tab-pane v-if="info.status==Enum.StatusDisable || info.status==Enum.StatusReject || info.status==Enum.StatusFinish || info.status==Enum.StatusError || info.status==Enum.StatusAudited">
+            <el-tab-pane v-if="status_show.active">
                 <span slot="label"><el-button plain size="mini" round>{{info.status==Enum.StatusAudited ?'通过':'激活'}}</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
@@ -49,17 +52,32 @@ var MyStatusChange = Vue.extend({
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
-            <el-tab-pane v-if="info.status==Enum.StatusActive">
-                <span slot="label"><el-button plain size="mini" round>停用</el-botton></span>
+            <el-tab-pane v-if="status_show.disable">
+                <span slot="label"><el-button plain size="mini" round>{{info.status==Enum.StatusClosed ?'草稿':'停用'}}</el-botton></span>
                 <el-form ref="form" :model="form" label-width="100px" size="small">
                     <el-form-item label="处理人">
                         <el-select v-model="form.handle_user_ids" multiple style="width:100%">
                             <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
                         </el-select>
                     </el-form-item>
+                    <el-form-item label="备注">
+                        <el-input type="textarea" v-model="form.status_remark" rows="5"></el-input>
+                    </el-form-item>
                     <el-form-item class="status-change-footer">
                         <el-button @click="close()">取消</el-button>
                         <el-button type="primary" @click="statusSubmit(Enum.StatusDisable)">确定</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane v-if="status_show.closed">
+                <span slot="label"><el-button plain size="mini" round>已关闭&删除</el-botton></span>
+                <el-form ref="form" :model="form" label-width="100px" size="small">
+                    <el-form-item label="备注">
+                        <el-input type="textarea" v-model="form.status_remark" rows="5"></el-input>
+                    </el-form-item>
+                    <el-form-item class="status-change-footer">
+                        <el-button @click="close()">取消</el-button>
+                        <el-button type="primary" @click="statusSubmit(Enum.StatusClosed)">确定</el-button>
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
@@ -95,6 +113,13 @@ var MyStatusChange = Vue.extend({
             info:{status:0},
             dic:{
                 user:[]
+            },
+            status_show:{
+                audited: false,
+                reject: false,
+                active: false,
+                disable: false,
+                closed: false,
             }
         }
     },
@@ -114,6 +139,7 @@ var MyStatusChange = Vue.extend({
             this.type = this.request.type
         }
         this.getDicSqlSource()
+        this.initStatusShow()
         console.log("状态变更 start",this.request, this.$auth_tag)
         window.copyToClipboard = this.copyToClipboard; // 事件绑定在window对象中后才可以被触发
     },
@@ -170,7 +196,6 @@ var MyStatusChange = Vue.extend({
                 sucMsg.dangerouslyUseHTMLString = true
                 sucMsg.message += `, <a href="javascript:;" onclick="copyToClipboard('标题&链接','${url}')">复制标题&链接</a>`
             }
-            console.log("submit",status, body)
 
             api.innerPost(path, body, res=>{
                 if (!res.status){
@@ -180,6 +205,43 @@ var MyStatusChange = Vue.extend({
                 this.close(true)
             })
         },
+        initStatusShow(){
+            if (this.info.status==Enum.StatusDisable || this.info.status==Enum.StatusReject || this.info.status==Enum.StatusFinish){
+                if ((this.$auth_tag.config_status && this.type=='config') ||
+                    (this.$auth_tag.pipeline_status && this.type=='pipeline') ||
+                    (this.$auth_tag.receive_status && this.type=='receive')){
+                    this.status_show.audited = true // 待审核 需要具有状态操作权限
+                }
+            }
+            if (this.info.status==Enum.StatusAudited){
+                if ((this.$auth_tag.config_audit && this.type=='config') ||
+                    (this.$auth_tag.pipeline_audit && this.type=='pipeline') ||
+                    (this.$auth_tag.receive_audit && this.type=='receive')){
+                    this.status_show.reject = true // 驳回  需要具有审核权限
+                }
+            }
+            if (this.info.status==Enum.StatusDisable || this.info.status==Enum.StatusReject || this.info.status==Enum.StatusFinish || this.info.status==Enum.StatusError || this.info.status==Enum.StatusAudited){
+                if ((this.$auth_tag.config_audit && this.type=='config') ||
+                    (this.$auth_tag.pipeline_audit && this.type=='pipeline') ||
+                    (this.$auth_tag.receive_audit && this.type=='receive')){
+                    this.status_show.active = true // 激活/通过  需要具有审核权限
+                }
+            }
+            if (this.info.status==Enum.StatusActive || this.info.status==Enum.StatusClosed){
+                if ((this.$auth_tag.config_status && this.type=='config') ||
+                    (this.$auth_tag.pipeline_status && this.type=='pipeline') ||
+                    (this.$auth_tag.receive_status && this.type=='receive')){
+                    this.status_show.disable = true // 草稿/停用 需要具有状态操作权限
+                }
+            }
+            if (this.info.status==Enum.StatusDisable || this.info.status==Enum.StatusReject || this.info.status==Enum.StatusFinish || this.info.status==Enum.StatusError){
+                if ((this.$auth_tag.config_status && this.type=='config') ||
+                    (this.$auth_tag.pipeline_status && this.type=='pipeline') ||
+                    (this.$auth_tag.receive_status && this.type=='receive')){
+                    this.status_show.closed = true // 预删除锁定，可以转为草稿后进行编辑
+                }
+            }
+        }
     }
 })
 

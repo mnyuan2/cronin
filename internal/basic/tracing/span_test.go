@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -11,6 +12,16 @@ import (
 )
 
 func TestStartSpan(t *testing.T) {
+
+	ti := time.Now()
+	b := fmt.Appendf(nil, "%s%v%v", "abcd", ti.Unix(), 123456)
+	id := md5.Sum(b)
+	h := fmt.Sprintf("%032x", id)
+	traceID, _ := trace.TraceIDFromHex(h)
+	fmt.Println(string(b), string(id[:]), ti.Unix(), h, traceID.String())
+
+	return
+
 	ctx := context.Background()
 
 	// 服务(程序)名称

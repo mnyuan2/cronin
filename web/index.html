@@ -24,6 +24,7 @@
 
 <script src="/static/js/home.js?v=[[.version]]"></script>
 <script src="/components/header.js?v=[[.version]]"></script>
+<script src="/components/sidebar.js?v=[[.version]]"></script>
 <script src="/components/config.js?v=[[.version]]"></script>
 <script src="/components/config_detail.js?v=[[.version]]"></script>
 <script src="/components/config_form.js?v=[[.version]]"></script>
@@ -37,6 +38,7 @@
 <script src="/components/source.js?v=[[.version]]"></script>
 <script src="/components/env.js?v=[[.version]]"></script>
 <script src="/components/message_template.js?v=[[.version]]"></script>
+<script src="/components/tag.js?v=[[.version]]"></script>
 <script src="/components/users.js?v=[[.version]]"></script>
 <script src="/components/user.js?v=[[.version]]"></script>
 <script src="/components/my_work.js?v=[[.version]]"></script>
@@ -51,10 +53,12 @@
             { path: '/', redirect: '/config'},
             { path: '/config', component: MyConfig},
             { path: '/config_detail', component: MyConfigDetail},
+            { path: '/config_form', component: MyConfigForm},
             { path: '/pipeline', component: MyPipeline},
             { path: '/receive', component: MyReceive},
             {path: '/source', component: MySource},
             {path: '/message_template', component: MyMessageTemplate},
+            {path: '/tag', component: MyTag},
             {path: '/users', component: MyUsers},
             {path: '/user', component: MyUser},
             {path: '/my/work', component: MyWork},

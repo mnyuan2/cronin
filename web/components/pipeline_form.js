@@ -28,11 +28,14 @@ var MyPipelineForm = Vue.extend({
                         <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                     </el-tooltip>
                 </span>
-                <el-input type="textarea" v-model="form.var_params" placeholder="变量参数实现 json 格式"></el-input>
+                <el-input type="textarea" v-model="form.var_params" :autosize="{minRows:2}" placeholder="变量参数实现 json 格式"></el-input>
             </el-form-item>
             
             <el-form-item label="任务" label-width="76px">
-                <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
+                <div>
+                    <el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button>
+                    <el-button type="text" @click="matchStepNext(999)" style="margin-left:46px">快捷添加<i class="el-icon-plus"></i></el-button>
+                </div>
                 <div id="config-selected-box" class="sort-drag-box">
                     <div class="input-box" v-for="(conf,conf_index) in form.configs" @mouseover="configDetailPanel(conf, true)" @mouseout="configDetailPanel(conf, false)">
                         <div class="drag">
@@ -102,53 +105,99 @@ var MyPipelineForm = Vue.extend({
             <el-button type="primary" size="small" @click="submitForm()" v-if="(form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject) && $auth_tag.pipeline_set">保存草稿</el-button>
         </div>
         
+        <!-- 快捷添加弹窗 -->
+        <el-dialog title="快捷添加" :visible.sync="match_add.show" width="60%" top="10vh" class="config-select-wrap" :modal="false">
+            <el-steps :active="match_add.step_index" simple>
+                <el-step title="条件" icon="el-icon-edit"></el-step>
+                <el-step title="列表" icon="el-icon-s-order"></el-step>
+            </el-steps>
+            <div id="match-add-search" class="sort-drag-box form-inline" style="margin-top: 20px;" v-show="match_add.step_index == 0">
+                <div class="input-box" v-for="(s,index) in match_add.search">
+                    <div class="drag">
+                        <i class="el-icon-more-outline" style="transform: rotate(90deg);"></i>
+                    </div>
+                    <div v-if="s.type=='pr_merge'" style="display: flex; padding: 0 0px 0 10px; align-items: center;">
+                        <span class="h4">pr_merge</span>
+                        <el-input size="small" placeholder="源分支*" v-model="s.value[0]" style="padding: 0 0 0 10px;"></el-input>
+                        <i class="el-icon-minus" style="margin-right: -8px;"></i>
+                        <i class="el-icon-right"></i>
+                        <el-input size="small" placeholder="目标分支*" v-model="s.value[1]"></el-input>
+                    </div>
+                    <div v-if="s.type=='tag'" style="display: flex; padding: 0 0px 0 10px; align-items: center;">
+                        <span class="h4">标签</span>
+                        <el-select size="small" v-model="s.value" multiple filterable placeholder="请选择" style="flex: 1; padding: 0 0 0 10px;">
+                            <el-option v-for="item in dic.tag" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                        </el-select>
+                    </div>
+                </div>
+            </div>
+            <div v-show="match_add.step_index == 1">
+                <el-table :data="match_add.list" @selection-change="matchSelectedChange" max-height="460">
+                    <el-table-column type="selection" width="55"></el-table-column>
+                    <el-table-column prop="name" label="任务名称">
+                        <div slot-scope="{row}" class="abc" style="display: flex;">
+                            <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+                                <router-link target="_blank" :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                            </span>
+                        </div>
+                    </el-table-column>
+                    <el-table-column prop="protocol_name" label="协议" width="80"></el-table-column>
+                    <el-table-column prop="" label="状态" width="100">
+                        <template slot-scope="{row}">
+                            <el-tooltip placement="top-start">
+                                <div slot="content">{{row.status_dt}}  {{row.status_remark}}</div>
+                                <el-button :type="statusTypeName(row.status)" plain size="mini" round disabled>{{row.status_name}}</el-button>
+                            </el-tooltip>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="remark" label="备注"></el-table-column>
+                </el-table>
+            </div>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" type="primary" @click="matchStepNext(1)" v-show="match_add.step_index == 0">查询&下一步</el-button>
+                <el-button size="small" @click="matchStepNext(-1)" v-show="match_add.step_index == 1">上一步</el-button>
+                <el-button size="small" type="primary" @click="matchStepNext(1)" v-show="match_add.step_index == 1">添加</el-button>
+            </div>
+        </el-dialog>
         <!-- 任务选择弹窗 -->
         <el-dialog title="任务选择" :visible.sync="config.boxShow" width="60%" top="10vh" class="config-select-wrap" :modal="false">
             <my-config-select v-if="config.boxShow" ref="selection"></my-config-select>
             <div slot="footer" class="dialog-footer">
                 <a href="/index#/config" target="_blank" class="el-button el-button--text left">管理任务</a>
-                <el-button size="medium" @click="configSelectBox('close')">关闭</el-button>
-                <el-button size="medium" type="primary" @click="configSelectBox('confirm')" :disabled="config.running">添加</el-button>
+                <el-button size="small" @click="configSelectBox('close')">关闭</el-button>
+                <el-button size="small" type="primary" @click="configSelectBox('confirm')" :disabled="config.running">添加</el-button>
             </div>
         </el-dialog>
         <!-- 推送设置弹窗 -->
-        <el-dialog title="推送设置" :visible.sync="msgSet.show" :show-close="false" :close-on-click-modal="false" :modal="false">
-            <el-form :model="msgSet" :inline="true" size="mini">
-                <el-form-item label="当">
-                    <el-select v-model="msgSet.data.status" style="width: 90px">
-                        <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
+        <el-dialog title="推送设置" :visible.sync="msg_set_box.show" :show-close="false" :close-on-click-modal="false" :modal="false">
+            <el-form :model="msg_set_box.form" :inline="true" size="small">
+                <el-form-item label="当执行">
+                    <el-select v-model="msg_set_box.form.status" multiple style="width: 143px" placeholder="状态">
+                        <el-option v-for="(dic_v,dic_k) in msg_set_box.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
                     </el-select>
                     时
                 </el-form-item>
                 <el-form-item label="发送">
-                    <el-select v-model="msgSet.data.msg_id">
+                    <el-select v-model="msg_set_box.form.msg_id" style="width: 180px" placeholder="模板">
                         <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
                     </el-select>
                     消息
                 </el-form-item>
-                <el-form-item label="并且@用户">
-                    <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
+                <el-form-item label="并且@">
+                    <el-select v-model="msg_set_box.form.notify_user_ids" multiple style="width: 210px" placeholder="人员">
                         <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
                     </el-select>
                 </el-form-item>
             </el-form>
             <span slot="footer" class="dialog-footer">
-                <el-button @click="msgSet.show = false">取 消</el-button>
-                <el-button type="primary" @click="msgSetConfirm()">确 定</el-button>
+                <el-button @click="msg_set_box.show = false" size="small">取 消</el-button>
+                <el-button type="primary" @click="msgSetConfirm()" size="small">确 定</el-button>
             </span>
         </el-dialog>
         <el-dialog title="任务详情" :visible.sync="config_detail.show" :close-on-click-modal="false" class="config-form-box" :modal="false">
             <my-config-form v-if="config_detail.show" :request="{detail:config_detail.detail,disabled:true}" @close="configDetailBox()"></my-config-form>
         </el-dialog>
     </div>`,
-
-    // StatusDisable: 1, // 草稿
-    // StatusAudited: 5, // 待审核
-    // StatusReject: 6, // 6 驳回
-    // StatusActive: 2, // 2 激活
-    // StatusFinish: 3, // 完成
-    // StatusError: 4, // 错误
-    // StatusDelete: 9, // 删除
 
     name: "MyPipelineForm",
     props: {
@@ -162,9 +211,12 @@ var MyPipelineForm = Vue.extend({
             dic:{
                 user: [],
                 msg: [],
+                tag: [],
             },
             // 表单
-            form:{},
+            form:{
+                var_params: '',
+            },
             hintSpec: "* * * * * *",
             // 日期选择器设置
             pickerOptions: {
@@ -172,6 +224,19 @@ var MyPipelineForm = Vue.extend({
                     return time.getTime() < Date.now() - 8.64e7
                 },
                 selectableRange: "00:00:00 - 23:01:59",
+            },
+            // 快捷添加
+            match_add:{
+                show: false,
+                step_index: 0,
+                search:[
+                    {"type":"pr_merge","value":["",""]},
+                    {"type":"tag", "value":[]},
+                ],
+                list:[],
+                selected: [],
+                var_params:[],
+                sort: null,
             },
             // 任务弹窗
             config:{
@@ -184,17 +249,18 @@ var MyPipelineForm = Vue.extend({
                 detail:{}
             },
             // 消息设置弹窗
-            msgSet:{
+            msg_set_box:{
                 show: false, // 是否显示
                 title: '添加',
                 index: -1, // 操作行号
-                data: {}, // 实际内容
+                form: {}, // 实际内容
                 statusList:[{id:1,name:"错误"}, {id:2, name:"结束"}, {id:0,name:"开始"}],
             },
             preference:{
                 pipeline: {}
             },
             sort: null,
+            sort2: null,
         }
     },
     watch:{
@@ -305,7 +371,7 @@ var MyPipelineForm = Vue.extend({
             }
             if (oldData == undefined || index < 0){
                 oldData = {
-                    status: 1,
+                    status: [],
                     msg_id: "",
                     notify_user_ids: [],
                 }
@@ -313,10 +379,10 @@ var MyPipelineForm = Vue.extend({
                 console.log('推送信息异常', oldData)
                 return this.$message.error("推送信息异常");
             }
-            this.msgSet.show = true
-            this.msgSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
-            this.msgSet.title = this.msgSet.index < 0? '添加' : '编辑';
-            this.msgSet.data = copyJSON(oldData)
+            this.msg_set_box.show = true
+            this.msg_set_box.index = Number(index)  // -1.新增、>=0.具体行的编辑
+            this.msg_set_box.title = this.msg_set_box.index < 0? '添加' : '编辑';
+            this.msg_set_box.form = copyJSON(oldData)
         },
         msgSetDel(index){
             if (index === "" || index == null || isNaN(index)){
@@ -329,27 +395,28 @@ var MyPipelineForm = Vue.extend({
         },
         // 推送确认
         msgSetConfirm(){
-            if (this.msgSet.data.msg_id <= 0){
+            if (this.msg_set_box.form.msg_id <= 0){
                 return this.$message.warning("请选择消息模板");
             }
-            let data = this.msgSetBuildDesc(this.msgSet.data)
+            let data = this.msgSetBuildDesc(this.msg_set_box.form)
 
-            if (this.msgSet.index < 0){
+            if (this.msg_set_box.index < 0){
                 this.form.msg_set.push(data)
             }else{
-                this.form.msg_set[this.msgSet.index] = data
+                this.form.msg_set[this.msg_set_box.index] = data
             }
-            this.msgSet.show = false
-            this.msgSet.index = -1
-            this.msgSet.data = {}
+            this.msg_set_box.show = false
+            this.msg_set_box.index = -1
+            this.msg_set_box.form = {}
         },
         // 构建消息设置描述
         msgSetBuildDesc(data){
-            let item1 = this.msgSet.statusList.find(option => option.id === data.status);
-            if (item1){
-                data.status_name = item1.name
-            }
-            let descrition = '<i class="el-icon-bell"></i>当任务<b class="b">'+item1.name+'</b>时'
+            let item1 = this.msg_set_box.statusList.filter((option) => {
+                return data.status.includes(option.id)
+            }).map((item)=>{return item.name});
+            data.status_name = item1.join(',')
+
+            let descrition = '<i class="el-icon-bell"></i>当任务<b class="b">'+data.status_name+'</b>时'
 
             let item2 = this.dic.msg.find(option => option.id === data.msg_id)
             if (item2){
@@ -360,7 +427,7 @@ var MyPipelineForm = Vue.extend({
                 return data.notify_user_ids.includes(option.id);
             }).map((item)=>{return item.name})
             if (item3.length > 0){
-                data.notify_users_name = item3
+                data.notify_users_name = item3.join(',')
                 descrition += '，并且@人员<b class="b">'+data.notify_users_name+'</b>'
             }
             data.descrition = descrition
@@ -368,12 +435,74 @@ var MyPipelineForm = Vue.extend({
         },
         // 枚举
         getDic(){
-            api.dicList([Enum.dicUser, Enum.dicMsg],(res) =>{
+            api.dicList([Enum.dicUser, Enum.dicMsg, Enum.dicTag],(res) =>{
                 this.dic.user = res[Enum.dicUser]
                 this.dic.msg = res[Enum.dicMsg]
+                this.dic.tag = res[Enum.dicTag]
             })
         },
 
+        // 快捷添加
+        matchStepNext(step = 1){
+            console.log("step", step)
+            let index = this.match_add.step_index + step
+
+            switch (index) {
+                case 1:
+                    let body = copyJSON(this.match_add.search).map(function (item){
+                        item.value = item.value.map(function (item2){
+                            return item2.toString()
+                        })
+                        return item
+                    })
+
+                    api.innerPost('/config/match_list', {search:body}, res=>{
+                        if (!res.status){
+                            return this.$message.error(res.message)
+                        }
+                        this.match_add.list = res.data.list
+                        this.match_add.var_params = res.data.var_params
+                        this.match_add.step_index = index
+                    },{async:false})
+                    break
+                case 2:
+                    let params = parseJSON(this.form.var_params)
+                    if (this.match_add.selected.length > 0){
+                        this.match_add.selected.forEach((item)=>{
+                            let temp = copyJSON(item)
+                            temp.view_panel = false
+                            temp.var_fields.forEach((item2)=>{
+                                params[item2.key] = this.match_add.var_params[item2.key]
+                            })
+                            this.form.configs.push(temp)
+                        })
+                        this.form.var_params = stringifyJSON(params)
+                    }
+                    this.match_add.step_index = 0
+                    this.match_add.show = false
+                    break
+                default:
+                    this.match_add.step_index = 0
+                    this.match_add.show = true
+                    if (this.match_add.sort == null){
+                        this.$nextTick(() => {
+                            this.match_add.sort = MySortable(document.getElementById("match-add-search"), (oldIndex, newIndex)=>{
+                                const oldlist = copyJSON(this.match_add.search);
+                                const oldItem = oldlist.splice(oldIndex, 1)[0];
+                                oldlist.splice(newIndex, 0, oldItem);
+                                this.match_add.search = []
+                                this.$nextTick(()=>{
+                                    this.match_add.search = oldlist
+                                    console.log("拖拽后",this.match_add.search, this)
+                                })
+                            })
+                        })
+                    }
+            }
+        },
+        matchSelectedChange(val) {
+            this.match_add.selected = val;
+        },
         // 任务盒子弹窗
         configSelectBox(e='show'){
             if (e == 'show'){ // 显示
@@ -406,7 +535,6 @@ var MyPipelineForm = Vue.extend({
                         this.form.configs= oldlist
                         console.log("拖拽后",that.form.configs, this, t)
                     })
-
                 })
             })
         },

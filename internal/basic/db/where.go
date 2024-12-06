@@ -129,7 +129,28 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 // findInSetSqlite sqlite 兼容版本 find_in_set
 func (builder *Where) findInSetSqlite(field string, value any, opt *whereOptions) *Where {
 	kind := reflect.TypeOf(value).Kind()
-	if kind == reflect.Slice || kind == reflect.Array {
+	if kind == reflect.Slice {
+		v := reflect.ValueOf(value)
+		where := " ("
+		length := v.Len()
+		if length > 0 {
+			vars := make([]any, length)
+			for i := 0; i < length; i++ {
+				item := v.Index(i)
+				where += fmt.Sprintf("INSTR(',' || %s || ',', ',%v,')>0", field, item.Interface())
+				if i < length-1 {
+					where += " OR "
+				}
+				vars[i] = item.Interface()
+			}
+			where += " )"
+			builder.wheres = append(builder.wheres, WhereExpr{
+				sql: where,
+				//vars: vars,
+				with: opt.withSpace,
+			})
+		}
+	} else if kind == reflect.Array {
 		// 待补充...
 	} else {
 		if opt.required || !opt.isZero(value) {

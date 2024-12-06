@@ -3,7 +3,6 @@ package biz
 import (
 	"bytes"
 	"context"
-	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/tracing"
 	"cron/internal/basic/util"
@@ -53,11 +52,10 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
 			span.AddEvent("执行错误", trace.WithAttributes(attribute.String("error.object", err.Error())))
-			go job.messagePush(ctx, enum.StatusDisable, err.Desc(), nil, 0)
 		} else if er := util.PanicInfo(recover()); er != "" {
 			span.SetStatus(tracing.StatusError, "执行异常")
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.panic", er)))
-			go job.messagePush(ctx, enum.StatusDisable, "执行异常", []byte(er), 0)
+			err = errs.New(errors.New(er), errs.SysError)
 		} else {
 			span.SetStatus(tracing.StatusOk, "")
 		}

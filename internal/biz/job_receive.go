@@ -49,7 +49,7 @@ func NewJobReceive(conf *models.CronReceive, param *dtos.ReceiveWebHook) *JobRec
 	//	log.Println("流水线配置解析错误", err.Error())
 	//}
 	//param, _ := job.conf.ParseParams(nil)
-	//job.conf.Parse(param)
+	job.conf.Parse(nil)
 
 	// 日志
 	job.tracer = tracing.Tracer(job.set.Env+"-cronin", trace.WithInstrumentationAttributes(
@@ -146,6 +146,19 @@ func (job *JobReceive) Run() {
 		listMap[item.Id] = item
 	}
 
+	// 欢迎语
+	job.conf.messagePush(ctx, &dtos.MsgPushRequest{
+		Status:     0,
+		StatusDesc: "开始",
+		Args: map[string]any{
+			"receive": map[string]any{
+				"title":      job.params.Title,
+				"html_url":   job.params.HtmlUrl,
+				"user_names": job.params.RelatedUserNames,
+			},
+		},
+	})
+
 	// 执行任务
 	for _, rule := range ruleSelected {
 		conf, ok := listMap[rule.Config.Id]
@@ -163,7 +176,12 @@ func (job *JobReceive) Run() {
 
 		_, er := j.Running(ctx, "接收任务", p)
 		if er != nil {
-			j.messagePush(ctx, enum.StatusDisable, er.Desc()+" 接收任务", []byte(err.Error()), time.Since(job.conf.runTime).Seconds())
+			j.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusDisable,
+				StatusDesc: er.Desc() + " 接收任务",
+				Body:       []byte(err.Error()),
+				Duration:   time.Since(job.conf.runTime).Seconds(),
+			})
 			// 这里要确认一下是否继续执行下去。
 			if job.set.ConfigErrAction == models.ErrActionStop {
 				return
@@ -176,7 +194,18 @@ func (job *JobReceive) Run() {
 		}
 	}
 	// 结束语
-	//job.conf.messagePush(ctx, enum.StatusActive, "完成", nil, time.Since(job.conf.runTime).Seconds())
+	job.conf.messagePush(ctx, &dtos.MsgPushRequest{
+		Status:     enum.StatusActive,
+		StatusDesc: "完成",
+		Duration:   time.Since(job.conf.runTime).Seconds(),
+		Args: map[string]any{
+			"receive": map[string]any{
+				"title":      job.params.Title,
+				"html_url":   job.params.HtmlUrl,
+				"user_names": job.params.RelatedUserNames,
+			},
+		},
+	})
 }
 
 func (job *JobReceive) GetConf() *JobConfig {

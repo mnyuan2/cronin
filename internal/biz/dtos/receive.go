@@ -1,11 +1,13 @@
 package dtos
 
 type ReceiveWebHook struct {
-	User    string              `json:"user"`
-	Type    string              `json:"type"`
-	Event   string              `json:"event"`
-	Dataset []map[string]string `json:"dataset"`
-	TraceId string              `json:"trace_id"`
+	RelatedUserNames []string            `json:"related_user_names"` // 相关人员
+	Type             string              `json:"type"`
+	Event            string              `json:"event"`
+	Title            string              `json:"title"` // 标题
+	HtmlUrl          string              `json:"html_url"`
+	Dataset          []map[string]string `json:"dataset"`  // 数据集
+	TraceId          string              `json:"trace_id"` // 内部占用
 }
 
 type ReceiveWebHookData struct {

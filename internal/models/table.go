@@ -1,10 +1,12 @@
 package models
 
 import (
+	"bytes"
 	"cron/internal/basic/config"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/pb"
+	"crypto/md5"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"log"
@@ -26,12 +28,12 @@ func AutoMigrate(Db *db.MyDB) {
 		}
 		// 迁移表结构
 		err := Db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
 	} else if config.DbConf().Driver == db.DriverSqlite {
-		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
@@ -65,18 +67,12 @@ func AutoMigrate(Db *db.MyDB) {
 				Name:  "",
 				Title: "企微xx群",
 				Content: `{
-	"http":{
-		"method":"POST",
-		"url":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx",
-		"body":"{
-			\"msgtype\": \"text\",
-			\"text\": {
-				\"content\": \"时间：[[log.create_dt]]\\n任务 [[config.name]]执行[[log.status_name]]了 \\n耗时[[log.duration]]秒\\n响应：[[log.body]]\",
-				\"mentioned_mobile_list\": [[user.mobile]]
-			}
-		}",
-		"header":[{"key":"","value":""}]
-	}
+    "http": {
+        "method": "POST",
+        "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx",
+        "body": "{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[.log.create_dt]]\\n任务：【[[.env]]】[[.config.name]]\\n状态：[[.log.status_name]]-[[.log.status_desc]][[if gt .log.retry_number 0]] 【重试 [[.log.retry_number]]】[[end]]\\n耗时：[[.log.duration]]秒\\n响应：[[.log.body]]\",\n        \"mentioned_mobile_list\": [[.user.mobile]]\n    }\n}",
+        "header": []
+    }
 }`,
 				Status:   enum.StatusActive,
 				CreateDt: ti.Format(time.DateTime),
@@ -97,21 +93,21 @@ func AutoMigrate(Db *db.MyDB) {
 				Id:      1,
 				Name:    "管理员",
 				Remark:  "所有权限",
-				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121,150,151,152,153,154,155",
+				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121,150,151,152,153,154,155,160,161,162,163",
 				Status:  enum.StatusActive,
 			},
 			{
 				Id:      2,
 				Name:    "负责人",
 				Remark:  "负责任务的创建与审核",
-				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,61,71,80,81,82,83,91",
+				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,61,71,80,81,82,83,91,151,152,153,155,160,161,162,163",
 				Status:  enum.StatusActive,
 			},
 			{
 				Id:      3,
 				Name:    "标准",
 				Remark:  "负责任务的创建并提交审核",
-				AuthIds: "21,22,23,25,31,32,33,35,71,81",
+				AuthIds: "21,22,23,25,31,32,33,35,71,81,151,155,161",
 				Status:  enum.StatusActive,
 			},
 		}, 10)
@@ -248,6 +244,97 @@ func historyDataRevise(db *db.MyDB) {
 			}
 		}
 		set.Content = `{"version":"0.7.0"}`
+		db.Select("content").Updates(set)
+	}
+	if set.Content == `{"version":"0.7.0"}` { // 升级所有消息状态从数值升级到数组；消息模板升级为 text/template 解析
+		type CronMsgSet struct {
+			MsgId         int   `json:"msg_id"`
+			Status        int   `json:"status"`
+			NotifyUserIds []int `json:"notify_user_ids"`
+		}
+		// 接收任务
+		receiveList := []*CronReceive{}
+		db.Find(&receiveList)
+		for _, item := range receiveList {
+			if len(item.MsgSet) < 5 {
+				continue
+			}
+			msgs := []*CronMsgSet{}
+			newMsgs := []*pb.CronMsgSet{}
+			if err := jsoniter.Unmarshal(item.MsgSet, &msgs); err != nil {
+				continue
+			}
+			for _, m := range msgs {
+				newMsgs = append(newMsgs, &pb.CronMsgSet{MsgId: m.MsgId, Status: []int{m.Status}, NotifyUserIds: m.NotifyUserIds})
+			}
+			item.MsgSet, _ = jsoniter.Marshal(newMsgs)
+			item.MsgSetHash = fmt.Sprintf("%x", md5.Sum(item.MsgSet))
+			db.Select("msg_set", "msg_set_hash").Updates(item)
+		}
+		// 流水线任务
+		pipelineList := []*CronPipeline{}
+		db.Find(&pipelineList)
+		for _, item := range pipelineList {
+			if len(item.MsgSet) < 5 {
+				continue
+			}
+			msgs := []*CronMsgSet{}
+			newMsgs := []*pb.CronMsgSet{}
+			if err := jsoniter.Unmarshal(item.MsgSet, &msgs); err != nil {
+				continue
+			}
+			for _, m := range msgs {
+				newMsgs = append(newMsgs, &pb.CronMsgSet{MsgId: m.MsgId, Status: []int{m.Status}, NotifyUserIds: m.NotifyUserIds})
+			}
+			item.MsgSet, _ = jsoniter.Marshal(newMsgs)
+			item.MsgSetHash = fmt.Sprintf("%x", md5.Sum(item.MsgSet))
+			db.Select("msg_set", "msg_set_hash").Updates(item)
+		}
+		// 任务
+		configList := []*CronConfig{}
+		db.Find(&configList)
+		for _, item := range configList {
+			if len(item.MsgSet) < 5 {
+				continue
+			}
+			msgs := []*CronMsgSet{}
+			newMsgs := []*pb.CronMsgSet{}
+			if err := jsoniter.Unmarshal(item.MsgSet, &msgs); err != nil {
+				continue
+			}
+			for _, m := range msgs {
+				newMsgs = append(newMsgs, &pb.CronMsgSet{MsgId: m.MsgId, Status: []int{m.Status}, NotifyUserIds: m.NotifyUserIds})
+			}
+			item.MsgSet, _ = jsoniter.Marshal(newMsgs)
+			item.MsgSetHash = fmt.Sprintf("%x", md5.Sum(item.MsgSet))
+			db.Select("msg_set", "msg_set_hash").Updates(item)
+		}
+
+		// 消息模板更新
+		msgsArgs := []string{
+			"env",
+			"config.name",
+			"config.protocol_name",
+			"log.status_name",
+			"log.status_desc",
+			"log.body",
+			"log.duration",
+			"log.create_dt",
+			"user.username",
+			"user.mobile",
+		}
+		msgs := []*CronSetting{}
+		db.Where("scene=?", SceneMsg).Find(&msgs)
+		for _, msg := range msgs {
+			b := []byte(msg.Content)
+			for _, k := range msgsArgs {
+				b = bytes.Replace(b, []byte("[["+k+"]]"), []byte("[[."+k+"]]"), -1)
+			}
+			msg.Content = string(b)
+			db.Select("content").Updates(msg)
+		}
+
+		set.Content = `{"version":"0.8.1"}`
 		db.Select("content").Updates(set)
 	}
 

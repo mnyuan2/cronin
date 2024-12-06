@@ -125,7 +125,9 @@ func (job *JobPipeline) Run() {
 	job.conf.runTime = time.Now()
 
 	// 欢迎语
-	job.conf.messagePush(ctx, 0, "开始", nil, 0)
+	job.conf.messagePush(ctx, &dtos.MsgPushRequest{
+		StatusDesc: "开始",
+	})
 	//fmt.Println(ctx, st)
 	configIds := []int{}
 	if er := jsoniter.Unmarshal(job.pipeline.ConfigIds, &configIds); er != nil {
@@ -158,7 +160,12 @@ func (job *JobPipeline) Run() {
 
 		if item.Status != models.ConfigStatusActive && item.Status != models.ConfigStatusFinish {
 			if job.pipeline.ConfigDisableAction == models.DisableActionStop {
-				job.conf.messagePush(ctx, enum.StatusDisable, "任务非激活", []byte(fmt.Sprintf("%s-%s", item.Name, temp.GetStatusName())), time.Since(job.conf.runTime).Seconds())
+				job.conf.messagePush(ctx, &dtos.MsgPushRequest{
+					Status:     enum.StatusDisable,
+					StatusDesc: "任务非激活",
+					Body:       []byte(fmt.Sprintf("%s-%s", item.Name, temp.GetStatusName())),
+					Duration:   time.Since(job.conf.runTime).Seconds(),
+				})
 				return
 			} else if job.pipeline.ConfigDisableAction == models.DisableActionOmit {
 				continue
@@ -179,7 +186,12 @@ func (job *JobPipeline) Run() {
 	for _, j := range jobs {
 		_, er := j.Running(ctx, "流水线执行", varParams)
 		if er != nil {
-			job.conf.messagePush(ctx, enum.StatusDisable, er.Desc()+" 流水线"+job.pipeline.ConfigErrActionName(), []byte(err.Error()), time.Since(job.conf.runTime).Seconds())
+			job.conf.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusDisable,
+				StatusDesc: er.Desc() + " 流水线" + job.pipeline.ConfigErrActionName(),
+				Body:       []byte(err.Error()),
+				Duration:   time.Since(job.conf.runTime).Seconds(),
+			})
 			// 这里要确认一下是否继续执行下去。
 			if job.pipeline.ConfigErrAction == models.ErrActionStop {
 				return
@@ -192,8 +204,11 @@ func (job *JobPipeline) Run() {
 		}
 	}
 	// 结束语
-	job.conf.messagePush(ctx, enum.StatusActive, "完成", nil, time.Since(job.conf.runTime).Seconds())
-
+	job.conf.messagePush(ctx, &dtos.MsgPushRequest{
+		Status:     enum.StatusActive,
+		StatusDesc: "完成",
+		Duration:   time.Since(job.conf.runTime).Seconds(),
+	})
 }
 
 func (job *JobPipeline) GetConf() *JobConfig {

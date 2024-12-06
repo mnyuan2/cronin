@@ -5,6 +5,7 @@ const (
 	DicMsg              = 3    // 消息模板
 	DicUser             = 4    // 用户
 	DicRole             = 5    // 角色列表
+	DicTag              = 6    // 标签
 	DicSqlSource        = 11   // sql 资源连接
 	DicJenkinsSource    = 12   // jenkins 资源连接
 	DicGitSource        = 13   // git 连接
@@ -15,6 +16,7 @@ const (
 	DicConfigStatus     = 1004 // 任务状态
 	DicProtocolType     = 1005 // 协议类型
 	DicReceiveDataField = 1006 // 接收字段
+	DicRetryMode        = 1007 // 重试模式
 )
 
 const (

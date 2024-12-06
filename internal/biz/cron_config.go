@@ -18,6 +18,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -67,7 +68,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 	}
 	resp.Page.Total, err = data.NewCronConfigData(dm.ctx).ListPage(w, r.Page, r.Size, &resp.List)
 	topList := map[int]*data.SumConfTop{}
-	if len(resp.List) > 0 {
+	if len(resp.List) > 0 && (r.IsExecRatio == 0 || r.IsExecRatio == enum.BoolYes) {
 		endTime := time.Now()
 		startTime := time.Now().Add(-time.Hour * 24 * 7) // 取七天前
 		ids := make([]int, len(resp.List))
@@ -88,15 +89,171 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		item.ProtocolName = models.ProtocolMap[item.Protocol]
 		item.CreateUserName = dicUserMap[item.CreateUserId]
 		item.HandleUserIds = []int{}
+		item.TagIds = []int{}
 		if item.VarFieldsStr != nil {
 			_ = jsoniter.Unmarshal(item.VarFieldsStr, &item.VarFields)
 		}
 		if item.HandleUserStr != nil {
 			conv.NewStr().Slice(string(item.HandleUserStr), &item.HandleUserIds)
 		}
+		if item.TagIdsStr != nil {
+			conv.NewStr().Slice(string(item.TagIdsStr), &item.TagIds)
+		}
 		if top, ok := topList[item.Id]; ok {
 			item.TopNumber = top.TotalNumber
 			item.TopErrorNumber = top.ErrorNumber
+		}
+	}
+
+	return resp, err
+}
+
+// 快速匹配
+func (dm *CronConfigService) MatchList(r *pb.CronMatchListRequest) (resp *pb.CronMatchListReply, err error) {
+	/*
+
+		1.参数：{"pr":{},"tags":[],} // 后面可能有别的形式，而且还要区分顺序。
+	*/
+
+	prMegetag, err := data.NewCronTagData(dm.ctx).GetOne("status=? and name='pr_merge'", models.ConfigStatusActive)
+	if err != nil {
+		return nil, errs.New(err, "pr_merge 标签")
+	}
+	prSearch := &pb.CronMatchListSearchItem{}
+
+	tagIds := []int{}
+	for _, item := range r.Search {
+		switch item.Type {
+		case "pr_merge":
+			if len(item.Value) < 2 || (item.Value[0] == "" && item.Value[1] == "") {
+				continue
+			}
+			tagIds = append(tagIds, prMegetag.Id)
+			prSearch = item
+		case "tag":
+			for _, v := range item.Value {
+				id, _ := strconv.Atoi(v)
+				if id != 0 {
+					tagIds = append(tagIds, id)
+				}
+			}
+		}
+	}
+
+	resp = &pb.CronMatchListReply{VarParams: map[string]string{}}
+	if len(tagIds) == 0 {
+		return resp, nil
+	}
+
+	w := db.NewWhere().
+		Eq("env", dm.user.Env, db.RequiredOption()).
+		FindInSet("tag_ids", tagIds)
+	list, err := data.NewCronConfigData(dm.ctx).List(w, 200)
+	if err != nil {
+		return nil, err
+	}
+
+	//  保持输入的tag顺序
+	tagIdByIndex := map[int][]int{} // tag_id:[index,index]
+	for i, item := range list {
+		ids, _ := conv.Ints().Slice(item.TagIds)
+		for _, id := range ids {
+			if id == 0 {
+				continue
+			}
+			//if _, ok := tagIdByIndex[id]; ok {
+			//	continue
+			//}
+			tagIdByIndex[id] = append(tagIdByIndex[id], i)
+		}
+	}
+
+	tagIdsMap := map[int]int{}
+	for _, tagId := range tagIds {
+		indexs, ok := tagIdByIndex[tagId]
+		if !ok {
+			continue
+		}
+		if _, ok := tagIdsMap[tagId]; ok {
+			continue
+		}
+		tagIdsMap[tagId] = tagId
+
+		for _, i := range indexs {
+			item := list[i]
+			vars := []*pb.KvItem{}
+			// 变量解析
+			if item.VarFields != nil {
+				jsoniter.Unmarshal(item.VarFields, &vars)
+			}
+			// pr_merge 检测填充
+			if tagId == prMegetag.Id && prSearch.Type != "" {
+				var number *pb.KvItem
+				if len(vars) > 0 {
+					// 首先要存在 包含 number key 片段的变量才进行 pr 检测，否则检测出来的结果没有意义。
+					for _, v := range vars {
+						if conv.NewStr().Contains(v.Key, "number") {
+							number = v
+							break
+						}
+					}
+					if number != nil {
+						// 检测pr
+						conf := data.NewConfigData(item)
+						prs, _ := conf.PRList(dm.ctx, &pb.GetEventPRList{
+							//Owner:   "",
+							//Repo:    "",
+							State:   "open",
+							Head:    prSearch.Value[0],
+							Base:    prSearch.Value[1],
+							Page:    1,
+							PerPage: 1,
+						})
+						if len(prs) > 0 {
+							// 这里就要进行参数替换了。
+							number.Value = conv.Ints().String(prs[0].Number)
+						}
+					}
+				}
+				if number == nil || number.Value == "" || number.Value == "0" {
+					continue
+				}
+			}
+			for _, v := range vars {
+				resp.VarParams[v.Key] = v.Value // 这个值可能是模板变量，影响面要评估一下。
+			}
+
+			row := &pb.CronConfigListItem{
+				Id:             item.Id,
+				Name:           item.Name,
+				Spec:           item.Spec,
+				Protocol:       item.Protocol,
+				ProtocolName:   models.ProtocolMap[item.Protocol],
+				Remark:         item.Remark,
+				Status:         item.Status,
+				StatusName:     models.ConfigStatusMap[item.Status],
+				StatusRemark:   item.StatusRemark,
+				StatusDt:       item.StatusDt,
+				Type:           item.Type,
+				TypeName:       models.ConfigTypeMap[item.Type],
+				UpdateDt:       item.UpdateDt,
+				VarFields:      []*pb.KvItem{},
+				CreateUserId:   item.CreateUserId,
+				CreateUserName: item.CreateUserName,
+				HandleUserIds:  []int{},
+				TagIds:         []int{},
+				TagNames:       item.TagNames,
+			}
+			if item.VarFields != nil {
+				_ = jsoniter.Unmarshal(item.VarFields, &row.VarFields)
+			}
+			if item.HandleUserIds != "" {
+				conv.NewStr().Slice(item.HandleUserIds, &row.HandleUserIds)
+			}
+			if item.TagIds != "" {
+				conv.NewStr().Slice(item.TagIds, &row.TagIds)
+			}
+			resp.List = append(resp.List, row)
 		}
 	}
 
@@ -138,13 +295,15 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
 			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
 		},
-		MsgSet:        []*pb.CronMsgSet{},
-		TypeName:      models.ConfigTypeMap[one.Type],
-		StatusName:    models.ConfigStatusMap[one.Status],
-		ProtocolName:  models.ProtocolMap[one.Protocol],
-		HandleUserIds: []int{},
+		MsgSet:           []*pb.CronMsgSet{},
+		TypeName:         models.ConfigTypeMap[one.Type],
+		StatusName:       models.ConfigStatusMap[one.Status],
+		ProtocolName:     models.ProtocolMap[one.Protocol],
+		ErrRetryModeName: models.RetryModeMap[one.ErrRetryMode],
+		HandleUserIds:    []int{},
+		TagIds:           []int{},
 	}
-	err = conv.NewMapper().Exclude("VarFields", "Command", "MsgSet", "HandleUserIds").Map(one, resp)
+	err = conv.NewMapper().Exclude("VarFields", "Command", "MsgSet", "HandleUserIds", "TagIds").Map(one, resp)
 	if err != nil {
 		return nil, errs.New(err, "系统错误")
 	}
@@ -194,6 +353,9 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 	}
 	if one.HandleUserIds != "" {
 		conv.NewStr().Slice(one.HandleUserIds, &resp.HandleUserIds)
+	}
+	if one.TagIds != "" {
+		conv.NewStr().Slice(one.TagIds, &resp.TagIds)
 	}
 
 	return resp, err
@@ -258,6 +420,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		}
 		if d.Status == models.ConfigStatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
+		}
+		if d.Status == models.ConfigStatusClosed {
+			return nil, fmt.Errorf("请先恢复任务后编辑")
 		}
 		g.SetType(models.LogTypeUpdateDiy).OldConfig(*d)
 	} else {
@@ -331,6 +496,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	} else if r.ErrRetryNum < 0 {
 		return nil, errors.New("最大重试次数不得小于0")
 	}
+	if _, ok := models.RetryModeMap[r.ErrRetryMode]; !ok {
+		return nil, errors.New("重试模式有误")
+	}
 	pl := len(r.VarFields)
 	for i, param := range r.VarFields {
 		if param.Key == "" && i < (pl-1) {
@@ -343,6 +511,33 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if msg.MsgId == 0 {
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
 		}
+		if len(msg.Status) == 0 {
+			return nil, fmt.Errorf("推送%v未设置消息状态", i)
+		}
+	}
+	// 校验标签
+	if len(r.TagIds) > 0 {
+		tags, err := data.NewCronTagData(dm.ctx).List("id in ?", r.TagIds)
+		if err != nil {
+			return nil, fmt.Errorf("标签信息有误，" + err.Error())
+		}
+		if len(tags) != len(r.TagIds) {
+			return nil, fmt.Errorf("标签信息有误")
+		}
+		ids := make([]int, len(tags))
+		names := make([]string, len(tags))
+		for i, item := range tags {
+			ids[i] = item.Id
+			names[i] = item.Name
+		}
+		d.TagIds, _ = conv.Int64s().Join(ids)
+		d.TagNames = strings.Join(names, ",")
+		if len(d.TagNames) > 500 {
+			return nil, fmt.Errorf("标签长度超过500字，存储失败")
+		}
+	} else {
+		d.TagIds = ""
+		d.TagNames = ""
 	}
 
 	if d.Status != models.ConfigStatusDisable { // 编辑后，单子都是草稿
@@ -360,6 +555,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.AfterTmpl = r.AfterTmpl
 	d.AfterSleep = r.AfterSleep
 	d.ErrRetryNum = r.ErrRetryNum
+	d.ErrRetryMode = r.ErrRetryMode
+	d.ErrRetrySleep = r.ErrRetrySleep
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
@@ -447,8 +644,19 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 		}
 		conf.AuditUserId = dm.user.UserId
 		conf.AuditUserName = dm.user.UserName
+
 	case models.ConfigStatusReject: // 驳回
 		if conf.Status != models.ConfigStatusAudited {
+			return nil, fmt.Errorf("不支持的状态变更操作")
+		}
+		conf.AuditUserId = dm.user.UserId
+		conf.AuditUserName = dm.user.UserName
+
+	case models.ConfigStatusClosed:
+		if conf.Status != models.ConfigStatusDisable &&
+			conf.Status != models.ConfigStatusReject &&
+			conf.Status != models.ConfigStatusFinish &&
+			conf.Status != models.ConfigStatusError {
 			return nil, fmt.Errorf("不支持的状态变更操作")
 		}
 		conf.AuditUserId = dm.user.UserId

@@ -43,6 +43,7 @@ var authList = []*Permission{
 	{Id: 24, Path: "/config/change_status?auth_type=audit", Title: "审核", Group: "任务", Type: AuthTypeGrant, Tag: "config_audit"},
 	{Id: 25, Path: "/config/detail", Title: "详情", Group: "任务", Type: AuthTypeGrant},
 	{Id: 26, Path: "/config/run", Title: "执行一下", Group: "任务", Type: AuthTypeLogin},
+	{Id: 27, Path: "/config/match_list", Title: "匹配列表", Group: "任务", Type: AuthTypeLogin},
 
 	{Id: 30, Path: "/pipeline/", Title: "流水线", Group: "", Type: AuthTypeGrant},
 	{Id: 31, Path: "/pipeline/list", Title: "列表", Group: "流水线", Type: AuthTypeGrant, Tag: "pipeline_list"},
@@ -67,13 +68,14 @@ var authList = []*Permission{
 	{Id: 142, Path: "/job/list", Title: "已注册列表", Group: "注册任务", Type: AuthTypeLogin},
 
 	{Id: 41, Path: "/work/table", Title: "工作表", Group: "我的", Type: AuthTypeLogin},
+	{Id: 42, Path: "/work/task_del", Title: "任务删除", Group: "我的", Type: AuthTypeOpen},
 
 	{Id: 50, Path: "/log/", Title: "日志", Group: "", Type: AuthTypeLogin},
 	{Id: 51, Path: "/log/list", Title: "列表", Group: "日志", Type: AuthTypeLogin},
 	{Id: 52, Path: "/log/traces", Title: "详情", Group: "日志", Type: AuthTypeLogin},
 	{Id: 53, Path: "/log/del", Title: "删除", Group: "日志", Type: AuthTypeOpen},
 	// 140~149
-	{Id: 140, Path: "/change_log/list", Title: "列表", Group: "变更日志", Type: AuthTypeLogin},
+	{Id: 149, Path: "/change_log/list", Title: "列表", Group: "变更日志", Type: AuthTypeLogin},
 
 	{Id: 60, Path: "/setting/", Title: "链接", Group: "", Type: AuthTypeGrant},
 	{Id: 61, Path: "/setting/source_list", Title: "列表", Group: "链接", Type: AuthTypeGrant, Tag: "source_list"},
@@ -114,6 +116,11 @@ var authList = []*Permission{
 	{Id: 103, Path: "/role/auth_list", Title: "权限列表", Group: "角色", Type: AuthTypeLogin},
 	{Id: 104, Path: "/role/auth_set", Title: "权限设置", Group: "角色", Type: AuthTypeGrant, Tag: "auth_set"},
 	{Id: 105, Path: "/role/change_status", Title: "变更状态", Group: "角色", Type: AuthTypeGrant},
+	// 160~169
+	{Id: 160, Path: "/tag/", Title: "标签", Group: "", Type: AuthTypeGrant},
+	{Id: 161, Path: "/tag/list", Title: "列表", Group: "标签", Type: AuthTypeGrant, Tag: "tag_list"},
+	{Id: 162, Path: "/tag/set", Title: "新增/编辑", Group: "标签", Type: AuthTypeGrant, Tag: "tag_set"},
+	{Id: 163, Path: "/tag/change_status", Title: "状态删除", Group: "标签", Type: AuthTypeGrant, Tag: "tag_status"},
 }
 var authMap = map[string]*Permission{}
 

@@ -33,6 +33,7 @@ const (
 	ConfigStatusActive  = 2 // 激活
 	ConfigStatusFinish  = 3 // 完成
 	ConfigStatusError   = 4 // 错误
+	ConfigStatusClosed  = 8 // 已关闭（预删除）
 	ConfigStatusDelete  = 9 // 删除
 )
 
@@ -42,8 +43,9 @@ var ConfigStatusMap = map[int]string{
 	ConfigStatusAudited: "待审核",
 	ConfigStatusReject:  "驳回",
 	ConfigStatusActive:  "激活",
-	ConfigStatusError:   "错误",
 	ConfigStatusFinish:  "完成",
+	ConfigStatusError:   "错误",
+	ConfigStatusClosed:  "已关闭",
 }
 
 const (
@@ -74,6 +76,17 @@ func ConfTypeMap() map[int]string {
 	}
 }
 
+const (
+	RetryModeFixed = 1 // 固定间隔
+	RetryModeIncr  = 2 // 递增间隔
+)
+
+// 重试模式
+var RetryModeMap = map[int]string{
+	RetryModeFixed: "固定间隔",
+	RetryModeIncr:  "递增间隔",
+}
+
 type CronConfig struct {
 	Id              int    `json:"id" gorm:"column:id;type:INTEGER;primary_key;comment:主键;"`
 	Env             string `json:"env" gorm:"column:env;type:varchar(32);index:config_env;comment:环境;"`
@@ -95,6 +108,8 @@ type CronConfig struct {
 	MsgSetHash      string `json:"msg_set_hash" gorm:"column:msg_set_hash;type:char(32);default:'';comment:消息配置hash;"`
 	AfterSleep      int    `json:"after_sleep" gorm:"column:after_sleep;type:int(11);default:0;comment:延迟关闭;"`
 	ErrRetryNum     int    `json:"err_retry_num" gorm:"column:err_retry_num;type:int(11);default:0;comment:错误重试次数;"`
+	ErrRetrySleep   int    `json:"err_retry_sleep" gorm:"column:err_retry_sleep;type:int(11);default:0;comment:错误重试间隔/秒;"`
+	ErrRetryMode    int    `json:"err_retry_mode" gorm:"column:err_retry_mode;type:int(11);default:1;comment:错误重试模式：1.固定间隔、2.增长间隔;"`
 	VarFields       []byte `json:"var_fields" gorm:"column:var_fields;type:json;default:null;comment:参数变量;"`
 	VarFieldsHash   string `json:"var_fields_hash" gorm:"column:var_fields_hash;type:char(32);default:'';comment:参数变量hash;"`
 	CreateUserId    int    `json:"create_user_id" gorm:"column:create_user_id;type:int(11);default:0;comment:创建人;"`
@@ -103,6 +118,8 @@ type CronConfig struct {
 	AuditUserName   string `json:"audit_user_name" gorm:"column:audit_user_name;type:varchar(64);default:'';comment:审核人名称;"`
 	HandleUserIds   string `json:"handle_user_ids" gorm:"column:handle_user_ids;type:varchar(255);default:'';comment:处理人,多选id逗号分隔;"`
 	HandleUserNames string `json:"handle_user_names" gorm:"column:handle_user_names;type:varchar(500);default:'';comment:处理人名称,多选id逗号分隔;"`
+	TagIds          string `json:"tag_ids" gorm:"column:tag_ids;type:varchar(255);default:'';comment:标签id,多选逗号分隔;"`
+	TagNames        string `json:"tag_names" gorm:"column:tag_names;type:varchar(500);default:'';comment:标签名称,多选逗号分隔;"`
 }
 
 func (m *CronConfig) TableName() string {

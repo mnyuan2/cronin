@@ -115,6 +115,9 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicRole:
 		_sql = "SELECT id, name FROM cron_auth_role %WHERE "
 		w.Eq("status", enum.StatusActive)
+	case enum.DicTag:
+		_sql = "SELECT id, name, concat('{\"remark\":\"',remark,'\"}') extend FROM `cron_tag` %WHERE"
+		w.Eq("status", enum.StatusActive)
 	}
 
 	if _sql != "" {
@@ -177,6 +180,7 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			{Id: models.ConfigStatusActive, Name: models.ConfigStatusMap[models.ConfigStatusActive]},
 			{Id: models.ConfigStatusFinish, Name: models.ConfigStatusMap[models.ConfigStatusFinish]},
 			{Id: models.ConfigStatusError, Name: models.ConfigStatusMap[models.ConfigStatusError]},
+			{Id: models.ConfigStatusClosed, Name: models.ConfigStatusMap[models.ConfigStatusClosed]},
 		}
 	case enum.DicProtocolType:
 		items = []*pb.DicGetItem{
@@ -197,6 +201,11 @@ func (dm *FoundationService) getEnum(t int) ([]*pb.DicGetItem, error) {
 			{Key: "custom_1", Name: "自定义1"},
 			{Key: "custom_2", Name: "自定义2"},
 			// 后续根据情况补充
+		}
+	case enum.DicRetryMode:
+		items = []*pb.DicGetItem{
+			{Id: models.RetryModeFixed, Name: models.RetryModeMap[models.RetryModeFixed]},
+			{Id: models.RetryModeIncr, Name: models.RetryModeMap[models.RetryModeIncr]},
 		}
 	}
 

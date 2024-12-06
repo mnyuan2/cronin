@@ -5,6 +5,8 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/models"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -58,4 +60,26 @@ func (m *CronPipelineData) SetEntryId(data *models.CronPipeline) error {
 func (m *CronPipelineData) GetOne(env string, Id int) (data *models.CronPipeline, err error) {
 	data = &models.CronPipeline{}
 	return data, m.db.Where("env=? and id=?", env, Id).Take(data).Error
+}
+
+// Del 删除
+func (m *CronPipelineData) Del(where *db.Where) (count int, err error) {
+	if where.Len() == 0 {
+		return 0, errors.New("未指定 pipeline 删除条件")
+	}
+	count = 0
+	w, args := where.Build()
+	err = m.db.Model(&models.CronPipeline{}).Where(w, args...).Select("count(*)").Find(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	if count == 0 {
+		return count, nil
+	}
+
+	err = m.db.Where(w, args...).Delete(&models.CronPipeline{}).Error
+	if err != nil {
+		return 0, fmt.Errorf("删除失败，%w", err)
+	}
+	return count, nil
 }

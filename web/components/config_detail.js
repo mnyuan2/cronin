@@ -82,7 +82,11 @@ var MyConfigDetail = Vue.extend({
                     
                     <el-descriptions-item span="2" v-if="detail.var_params">
                         <template slot="label">参数实现</template>
-                        <el-input type="textarea" v-model="detail.var_params" rows="2" disabled></el-input>
+                        <el-input type="textarea" v-model="detail.var_params" autosize disabled></el-input>
+                    </el-descriptions-item>
+                    <el-descriptions-item span="2" v-if="detail.tag_ids && detail.tag_ids.length">
+                        <template slot="label">标签</template>
+                        <div>{{detail.tag_names}}</div>
                     </el-descriptions-item>
                     
                     <el-descriptions-item span="2">
@@ -103,13 +107,13 @@ var MyConfigDetail = Vue.extend({
                                     </el-input>
                                 </el-form-item>
                                 <el-form-item label="请求Body参数" v-if="detail.command.http.body != ''">
-                                    <el-input type="textarea" v-model="detail.command.http.body" rows="4"></el-input>
+                                    <el-input type="textarea" v-model="detail.command.http.body" autosize></el-input>
                                 </el-form-item>
                             </div>
                             
                             <div v-if="detail.protocol_name == 'rpc'">
                                 <el-form-item label="proto" style="margin-top: -10px" v-if="detail.command.rpc.proto">
-                                    <el-input type="textarea" v-model="detail.command.rpc.proto" rows="3" placeholder="请输入*.proto 文件内容" style=""></el-input>
+                                    <el-input type="textarea" v-model="detail.command.rpc.proto" autosize placeholder="请输入*.proto 文件内容" style=""></el-input>
                                 </el-form-item>
                                 <el-form-item label="" >
                                     <el-input v-model="detail.command.rpc.addr+' / '+ detail.command.rpc.action">
@@ -120,13 +124,13 @@ var MyConfigDetail = Vue.extend({
                                     </el-input>
                                 </el-form-item>
                                 <el-form-item label="请求参数">
-                                    <el-input type="textarea" v-model="detail.command.rpc.body" rows="3" placeholder="请输入请求参数"></el-input>
+                                    <el-input type="textarea" v-model="detail.command.rpc.body" autosize placeholder="请输入请求参数"></el-input>
                                 </el-form-item>             
                             </div>
                             
                             <div v-if="detail.protocol_name == 'cmd'">
                                 <p>主机<b class="b">{{detail.command.cmd.host.id==-1?'本机': dic.host_source[detail.command.cmd.host.id]}}</b>，来源 <b class="b">{{detail.command.cmd.origin}}</b>，类型 <b class="b">{{detail.command.cmd.type}}</code></p>
-                                <el-input type="textarea" v-model="detail.command.cmd.statement.local" ></el-input>
+                                <el-input type="textarea" v-model="detail.command.cmd.statement.local" autosize></el-input>
                             </div>
                             
                             <div v-if="detail.protocol_name == 'sql'">
@@ -464,12 +468,13 @@ var MyConfigDetail = Vue.extend({
         },
         // 构建消息设置描述
         msgSetBuildDesc(data){
-            let statusList = [{id:1,name:"错误"}, {id:2, name:"结束"}, {id:0,name:"开始"}]
-            let item1 = statusList.find(option => option.id === data.status);
-            if (item1){
-                data.status_name = item1.name
-            }
-            let descrition = '当任务<b class="b">'+item1.name+'</b>时'
+            let statusList = [{id:1,name:"错误"}, {id:2, name:"成功"}, {id:0,name:"完成"}]
+            let item1 = statusList.filter((option) => {
+                return data.status.includes(option.id)
+            }).map((item)=>{return item.name});
+            data.status_name = item1.join(',')
+
+            let descrition = '<i class="el-icon-bell"></i>当任务<b class="b">'+data.status_name+'</b>时'
 
             let item2 = this.dic.msg.find(option => option.id === data.msg_id)
             if (item2){
@@ -480,7 +485,7 @@ var MyConfigDetail = Vue.extend({
                 return data.notify_user_ids.includes(option.id);
             }).map((item)=>{return item.name})
             if (item3.length > 0){
-                data.notify_users_name = item3
+                data.notify_users_name = item3.join(',')
                 descrition += '，并且@人员<b class="b">'+data.notify_users_name+'</b>'
             }
             data.descrition = descrition

@@ -1,36 +1,7 @@
 var MyConfig = Vue.extend({
     template: `<el-container>
     <!--边栏-->
-    <el-aside style="padding-top: 10px">
-        <el-card class="aside-card">
-            <div slot="header">
-                <span class="h3">执行任务</span>
-            </div>
-            <ol>
-                <li v-for="item in queue.exec">
-                    <span v-html="taskItemIcon(item)"></span>
-                    <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
-                    <p style="margin: 0;color: #909399;line-height: 100%;font-size: 12px;">
-                        ({{durationTransform(item.duration, 's')}}) 
-                        <el-popconfirm :title="'确定停用 '+item.name+' 任务吗？'" @confirm="jobStop(item)"><i slot="reference" class="el-icon-circle-close stop"></i></el-popconfirm>
-                    </p>
-                </li>
-            </ul>
-            <div v-show="!queue.exec.length">-</div>
-        </el-card>
-        <el-card class="aside-card">
-            <div slot="header">
-                <span class="h3">注册任务</span>
-            </div>
-            <ol>
-                <li v-for="item in queue.register">
-                    <span v-html="taskItemIcon(item)"></span>
-                    <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
-                </li>
-            </ol>
-            <div v-show="!queue.register.length">-</div>
-        </el-card>
-    </el-aside>
+    <my-sidebar></my-sidebar>
     <!--主内容-->
     <el-main>
         <el-menu :default-active="listParam.type" class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
@@ -42,30 +13,36 @@ var MyConfig = Vue.extend({
             </div>
         </el-menu>
         <el-row>
-            <el-form :inline="true" :model="listParam" size="small" class="search-form">
+            <el-form :inline="true" :model="listParam" size="mini" class="search-form">
                 <el-form-item label="名称">
                     <el-input v-model="listParam.name" placeholder="搜索名称"></el-input>
                 </el-form-item>
                 <el-form-item label="协议">
-                    <el-select v-model="listParam.protocol" placeholder="所有" multiple style="width: 150px">
+                    <el-select v-model="listParam.protocol" placeholder="所有" multiple style="width: 140px">
                         <el-option v-for="item in dic.protocol" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="状态">
-                    <el-select v-model="listParam.status" placeholder="所有" multiple style="width: 160px">
+                    <el-select v-model="listParam.status" placeholder="所有" multiple style="width: 150px">
                         <el-option v-for="item in dic.config_status" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="处理人">
-                    <el-select v-model="listParam.handle_user_ids" placeholder="所有" multiple>
+                    <el-select v-model="listParam.handle_user_ids" placeholder="所有" multiple style="width: 150px">
                         <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="创建人">
-                    <el-select v-model="listParam.create_user_ids" placeholder="所有" multiple>
+                    <el-select v-model="listParam.create_user_ids" placeholder="所有" multiple style="width: 150px">
                         <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
+                <el-form-item label="标签">
+                    <el-select v-model="listParam.tag_ids" placeholder="所有" multiple style="width: 150px">
+                        <el-option v-for="item in dic.tag" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                
                 <el-form-item>
                     <el-button type="primary" @click="getList">查询</el-button>
                 </el-form-item>
@@ -104,6 +81,7 @@ var MyConfig = Vue.extend({
             <el-table-column prop="remark" label="备注"></el-table-column>
             <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
             <el-table-column prop="create_user_name" label="创建人" width="80"></el-table-column>
+            <el-table-column prop="tag_names" label="标签"></el-table-column>
         </el-table>
         <el-pagination
                 @size-change="handleSizeChange"
@@ -130,11 +108,11 @@ var MyConfig = Vue.extend({
     name: "MyConfig",
     data(){
         return {
-            env: {},
             dic:{
                 config_status:[],
                 user:[],
                 protocol: [],
+                tag: [],
             },
             // dic_sql_source:[],
             // dic_sql_driver:[],
@@ -146,10 +124,6 @@ var MyConfig = Vue.extend({
             // dic_cmd_type: [],
             sys_info:{},
             auth_tags:{},
-            queue:{
-                exec:[], // 执行队列
-                register:[], // 注册队列
-            },
             list: [],
             listPage:{
                 total:0,
@@ -238,16 +212,8 @@ var MyConfig = Vue.extend({
     mounted(){
         this.getList()
         this.auth_tags = cache.getAuthTags()
-        // 添加指定事件监听
-        this.env = cache.getEnv()
-        this.$sse.addEventListener(this.env.env+".exec.queue", this.execQueue)
-        this.$sse.addEventListener(this.env.env+'.register.queue', this.registerQueue)
     },
-    beforeDestroy(){
-        // 销毁指定事件监听
-        this.$sse.removeEventListener(this.env.env+".exec.queue", this.execQueue)
-        this.$sse.removeEventListener(this.env.env+".register.queue", this.registerQueue)
-    },
+    beforeDestroy(){},
 
     // 具体方法
     methods:{
@@ -846,6 +812,7 @@ var MyConfig = Vue.extend({
                 // Enum.dicHostSource,
                 // Enum.dicCmdType,
                 Enum.dicUser,
+                Enum.dicTag,
                 // Enum.dicMsg
             ]
             api.dicList(types,(res) =>{
@@ -855,6 +822,7 @@ var MyConfig = Vue.extend({
                 // this.dic_git_event = res[Enum.dicGitEvent]
                 // this.dic_host_source =res[Enum.dicHostSource]
                 this.dic.user = res[Enum.dicUser]
+                this.dic.tag = res[Enum.dicTag]
                 // this.dic_msg = res[Enum.dicMsg]
                 // this.dic_cmd_type = res[Enum.dicCmdType]
                 // this.dic_sql_driver = res[Enum.dicSqlDriver]
@@ -863,43 +831,7 @@ var MyConfig = Vue.extend({
 
             })
         },
-        // 停止执行任务
-        jobStop(row){
-            api.innerPost("/job/stop",row, res=>{
-                if (!res.status){
-                    return this.$message.error(res.message)
-                }
-                this.$message.success('操作成功')
-            })
-        },
-        // 消息监听处理
-        execQueue(e){
-            // console.log("execQueue", e)
-            let data = JSON.parse(e.data)
-            if (!data){
-                this.queue.exec = []
-                return
-            }
-            this.queue.exec = data
-        },
-        registerQueue(e){
-            // console.log("registerQueue", e)
-            let data = JSON.parse(e.data)
-            if (!data){
-                this.queue.register = []
-                return
-            }
-            this.queue.register = data
-        },
-        taskItemIcon(row){
-            if (row.ref_type == 'config'){
-                return '<i class="task-item-icon" style="background: #28ab80;">c</i>'
-            }else if (row.ref_type == 'pipeline'){
-                return '<i class="task-item-icon" style="background: #5c88c5;">p</i>'
-            }else if(row.ref_type == 'receive'){
-                return '<i class="task-item-icon" style="background: #182b50;">r</i>'
-            }
-        },
+
     }
 })
 

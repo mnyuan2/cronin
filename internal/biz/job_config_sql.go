@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"time"
 )
 
@@ -87,6 +88,7 @@ func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 		)
 		return errs.New(_db.Error, "连接失败")
 	}
+	_db.Logger = logger.Discard // 取消日志打印
 
 	statement := []*pb.KvItem{} // value.具体sql、key.描述备注
 
@@ -133,7 +135,13 @@ func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 	err = job.sqlMysqlExec(r, _db, statement)
 	if err != nil {
 		// 执行告警推送
-		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), 0)
+		go job.messagePush(ctx, &dtos.MsgPushRequest{
+			Status:     enum.StatusDisable,
+			StatusDesc: err.Desc(),
+			Body:       []byte(err.Error()),
+			Duration:   0,
+			RetryNum:   0,
+		})
 	}
 	return err
 }
@@ -197,7 +205,13 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, item *pb.KvItem)
 			attribute.String("remark", models.SqlErrActionMap[r.ErrAction]),
 		))
 		if r.ErrAction == models.SqlErrActionProceed {
-			go job.messagePush(ctx, enum.StatusDisable, "错误跳过继续", []byte(err.Error()), 0)
+			go job.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusDisable,
+				StatusDesc: "错误跳过继续",
+				Body:       []byte(err.Error()),
+				Duration:   0,
+				RetryNum:   0,
+			})
 		}
 	} else {
 		span.SetStatus(codes.Ok, "成功")
