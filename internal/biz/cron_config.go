@@ -75,7 +75,12 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, "config")
+		w2 := db.NewWhere().
+			Eq("env", dm.user.Env).
+			Eq("operation", "job-task").
+			In("ref_id", ids).
+			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(w2)
 	}
 
 	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicUser)

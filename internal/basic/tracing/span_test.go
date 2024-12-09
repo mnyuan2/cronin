@@ -11,16 +11,16 @@ import (
 	"time"
 )
 
-func TestStartSpan(t *testing.T) {
-
+func TestTraceId(t *testing.T) {
 	ti := time.Now()
 	b := fmt.Appendf(nil, "%s%v%v", "abcd", ti.Unix(), 123456)
 	id := md5.Sum(b)
 	h := fmt.Sprintf("%032x", id)
 	traceID, _ := trace.TraceIDFromHex(h)
 	fmt.Println(string(b), string(id[:]), ti.Unix(), h, traceID.String())
+}
 
-	return
+func TestStartSpan(t *testing.T) {
 
 	ctx := context.Background()
 

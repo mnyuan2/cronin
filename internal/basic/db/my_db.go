@@ -1,6 +1,7 @@
 package db
 
 import (
+	"cron/internal/basic/config"
 	"gorm.io/gorm"
 )
 
@@ -53,4 +54,8 @@ func (gdb *MyDB) Paginate(out interface{}, page int, pageSize int, tableName str
 		return 0, err
 	}
 	return
+}
+
+func (gdb *MyDB) GetDriver() string {
+	return config.DbConf().Driver
 }
