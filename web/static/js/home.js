@@ -324,6 +324,8 @@ const Enum ={
     dicProtocolType: 1005,
     // 1006 接收数据字段
     dicReceiveDataField: 1006,
+    // 1007 重试模式
+    dicRetryMode: 1007,
     // 1 草稿,停用
     StatusDisable: 1,
     // 5 待审核
@@ -336,13 +338,15 @@ const Enum ={
     StatusFinish: 3,
     // 4 错误
     StatusError: 4,
+    // 8 已关闭（预删除）
+    StatusClosed: 8,
     // 9 删除
     StatusDelete: 9,
 }
 
 function statusTypeName(status){
     switch (Number(status)) {
-        case Enum.StatusDisable:
+        case Enum.StatusClosed:
             return 'info';
         case Enum.StatusActive:
         case Enum.StatusAudited:

@@ -87,7 +87,7 @@ func (dm *TaskService) Init() (err error) {
 
 	// 系统内置任务
 	dm.AddConfig(dm.sysLogRetentionConf())
-
+	dm.AddConfig(dm.sysTaskDeleteConf())
 	return nil
 }
 
@@ -302,7 +302,8 @@ func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 		Http: &pb.CronHttp{
 			Method: http.MethodPost,
 			Url:    dm.conf.Http.Local() + "/log/del",
-			Body:   fmt.Sprintf(`{"retention":"%s"}`, dm.conf.Task.LogRetention),
+			Body:   fmt.Sprintf(`{"retention":"%s"}`, retention),
+			Header: []*pb.KvItem{},
 		},
 		Rpc:     &pb.CronRpc{},
 		Cmd:     &pb.CronCmd{},
@@ -317,6 +318,46 @@ func (dm *TaskService) sysLogRetentionConf() *models.CronConfig {
 	//		{Key: "Authorization", Value: "Basic " + s},
 	//	}
 	//}
+	sysLogRetention.Command, _ = jsoniter.Marshal(cmd)
+	return sysLogRetention
+}
+
+// sysTaskDeleteConf 内置任务，删除任务设置
+func (dm *TaskService) sysTaskDeleteConf() *models.CronConfig {
+	retention := dm.conf.Task.TaskDelRetention
+	if retention == "" {
+		return nil
+	}
+	re, err := time.ParseDuration(retention)
+	if err != nil {
+		panic(fmt.Sprintf("log_retention 日志存续配置有误, %s", err.Error()))
+	} else if re.Hours() < 24 {
+		panic("log_retention 日志存续不得小于24h")
+	}
+
+	var sysLogRetention = &models.CronConfig{
+		Id:       -2,
+		Name:     "任务延迟删除",
+		Spec:     "0 0 5 * * *", // 每天5点执行
+		Protocol: models.ProtocolHttp,
+		Status:   enum.StatusActive,
+		Remark:   "系统内置任务",
+		CreateDt: time.Now().Format(conv.FORMAT_DATETIME),
+		UpdateDt: time.Now().Format(conv.FORMAT_DATETIME),
+	}
+	cmd := &pb.CronConfigCommand{
+		Http: &pb.CronHttp{
+			Method: http.MethodPost,
+			Url:    dm.conf.Http.Local() + "/work/task_del",
+			Body:   fmt.Sprintf(`{"retention":"%s"}`, retention),
+			Header: []*pb.KvItem{},
+		},
+		Rpc:     &pb.CronRpc{},
+		Cmd:     &pb.CronCmd{},
+		Sql:     &pb.CronSql{},
+		Jenkins: &pb.CronJenkins{},
+		Git:     &pb.CronGit{},
+	}
 	sysLogRetention.Command, _ = jsoniter.Marshal(cmd)
 	return sysLogRetention
 }

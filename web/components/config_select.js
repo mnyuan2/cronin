@@ -7,7 +7,7 @@ var MyConfigSelect = Vue.extend({
     </el-radio-group>
     
     <el-row>
-        <el-form :inline="true" :model="list.param" size="mini" class="search-form">
+        <el-form :inline="true" :model="list.param" size="small" class="search-form">
             <el-form-item label="名称">
                 <el-input v-model="list.param.name" placeholder="搜索名称"></el-input>
             </el-form-item>
@@ -114,8 +114,15 @@ var MyConfigSelect = Vue.extend({
             if (this.list.request){
                 return this.$message.info('请求执行中,请稍等.');
             }
+            let body = copyJSON(this.list.param)
+            if (body.status.length == 0){
+                body.status = this.dic.config_status.map(function (item){
+                    return item.id
+                })
+            }
+
             this.list.request = true
-            api.innerGet("/config/list", this.list.param, (res)=>{
+            api.innerGet("/config/list", body, (res)=>{
                 this.list.request = false
                 if (!res.status){
                     return this.$message.error(res.message);
@@ -145,7 +152,9 @@ var MyConfigSelect = Vue.extend({
         getDic(){
             api.dicList([Enum.dicUser, Enum.dicProtocolType, Enum.dicConfigStatus],(res) =>{
                 this.dic.user = res[Enum.dicUser]
-                this.dic.config_status = res[Enum.dicConfigStatus]
+                this.dic.config_status = res[Enum.dicConfigStatus].filter(function (item){
+                    return item.id != Enum.StatusClosed // 选择弹窗不能有关闭的任务
+                })
                 this.dic.protocol = res[Enum.dicProtocolType]
             })
         },

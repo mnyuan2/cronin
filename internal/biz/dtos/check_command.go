@@ -67,6 +67,9 @@ func CheckSql(sql *pb.CronSql) error {
 		return fmt.Errorf("请选择 sql 连接")
 	}
 	for _, item := range sql.Statement {
+		if sql.Origin != item.Type {
+			continue // 来源不一致的忽略
+		}
 		if sql.Origin == enum.SqlStatementSourceLocal {
 			if item.Local == "" {
 				return errors.New("未设置 sql 执行语句")

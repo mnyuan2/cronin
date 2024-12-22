@@ -24,6 +24,7 @@
 
 <script src="/static/js/home.js?v=[[.version]]"></script>
 <script src="/components/header.js?v=[[.version]]"></script>
+<script src="/components/sidebar.js?v=[[.version]]"></script>
 <script src="/components/config.js?v=[[.version]]"></script>
 <script src="/components/config_detail.js?v=[[.version]]"></script>
 <script src="/components/config_form.js?v=[[.version]]"></script>
@@ -51,6 +52,7 @@
             { path: '/', redirect: '/config'},
             { path: '/config', component: MyConfig},
             { path: '/config_detail', component: MyConfigDetail},
+            { path: '/config_form', component: MyConfigForm},
             { path: '/pipeline', component: MyPipeline},
             { path: '/receive', component: MyReceive},
             {path: '/source', component: MySource},

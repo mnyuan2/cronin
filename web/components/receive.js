@@ -1,34 +1,7 @@
 var MyReceive = Vue.extend({
     template: `<el-container>
-        <!--边栏-->
-    <el-aside style="padding-top: 10px">
-        <el-card class="aside-card">
-            <div slot="header">
-                <span class="h3">执行任务</span>
-            </div>
-            <ol>
-                <li v-for="item in queue.exec">
-                    <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
-                    <p style="margin: 0;color: #909399;line-height: 100%;font-size: 12px;">
-                        ({{durationTransform(item.duration, 's')}}) 
-                        <el-popconfirm :title="'确定停用 '+item.name+' 任务吗？'" @confirm="jobStop(item)"><i slot="reference" class="el-icon-circle-close stop"></i></el-popconfirm>
-                    </p>
-                </li>
-            </ul>
-            <div v-show="!queue.exec.length">-</div>
-        </el-card>
-        <el-card class="aside-card">
-            <div slot="header">
-                <span class="h3">注册任务</span>
-            </div>
-            <ol>
-                <li v-for="item in queue.register">
-                    <router-link :to="{path:'/config_detail', query:{id:item.ref_id, type:item.ref_type, entry_id:item.entry_id}}" class="el-link el-link--default is-underline">{{item.name}}</router-link>
-                </li>
-            </ol>
-            <div v-show="!queue.register.length">-</div>
-        </el-card>
-    </el-aside>
+    <!--边栏-->
+    <my-sidebar></my-sidebar>
     <!--主内容-->
     <el-main>
         <el-menu class="el-menu-demo" mode="horizontal" @select="handleClickTypeLabel">
@@ -120,7 +93,6 @@ var MyReceive = Vue.extend({
     name: "MyReceive",
     data(){
         return {
-            env: {},
             dic:{
                 user: [],
                 msg: [],
@@ -145,11 +117,6 @@ var MyReceive = Vue.extend({
                     name: '',
                 },
                 request: false, // 请求中标志
-            },
-            // 队列
-            queue:{
-                exec:[], // 执行队列
-                register:[], // 注册队列
             },
             set_box: {
                 show:false,
@@ -181,16 +148,8 @@ var MyReceive = Vue.extend({
     // 模块初始化
     mounted(){
         this.getList()
-        // 添加指定事件监听
-        this.env = cache.getEnv()
-        this.$sse.addEventListener(this.env.env+".exec.queue", this.execQueue)
-        this.$sse.addEventListener(this.env.env+'.register.queue', this.registerQueue)
     },
-    beforeDestroy(){
-        // 销毁指定事件监听
-        this.$sse.removeEventListener(this.env.env+".exec.queue", this.execQueue)
-        this.$sse.removeEventListener(this.env.env+".register.queue", this.registerQueue)
-    },
+    beforeDestroy(){},
     // 具体方法
     methods:{
         loadParams(param){
@@ -344,34 +303,6 @@ var MyReceive = Vue.extend({
             this.config_log_box.id = 0;
             this.config_log_box.title = ' 日志'
             this.config_log_box.tags = {}
-        },
-        // 停止执行任务
-        jobStop(row){
-            api.innerPost("/job/stop",row, res=>{
-                if (!res.status){
-                    return this.$message.error(res.message)
-                }
-                this.$message.success('操作成功')
-            })
-        },
-        // 消息监听处理
-        execQueue(e){
-            // console.log("execQueue", e)
-            let data = JSON.parse(e.data)
-            if (!data){
-                this.queue.exec = []
-                return
-            }
-            this.queue.exec = data
-        },
-        registerQueue(e){
-            // console.log("registerQueue", e)
-            let data = JSON.parse(e.data)
-            if (!data){
-                this.queue.register = []
-                return
-            }
-            this.queue.register = data
         },
     }
 })

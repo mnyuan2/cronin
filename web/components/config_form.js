@@ -55,7 +55,7 @@ var MyConfigForm = Vue.extend({
                         </el-input>
                     </el-form-item>
                     <el-form-item label="请求Body参数">
-                        <el-input type="textarea" v-model="form.command.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
+                        <el-input type="textarea" v-model="form.command.http.body" :autosize="{minRows:5}" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                     </el-form-item>
                 </el-tab-pane>
 
@@ -64,7 +64,7 @@ var MyConfigForm = Vue.extend({
                         <el-radio v-model="form.command.rpc.method" label="GRPC">GRPC</el-radio>
                     </el-form-item>
                     <el-form-item label="proto" style="margin-top: -10px">
-                        <el-input type="textarea" v-model="form.command.rpc.proto" rows="5" placeholder="请输入*.proto 文件内容" style=""></el-input>
+                        <el-input type="textarea" v-model="form.command.rpc.proto" :autosize="{minRows:5}" placeholder="请输入*.proto 文件内容" style=""></el-input>
                     </el-form-item>
                     <el-form-item label="地址" label-width="42px">
                         <el-input v-model="form.command.rpc.addr" placeholder="请输入服务地址，含端口; 示例：localhost:21014"></el-input>
@@ -76,7 +76,7 @@ var MyConfigForm = Vue.extend({
                         <el-button @click="parseProto()">解析proto</el-button>
                     </el-form-item>
                     <el-form-item label="请求参数">
-                        <el-input type="textarea" v-model="form.command.rpc.body" rows="5" placeholder="请输入请求参数"></el-input>
+                        <el-input type="textarea" v-model="form.command.rpc.body" :autosize="{minRows:5}" placeholder="请输入请求参数"></el-input>
                     </el-form-item>
                 </el-tab-pane>
                 
@@ -116,7 +116,7 @@ var MyConfigForm = Vue.extend({
                             <el-input v-model="form.command.cmd.statement.git.ref" placeholder="分支、tag或commit。默认: 仓库的默认分支(通常是master)"></el-input>
                         </el-form-item>
                     </el-form>
-                    <el-input type="textarea" v-model="form.command.cmd.statement.local" rows="5" placeholder="请输入命令行执行内容" v-if="form.command.cmd.origin=='local'"></el-input>
+                    <el-input type="textarea" v-model="form.command.cmd.statement.local" :autosize="{minRows:5}" placeholder="请输入命令行执行内容" v-if="form.command.cmd.origin=='local'"></el-input>
                 </el-tab-pane>
                 
                 <el-tab-pane label="sql" name="4" label-position="left">
@@ -191,7 +191,7 @@ var MyConfigForm = Vue.extend({
                         <el-input v-model="form.command.jenkins.name" placeholder="jenkins job name"></el-input>
                     </el-form-item>
                     <el-form-item label="参数" class="http_header_box">
-                        <el-input v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">
+                        <el-input class="input-input" v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">
                             <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput"></el-input>
                             <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i)"></el-button>
                         </el-input>
@@ -239,7 +239,8 @@ var MyConfigForm = Vue.extend({
         <el-form-item label="重试" label-width="50px" v-show="form.err_retry_num>0">
             <div class="input-box">
                 <span class="input-header"><i class="el-icon-edit" @click="biggerShow(true)"></i></span>
-                {{form.err_retry_num}}/次
+                {{form.err_retry_num}}/次，
+                {{form.err_retry_mode_name}} {{form.err_retry_sleep}}/秒
             </div>
         </el-form-item>
         <el-form-item label="延迟" label-width="50px" v-show="form.after_sleep>0">
@@ -265,7 +266,7 @@ var MyConfigForm = Vue.extend({
             </div>
         </el-form-item>
         <div style="text-align: right;padding-bottom: 14px;">
-            <el-button @click="configRun()" class="left" size="small" v-if="!request.disabled">执行一下</el-button>
+            <el-button @click="configRun()" class="left" size="small" v-if="form.status!=Enum.StatusClosed && !request.disabled">执行一下</el-button>
             <el-button @click="close(false)" size="small" :disabled="false">取 消</el-button>
             <el-button type="success" @click="setCron()" size="small" v-if="(form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject) && $auth_tag.config_set && !request.disabled">保存草稿</el-button>
         </div>
@@ -309,7 +310,7 @@ var MyConfigForm = Vue.extend({
         </el-form>
         
         <el-form :model="sqlSet.statement.local"  v-if="sqlSet.source=='local'">
-            <el-input type="textarea" rows="12" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.statement.local"></el-input>
+            <el-input type="textarea" :autosize="{minRows:12}" placeholder="请输入sql内容，批量添加时多个sql请用;分号分隔。" v-model="sqlSet.statement.local"></el-input>
         </el-form>
        
         <span slot="footer" class="dialog-footer">
@@ -398,7 +399,7 @@ var MyConfigForm = Vue.extend({
                     </el-input>
                 </el-form-item>
                 <el-form-item label="内容*">
-                    <el-input type="textarea" v-model="gitSet.data.file_update.content" placeholder="文件内容\n支持模板语法，文件原内容会以raw_content变量名称传入。"></el-input>
+                    <el-input type="textarea" :autosize="{minRows:2}" v-model="gitSet.data.file_update.content" placeholder="文件内容\n支持模板语法，文件原内容会以raw_content变量名称传入。"></el-input>
                 </el-form-item>
                 <el-form-item label="描述*">
                     <el-input type="textarea" v-model="gitSet.data.file_update.message" placeholder="commit 描述"></el-input>
@@ -415,31 +416,32 @@ var MyConfigForm = Vue.extend({
         </span>
     </el-dialog>
     <!-- 推送设置弹窗 -->
-    <el-dialog title="推送设置" :visible.sync="msgSet.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
-        <el-form :model="msgSet" :inline="true" size="mini">
-            <el-form-item label="当结果">
-                <el-select v-model="msgSet.data.status" style="width: 90px">
-                    <el-option v-for="(dic_v,dic_k) in msgSet.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
+    <el-dialog title="推送设置" :visible.sync="msg_set_box.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
+        <el-form :model="msg_set_box.form" :inline="true" size="small">
+            <el-form-item label="当执行">
+                <el-select v-model="msg_set_box.form.status" multiple style="width: 143px" placeholder="状态">
+                    <el-option v-for="(dic_v,dic_k) in msg_set_box.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
                 </el-select>
                 时
             </el-form-item>
             <el-form-item label="发送">
-                <el-select v-model="msgSet.data.msg_id">
+                <el-select v-model="msg_set_box.form.msg_id" style="width: 180px" placeholder="模板">
                     <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
                 </el-select>
                 消息
             </el-form-item>
-            <el-form-item label="并且@用户">
-                <el-select v-model="msgSet.data.notify_user_ids" multiple="true">
+            <el-form-item label="并且@">
+                <el-select v-model="msg_set_box.form.notify_user_ids" multiple style="width: 210px" placeholder="人员">
                     <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
                 </el-select>
             </el-form-item>
         </el-form>
         <span slot="footer" class="dialog-footer">
-            <el-button @click="msgSet.show = false" size="small">取 消</el-button>
+            <el-button @click="msg_set_box.show = false" size="small">取 消</el-button>
             <el-button type="primary" @click="msgSetConfirm()" size="small">确 定</el-button>
         </span>
     </el-dialog>
+    
     <!-- 更多设置 弹窗 -->
     <el-dialog title="更多设置" :visible.sync="bigger_set.show" :show-close="false" :close-on-click-modal="false" :modal="false">
         <el-form :model="bigger_set.form" size="small" label-width="69px">
@@ -466,12 +468,23 @@ var MyConfigForm = Vue.extend({
                         <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                     </el-tooltip>
                 </span>
-                <el-input type="textarea" v-model="bigger_set.form.after_tmpl" rows="2" placeholder="任务成功后，对结果响应文本进行二次解析；可重构响应及错误验证。\n结果变量: result·string"></el-input>
+                <el-input type="textarea" v-model="bigger_set.form.after_tmpl" :autosize="{minRows:2}" placeholder="任务成功后，对结果响应文本进行二次解析；可重构响应及错误验证。\n结果变量: result·string"></el-input>
             </el-form-item>
             <el-form-item label="重试">
-                <el-input type="number" v-model="bigger_set.form.err_retry_num" placeholder="失败时重试">
-                    <span slot="append">次</span>
-                </el-input>
+                <el-col :span="11">
+                    <el-input type="number" v-model="bigger_set.form.err_retry_num" placeholder="失败时最大重试" class="input-input">
+                        <span slot="append">次</span>
+                    </el-input>
+                </el-col>
+                <el-col :span="2" style="text-align: center;">-</el-col>
+                <el-col :span="11">
+                    <el-input type="number" v-model="bigger_set.form.err_retry_sleep" placeholder="重试间隔" class="input-input">
+                        <el-select v-model="bigger_set.form.err_retry_mode" slot="prepend" style="width: 80px;">
+                            <el-option v-for="(dic_v,dic_k) in dic.retry_mode" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+                        </el-select>
+                        <span slot="append">秒</span>
+                    </el-input>
+                </el-col>
             </el-form-item>
             <el-form-item label="延迟">
                 <el-input type="number" v-model="bigger_set.form.after_sleep" placeholder="任务成功完成后，继续等待...秒">
@@ -505,6 +518,7 @@ var MyConfigForm = Vue.extend({
                 host_source:[],
                 user:[],
                 msg:[],
+                retry_mode: [],
             },
 
             form:{
@@ -535,12 +549,12 @@ var MyConfigForm = Vue.extend({
                     "rebase":"变基并合并"
                 },
             },
-            msgSet:{
+            msg_set_box:{
                 show: false, // 是否显示
                 title: '添加',
                 index: -1, // 操作行号
-                data: {}, // 实际内容
-                statusList:[{id:1,name:"错误"}, {id:2, name:"结束"}], //  {id:0,name:"开始"}
+                form: {}, // 实际内容
+                statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}],
             },
             bigger_set:{
                 show:false,
@@ -639,6 +653,9 @@ var MyConfigForm = Vue.extend({
         })
         this.getDicSqlSource()
         console.log("config_form request",this.request)
+        if (this.request == undefined){
+            this.request = {detail:{},disabled:false}
+        }
         if (this.request.detail !== undefined && this.request.detail.id > 0){
             this.form = this.editShow(this.request.detail)
         }else{
@@ -661,7 +678,7 @@ var MyConfigForm = Vue.extend({
                 command:{
                     http:{
                         method: 'GET',
-                        header: [{"key":"","value":""}],
+                        header: [{}],
                         url:'',
                         body:'',
                     },
@@ -685,7 +702,7 @@ var MyConfigForm = Vue.extend({
                                 link_id: "",
                                 owner: "",
                                 project: "",
-                                path: [""], // 目前不支持多选，但数据结构要能为后续支持扩展
+                                path: [], // 目前不支持多选，但数据结构要能为后续支持扩展
                                 ref: "",
                             },
                             local: ""
@@ -710,7 +727,7 @@ var MyConfigForm = Vue.extend({
                             id: "",
                         },
                         name: "",
-                        params: [{"key":"","value":""}]
+                        params: [{}]
                     },
                     git:{
                         link_id: "",
@@ -718,8 +735,11 @@ var MyConfigForm = Vue.extend({
                     }
                 },
                 after_tmpl: '',
-                after_sleep: '',
-                err_retry_num: '',
+                after_sleep: 0,
+                err_retry_num: 0,
+                err_retry_sleep: 0,
+                err_retry_mode: 1,
+                err_retry_mode_name: '',
                 msg_set: [],
                 status: '1',
             }
@@ -750,14 +770,20 @@ var MyConfigForm = Vue.extend({
                 form.command.sql.statement[i] = this.sqlGitBuildDesc(row.command.sql.statement[i])
             }
 
-            if (form.command.http.header.length == 0){
+            let hl = form.command.http.header.length
+            if (hl == 0){
                 form.command.http.header = this.initFormData().command.http.header
+            }else if (form.command.http.header[hl-1].key != ""){
+                form.command.http.header.push({})
             }
             if (form.command.jenkins.source.id == 0){
                 form.command.jenkins.source.id = ""
             }
-            if (form.command.jenkins.params.length == 0){
+            let pl = form.command.jenkins.params.length
+            if (pl == 0){
                 form.command.jenkins.params = this.initFormData().command.jenkins.params
+            }else if (form.command.jenkins.params[pl-1].key != ""){
+                form.command.jenkins.params.push({})
             }
             if (form.command.cmd.host.id == 0){
                 form.command.cmd.host.id = this.initFormData().command.cmd.host.id
@@ -781,15 +807,6 @@ var MyConfigForm = Vue.extend({
             form.protocol = form.protocol.toString()
             console.log("编辑：",form)
             return form
-        },
-        // 枚举
-        getDicSource(){
-            api.dicList([Enum.dicSqlSource, Enum.dicJenkinsSource, Enum.dicUser, Enum.dicMsg],(res) =>{
-                this.dic.sql_source = res[Enum.dicSqlSource]
-                this.dic.jenkins_source = res[Enum.dicJenkinsSource]
-                this.dic.user = res[Enum.dicUser]
-                this.dic.msg = res[Enum.dicMsg]
-            })
         },
         // 添加/编辑 任务
         setCron(afterCall){
@@ -818,8 +835,9 @@ var MyConfigForm = Vue.extend({
             body.command.http.header = body.command.http.header.filter(function (item) {
                 return item['key'] !== undefined &&  item.key !== ''
             })
-            body.after_sleep = Number(body.after_sleep)
-            body.err_retry_num = Number(body.err_retry_num)
+            body.command.jenkins.params = body.command.jenkins.params.filter(function (item) {
+                return item['key'] !== undefined &&  item.key !== ''
+            })
 
             api.innerPost("/config/set", body, (res)=>{
                 if (!res.status){
@@ -1123,6 +1141,8 @@ var MyConfigForm = Vue.extend({
                     after_tmpl: this.form.after_tmpl,
                     after_sleep: this.form.after_sleep,
                     err_retry_num: this.form.err_retry_num,
+                    err_retry_sleep: this.form.err_retry_sleep,
+                    err_retry_mode: this.form.err_retry_mode,
                     remark: this.form.remark
                 }
                 if (form.var_fields == null || form.var_fields.length == 0){
@@ -1140,8 +1160,15 @@ var MyConfigForm = Vue.extend({
                 return item['key'] !== undefined &&  item.key !== ''
             })
             this.form.after_tmpl = data.after_tmpl
-            this.form.after_sleep = data.after_sleep
-            this.form.err_retry_num = data.err_retry_num
+            this.form.after_sleep = Number(data.after_sleep)
+            this.form.err_retry_num = Number(data.err_retry_num)
+            this.form.err_retry_sleep = Number(data.err_retry_sleep)
+            this.form.err_retry_mode = Number(data.err_retry_mode)
+            this.dic.retry_mode.forEach((item)=>{
+                if (item.id == this.form.err_retry_mode){
+                    this.form.err_retry_mode_name = item.name
+                }
+            })
             this.form.remark = data.remark
             this.biggerShow(false)
         },
@@ -1153,7 +1180,7 @@ var MyConfigForm = Vue.extend({
             }
             if (oldData == undefined || index < 0){
                 oldData = {
-                    status: 1,
+                    status: [],
                     msg_id: "",
                     notify_user_ids: [],
                 }
@@ -1161,10 +1188,10 @@ var MyConfigForm = Vue.extend({
                 console.log('推送信息异常', oldData)
                 return this.$message.error("推送信息异常");
             }
-            this.msgSet.show = true
-            this.msgSet.index = Number(index)  // -1.新增、>=0.具体行的编辑
-            this.msgSet.title = this.msgSet.index < 0? '添加' : '编辑';
-            this.msgSet.data = oldData
+            this.msg_set_box.show = true
+            this.msg_set_box.index = Number(index)  // -1.新增、>=0.具体行的编辑
+            this.msg_set_box.title = this.msg_set_box.index < 0? '添加' : '编辑';
+            this.msg_set_box.form = oldData
         },
         msgSetDel(index){
             if (this.request.disabled){
@@ -1183,27 +1210,27 @@ var MyConfigForm = Vue.extend({
         },
         // 推送确认
         msgSetConfirm(){
-            if (this.msgSet.data.msg_id <= 0){
+            if (this.msg_set_box.form.msg_id <= 0){
                 return this.$message.warning("请选择消息模板");
             }
-            let data = this.msgSetBuildDesc(this.msgSet.data)
-
-            if (this.msgSet.index < 0){
+            let data = this.msgSetBuildDesc(this.msg_set_box.form)
+            if (this.msg_set_box.index < 0){
                 this.form.msg_set.push(data)
             }else{
-                this.form.msg_set[this.msgSet.index] = data
+                this.form.msg_set[this.msg_set_box.index] = data
             }
-            this.msgSet.show = false
-            this.msgSet.index = -1
-            this.msgSet.data = {}
+            this.msg_set_box.show = false
+            this.msg_set_box.index = -1
+            this.msg_set_box.form = {}
         },
         // 构建消息设置描述
         msgSetBuildDesc(data){
-            let item1 = this.msgSet.statusList.find(option => option.id === data.status);
-            if (item1){
-                data.status_name = item1.name
-            }
-            let descrition = '当任务<b class="b">'+item1.name+'</b>时'
+            let item1 = this.msg_set_box.statusList.filter((option) => {
+                return data.status.includes(option.id)
+            }).map((item)=>{return item.name});
+            data.status_name = item1.join(',')
+
+            let descrition = '<i class="el-icon-bell"></i>当任务<b class="b">'+data.status_name+'</b>时'
 
             let item2 = this.dic.msg.find(option => option.id === data.msg_id)
             if (item2){
@@ -1214,7 +1241,7 @@ var MyConfigForm = Vue.extend({
                 return data.notify_user_ids.includes(option.id);
             }).map((item)=>{return item.name})
             if (item3.length > 0){
-                data.notify_users_name = item3
+                data.notify_users_name = item3.join(',')
                 descrition += '，并且@人员<b class="b">'+data.notify_users_name+'</b>'
             }
             data.descrition = descrition
@@ -1280,7 +1307,8 @@ var MyConfigForm = Vue.extend({
                 Enum.dicHostSource,
                 Enum.dicCmdType,
                 Enum.dicUser,
-                Enum.dicMsg
+                Enum.dicMsg,
+                Enum.dicRetryMode
             ]
             api.dicList(types,(res) =>{
                 this.dic.sql_source = res[Enum.dicSqlSource]
@@ -1292,6 +1320,7 @@ var MyConfigForm = Vue.extend({
                 this.dic.msg = res[Enum.dicMsg]
                 this.dic.cmd_type = res[Enum.dicCmdType]
                 this.dic.sql_driver = res[Enum.dicSqlDriver]
+                this.dic.retry_mode = res[Enum.dicRetryMode]
             })
         },
         // 解析proto内容

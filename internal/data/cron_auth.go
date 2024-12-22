@@ -67,6 +67,7 @@ var authList = []*Permission{
 	{Id: 142, Path: "/job/list", Title: "已注册列表", Group: "注册任务", Type: AuthTypeLogin},
 
 	{Id: 41, Path: "/work/table", Title: "工作表", Group: "我的", Type: AuthTypeLogin},
+	{Id: 42, Path: "/work/task_del", Title: "任务删除", Group: "我的", Type: AuthTypeOpen},
 
 	{Id: 50, Path: "/log/", Title: "日志", Group: "", Type: AuthTypeLogin},
 	{Id: 51, Path: "/log/list", Title: "列表", Group: "日志", Type: AuthTypeLogin},

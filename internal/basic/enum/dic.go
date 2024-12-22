@@ -15,6 +15,7 @@ const (
 	DicConfigStatus     = 1004 // 任务状态
 	DicProtocolType     = 1005 // 协议类型
 	DicReceiveDataField = 1006 // 接收字段
+	DicRetryMode        = 1007 // 重试模式
 )
 
 const (

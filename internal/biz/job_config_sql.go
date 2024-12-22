@@ -133,7 +133,13 @@ func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 	err = job.sqlMysqlExec(r, _db, statement)
 	if err != nil {
 		// 执行告警推送
-		go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), 0)
+		go job.messagePush(ctx, &dtos.MsgPushRequest{
+			Status:     enum.StatusDisable,
+			StatusDesc: err.Desc(),
+			Body:       []byte(err.Error()),
+			Duration:   0,
+			RetryNum:   0,
+		})
 	}
 	return err
 }
@@ -197,7 +203,13 @@ func (job *JobConfig) sqlMysqlItem(r *pb.CronSql, _db *gorm.DB, item *pb.KvItem)
 			attribute.String("remark", models.SqlErrActionMap[r.ErrAction]),
 		))
 		if r.ErrAction == models.SqlErrActionProceed {
-			go job.messagePush(ctx, enum.StatusDisable, "错误跳过继续", []byte(err.Error()), 0)
+			go job.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusDisable,
+				StatusDesc: "错误跳过继续",
+				Body:       []byte(err.Error()),
+				Duration:   0,
+				RetryNum:   0,
+			})
 		}
 	} else {
 		span.SetStatus(codes.Ok, "成功")
