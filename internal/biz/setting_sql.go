@@ -8,7 +8,7 @@ import (
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
-	"cron/internal/basic/git/gitee"
+	"cron/internal/basic/git"
 	"cron/internal/basic/host"
 	"cron/internal/data"
 	"cron/internal/models"
@@ -129,7 +129,7 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 	case enum.DicJenkinsSource:
 		r.Source.Jenkins.Hostname = strings.Trim(r.Source.Jenkins.Hostname, "/")
 	case enum.DicGitSource:
-		if r.Source.Git.Type != "gitee" {
+		if r.Source.Git.Type != "gitee" && r.Source.Git.Type != "github" {
 			return nil, fmt.Errorf("git 类型错误 %s", r.Source.Git.Type)
 		}
 	case enum.DicHostSource:
@@ -212,11 +212,14 @@ func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingS
 		}
 
 	case enum.DicGitSource:
-		if r.Source.Git.Type != "gitee" {
+		cli := git.NewApi(git.Config{
+			Type:        r.Source.Git.Type,
+			AccessToken: r.Source.Git.AccessToken,
+		})
+		if cli == nil {
 			return nil, fmt.Errorf("git 类型错误 %s", r.Source.Git.Type)
 		}
-
-		_, er := gitee.NewApiV5(r.Source.Git).User(gitee.NewHandler(dm.ctx))
+		_, er := cli.User(git.NewHandler(dm.ctx))
 		if err != nil {
 			return nil, errs.New(er, "链接失败")
 		}

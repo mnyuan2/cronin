@@ -132,6 +132,8 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 		d.Env = dm.user.Env
 		d.CreateUserId = dm.user.UserId
 		d.CreateUserName = dm.user.UserName
+		d.StatusDt = time.Now().Format(time.DateTime)
+		d.StatusRemark = "新增"
 	}
 
 	if r.VarParams != "" {

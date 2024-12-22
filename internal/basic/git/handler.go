@@ -1,4 +1,4 @@
-package gitee
+package git
 
 import (
 	"context"
@@ -57,6 +57,16 @@ func (m *Handler) OnResponseHeader(header http.Header) {
 // 响应内容
 func (m *Handler) OnResponseBody(b []byte) {
 	m.ResponseBody = b
+}
+
+// 开始时间
+func (m *Handler) OnStartTime(t time.Time) {
+	m.startTime = t
+}
+
+// 截止时间
+func (m *Handler) OnEndTime(t time.Time) {
+	m.endTime = t
 }
 
 // 上下文

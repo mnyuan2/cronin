@@ -435,6 +435,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		d.Env = dm.user.Env
 		d.CreateUserId = dm.user.UserId
 		d.CreateUserName = dm.user.UserName
+		d.Status = models.ConfigStatusDisable
+		d.StatusRemark = "新增"
+		d.StatusDt = time.Now().Format(time.DateTime)
 	}
 
 	if r.Type == models.TypeCycle {

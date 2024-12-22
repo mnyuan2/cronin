@@ -47,7 +47,7 @@ func (m *CronConfigData) Set(data *models.CronConfig) error {
 			Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
-		return m.db.Omit("status_dt").Create(data).Error
+		return m.db.Create(data).Error
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
-	"cron/internal/basic/git/gitee"
+	"cron/internal/basic/git"
 	"cron/internal/models"
 	"cron/internal/pb"
 	jsoniter "github.com/json-iterator/go"
@@ -86,11 +86,14 @@ func (m *ConfigData) PRList(ctx context.Context, r *pb.GetEventPRList) (resp []*
 	if er := jsoniter.UnmarshalFromString(link.Content, conf); er != nil {
 		return nil, errs.New(er, "链接配置解析错误")
 	}
-	api := gitee.NewApiV5(conf.Git)
-	h := gitee.NewHandler(ctx)
+	api := git.NewApi(git.Config{
+		Type:        conf.Git.Type,
+		AccessToken: conf.Git.AccessToken,
+	})
+	h := git.NewHandler(ctx)
 
-	res, er := api.Pulls(h, &gitee.Pulls{
-		BaseRequest: gitee.BaseRequest{
+	res, er := api.Pulls(h, &git.Pulls{
+		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Repo,
 		},
@@ -103,13 +106,13 @@ func (m *ConfigData) PRList(ctx context.Context, r *pb.GetEventPRList) (resp []*
 	if er != nil {
 		return nil, errs.New(er, "列表请求失败")
 	}
-	resp = make([]*PRListItem, len(res))
-	for i, item := range res {
+	resp = make([]*PRListItem, len(res.List))
+	for i, item := range res.List {
 		resp[i] = &PRListItem{
 			Number:  item.Number,
 			State:   item.State,
-			HeadRef: item.Head.Ref,
-			BaseRef: item.Base.Ref,
+			HeadRef: item.HeadRefName,
+			BaseRef: item.BaseRefName,
 		}
 	}
 	return resp, nil

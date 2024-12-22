@@ -122,6 +122,8 @@ func (dm *ReceiveService) Set(r *pb.ReceiveSetRequest) (resp *pb.ReceiveSetReply
 		d.Env = dm.user.Env
 		d.CreateUserId = dm.user.UserId
 		d.CreateUserName = dm.user.UserName
+		d.StatusDt = time.Now().Format(time.DateTime)
+		d.StatusRemark = "新增"
 	}
 
 	if r.ReceiveTmpl == "" {

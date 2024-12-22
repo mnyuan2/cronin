@@ -14,9 +14,9 @@ var conf = &git.Config{AccessToken: "e6a28b06d79d492f9809069d5550b436"}
 
 func TestUrl(t *testing.T) {
 	api := NewApiV5(conf)
-	handler := NewHandler(context.Background())
-	res, err := api.FileGet(handler, &FileGetRequest{
-		BaseRequest: BaseRequest{
+	handler := git.NewHandler(context.Background())
+	res, err := api.FileGet(handler, &git.FileGetRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: "mnyuan",
 			Repo:  "cronin",
 		},
@@ -28,7 +28,7 @@ func TestUrl(t *testing.T) {
 	}
 	fmt.Println(handler)
 	fmt.Println(res)
-	fmt.Println(res.DecodeContent())
+	fmt.Println(string(res.Content))
 }
 
 func TestPath(t *testing.T) {
@@ -40,21 +40,21 @@ func TestPath(t *testing.T) {
 
 func TestUser(t *testing.T) {
 	api := NewApiV5(conf)
-	handler := NewHandler(context.Background())
+	handler := git.NewHandler(context.Background())
 	res, err := api.User(handler)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	fmt.Println(handler)
-	fmt.Println(string(res))
+	fmt.Println(res)
 }
 
 func TestApiV5_PullsCreate(t *testing.T) {
 	api := NewApiV5(conf)
-	handler := NewHandler(context.Background())
+	handler := git.NewHandler(context.Background())
 
-	res, err := api.PullsCreate(handler, &PullsCreateRequest{
-		BaseRequest: BaseRequest{
+	res, err := api.PullCreate(handler, &git.PullsCreateRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: "mnyuan",
 			Repo:  "cronin",
 		},
@@ -80,12 +80,12 @@ func TestApiV5_PullsCreate(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	fmt.Println(string(res))
+	fmt.Println(res)
 }
 
 func TestApiV5_PullsReview(t *testing.T) {
 	api := NewApiV5(conf)
-	handler := NewHandler(context.Background())
+	handler := git.NewHandler(context.Background())
 
 	res, err := api.PullsReview(handler, &PullsReviewRequest{
 		BaseRequest: BaseRequest{
@@ -105,7 +105,7 @@ func TestApiV5_PullsReview(t *testing.T) {
 
 func TestApiV5_PullsTest(t *testing.T) {
 	api := NewApiV5(conf)
-	handler := NewHandler(context.Background())
+	handler := git.NewHandler(context.Background())
 
 	res, err := api.PullsTest(handler, &PullsTestRequest{
 		BaseRequest: BaseRequest{
@@ -126,10 +126,10 @@ func TestApiV5_PullsTest(t *testing.T) {
 // 合并分支
 func TestPullsMerge(t *testing.T) {
 	api := NewApiV5(conf)
-	handler := NewHandler(context.Background())
+	handler := git.NewHandler(context.Background())
 
-	res, err := api.PullsMerge(handler, &PullsMergeRequest{
-		BaseRequest: BaseRequest{
+	res, err := api.PullMerge(handler, &git.PullsMergeRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: "mnyuan",
 			Repo:  "cronin",
 		},

@@ -5,7 +5,7 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
-	"cron/internal/basic/git/gitee"
+	"cron/internal/basic/git"
 	"cron/internal/basic/tracing"
 	"cron/internal/biz/dtos"
 	"cron/internal/data"
@@ -31,7 +31,10 @@ func (job *JobConfig) gitFunc(ctx context.Context, r *pb.CronGit) (resp []byte, 
 		return nil, errs.New(er, "链接配置解析错误")
 	}
 
-	api := gitee.NewApiV5(conf.Git)
+	api := git.NewApi(git.Config{
+		Type:        conf.Git.Type,
+		AccessToken: conf.Git.AccessToken,
+	})
 
 	for i, e := range r.Events {
 		switch e.Id {
@@ -62,7 +65,10 @@ func (job *JobConfig) getGitFile(ctx context.Context, r *pb.Git) (flies []*dtos.
 		return nil, errs.New(er, "链接配置解析错误")
 	}
 
-	api := gitee.NewApiV5(conf.Git)
+	api := git.NewApi(git.Config{
+		Type:        conf.Git.Type,
+		AccessToken: conf.Git.AccessToken,
+	})
 	flies = []*dtos.File{}
 	for _, path := range r.Path {
 		list := strings.Split(path, ",")
@@ -83,8 +89,8 @@ func (job *JobConfig) getGitFile(ctx context.Context, r *pb.Git) (flies []*dtos.
 }
 
 // 获取文件信息
-func (job *JobConfig) gitReposContents(ctx context.Context, api *gitee.ApiV5, r *pb.Git, path string) (file []byte, err errs.Errs) {
-	h := gitee.NewHandler(ctx)
+func (job *JobConfig) gitReposContents(ctx context.Context, api git.Api, r *pb.Git, path string) (file []byte, err errs.Errs) {
+	h := git.NewHandler(ctx)
 	ctx, span := job.tracer.Start(ctx, "repos-contents")
 	defer func() {
 		if err != nil {
@@ -104,8 +110,8 @@ func (job *JobConfig) gitReposContents(ctx context.Context, api *gitee.ApiV5, r 
 		span.End()
 	}()
 
-	res, er := api.FileGet(h, &gitee.FileGetRequest{
-		BaseRequest: gitee.BaseRequest{
+	res, er := api.FileGet(h, &git.FileGetRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Project,
 		},
@@ -115,17 +121,13 @@ func (job *JobConfig) gitReposContents(ctx context.Context, api *gitee.ApiV5, r 
 	if er != nil {
 		return nil, errs.New(er, "gite文件获取失败")
 	}
-	file, er = res.DecodeContent()
-	if er != nil {
-		return nil, errs.New(er, "gite文件解析失败")
-	}
-	span.AddEvent("", trace.WithAttributes(attribute.String("response", string(file))))
+	span.AddEvent("", trace.WithAttributes(attribute.String("response", string(res.Content))))
 
 	return file, nil
 }
 
 // 记录日志
-func (job *JobConfig) handlerLog(name string, h *gitee.Handler, err errs.Errs) {
+func (job *JobConfig) handlerLog(name string, h *git.Handler, err errs.Errs) {
 	if h == nil {
 		return
 	}
@@ -150,8 +152,8 @@ func (job *JobConfig) handlerLog(name string, h *gitee.Handler, err errs.Errs) {
 }
 
 // pr 列表查询
-func (job *JobConfig) PRList(ctx context.Context, api *gitee.ApiV5, r *pb.GetEventPRList) (resp []byte, err errs.Errs) {
-	h := gitee.NewHandler(ctx)
+func (job *JobConfig) PRList(ctx context.Context, api git.Api, r *pb.GetEventPRList) (resp []byte, err errs.Errs) {
+	h := git.NewHandler(ctx)
 	defer func() {
 		job.handlerLog("PRList", h, err)
 	}()
@@ -160,8 +162,8 @@ func (job *JobConfig) PRList(ctx context.Context, api *gitee.ApiV5, r *pb.GetEve
 		return nil, errs.New(nil, "必填参数不足")
 	}
 
-	request := &gitee.Pulls{
-		BaseRequest: gitee.BaseRequest{
+	request := &git.Pulls{
+		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Repo,
 		},
@@ -181,8 +183,8 @@ func (job *JobConfig) PRList(ctx context.Context, api *gitee.ApiV5, r *pb.GetEve
 }
 
 // pr 是否合并
-func (job *JobConfig) PRIsMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
-	h := gitee.NewHandler(ctx)
+func (job *JobConfig) PRIsMerge(ctx context.Context, api git.Api, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
+	h := git.NewHandler(ctx)
 	defer func() {
 		job.handlerLog("PRIsMerge", h, err)
 	}()
@@ -195,23 +197,23 @@ func (job *JobConfig) PRIsMerge(ctx context.Context, api *gitee.ApiV5, r *pb.Git
 		return nil, errs.New(nil, "必填参数不足")
 	}
 
-	request := &gitee.PullsMergeRequest{
-		BaseRequest: gitee.BaseRequest{
+	request := &git.PullsMergeRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Repo,
 		},
 		Number: int32(num),
 	}
-	res, er := api.PullsIsMerge(h, request)
+	res, er := api.PullGet(h, request)
 	if er != nil {
-		return []byte(res.HtmlUrl), errs.New(er)
+		return []byte(res.Url), errs.New(er)
 	}
-	return []byte(res.HtmlUrl + "   " + res.Message), nil
+	return []byte(res.Url), nil
 }
 
 // pr 合并
-func (job *JobConfig) PRMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
-	h := gitee.NewHandler(ctx)
+func (job *JobConfig) PRMerge(ctx context.Context, api git.Api, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
+	h := git.NewHandler(ctx)
 	defer func() {
 		job.handlerLog("PRMerge", h, err)
 	}()
@@ -221,8 +223,8 @@ func (job *JobConfig) PRMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEv
 		return nil, errs.New(er, "pr编号输入有误")
 	}
 
-	request := &gitee.PullsMergeRequest{
-		BaseRequest: gitee.BaseRequest{
+	request := &git.PullsMergeRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Repo,
 		},
@@ -232,17 +234,17 @@ func (job *JobConfig) PRMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEv
 		Title:             r.Title,
 		Description:       r.Description,
 	}
-	res, er := api.PullsMerge(h, request)
+	res, er := api.PullMerge(h, request)
 	if er != nil {
-		return []byte(res.HtmlUrl), errs.New(er, "pr合并失败")
+		return []byte(res.Url), errs.New(er, "pr合并失败")
 	}
-	return []byte(res.HtmlUrl + "   " + res.Message), nil
+	return []byte(res.Url), nil
 }
 
 // 文件 更新
-func (job *JobConfig) FileUpdate(ctx context.Context, api *gitee.ApiV5, r *pb.GitEventFileUpdate) (resp []byte, err errs.Errs) {
-	h1 := gitee.NewHandler(ctx)
-	h2 := gitee.NewHandler(ctx)
+func (job *JobConfig) FileUpdate(ctx context.Context, api git.Api, r *pb.GitEventFileUpdate) (resp []byte, err errs.Errs) {
+	h1 := git.NewHandler(ctx)
+	h2 := git.NewHandler(ctx)
 	defer func() {
 		job.handlerLog("FileGet", h1, err)
 		job.handlerLog("FileUpdate", h2, err)
@@ -250,8 +252,8 @@ func (job *JobConfig) FileUpdate(ctx context.Context, api *gitee.ApiV5, r *pb.Gi
 
 	// 获取原文件信息
 
-	res1, er := api.FileGet(h1, &gitee.FileGetRequest{
-		BaseRequest: gitee.BaseRequest{
+	res1, er := api.FileGet(h1, &git.FileGetRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Repo,
 		},
@@ -268,16 +270,15 @@ func (job *JobConfig) FileUpdate(ctx context.Context, api *gitee.ApiV5, r *pb.Gi
 	for k, v := range job.varParams {
 		p[k] = v
 	}
-	rawContent, _ := res1.DecodeContent()
-	p["raw_content"] = string(rawContent)
+	p["raw_content"] = res1.Content
 	content, er := conv.DefaultStringTemplate().SetParam(p).Execute(inContent)
 	if er != nil {
 		return nil, errs.New(er, "内容模板错误")
 	}
 
 	// 更新文件信息
-	res2, er := api.FileUpdate(h2, &gitee.FileUpdateRequest{
-		BaseRequest: gitee.BaseRequest{
+	res2, er := api.FileUpdate(h2, &git.FileUpdateRequest{
+		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,
 			Repo:  r.Repo,
 		},
@@ -290,5 +291,5 @@ func (job *JobConfig) FileUpdate(ctx context.Context, api *gitee.ApiV5, r *pb.Gi
 	if er != nil {
 		return nil, errs.New(er, "文件更新错误")
 	}
-	return []byte(res2.Commit.HtmlUrl), nil
+	return []byte(res2.Commit.CommitUrl), nil
 }

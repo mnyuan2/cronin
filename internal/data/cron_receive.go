@@ -43,8 +43,6 @@ func (m *CronReceiveData) Set(data *models.CronReceive) error {
 		return m.db.Where("id=?", data.Id).Omit("entry_id", "env").Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
-		data.StatusDt = data.CreateDt
-		data.StatusRemark = "新增"
 		return m.db.Create(data).Error
 	}
 }
