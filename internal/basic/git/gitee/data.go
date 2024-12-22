@@ -10,6 +10,31 @@ type BaseRequest struct {
 	Repo  string `json:"repo"`  // 项目名称（仓库路径）
 }
 
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
+
+type Pulls struct {
+	BaseRequest
+	State   string `json:"state"`    // 可选。Pull Request 状态: open、closed、merged、all
+	Head    string `json:"head"`     // 可选。Pull Request 提交的源分支。格式：branch 或者：username:branch
+	Base    string `json:"base"`     // 可选。Pull Request 提交目标分支的名称。
+	Page    int    `json:"page"`     // 当前的页码
+	PerPage int    `json:"per_page"` // 每页的数量，最大为 100
+}
+
+type PullsResponse []*PullsItem
+type PullsItem struct {
+	Id     int           `json:"id"`
+	Number int           `json:"number"`
+	State  string        `json:"state"`
+	Head   *PullsItemRef `json:"head"`
+	Base   *PullsItemRef `json:"base"`
+}
+type PullsItemRef struct {
+	Ref string `json:"ref"`
+}
+
 type PullsCreateRequest struct {
 	BaseRequest
 	// 必填。Pull Request 标题
@@ -82,6 +107,7 @@ type PullsMergeResponse struct {
 	Sha     string `json:"sha"`
 	Merged  bool   `json:"merged"`
 	Message string `json:"message"`
+	Error   string `json:"error"`    // 部分业务错误时会返回此字段
 	HtmlUrl string `json:"html_url"` // 这是自定义字段
 }
 

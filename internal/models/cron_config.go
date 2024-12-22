@@ -118,6 +118,8 @@ type CronConfig struct {
 	AuditUserName   string `json:"audit_user_name" gorm:"column:audit_user_name;type:varchar(64);default:'';comment:审核人名称;"`
 	HandleUserIds   string `json:"handle_user_ids" gorm:"column:handle_user_ids;type:varchar(255);default:'';comment:处理人,多选id逗号分隔;"`
 	HandleUserNames string `json:"handle_user_names" gorm:"column:handle_user_names;type:varchar(500);default:'';comment:处理人名称,多选id逗号分隔;"`
+	TagIds          string `json:"tag_ids" gorm:"column:tag_ids;type:varchar(255);default:'';comment:标签id,多选逗号分隔;"`
+	TagNames        string `json:"tag_names" gorm:"column:tag_names;type:varchar(500);default:'';comment:标签名称,多选逗号分隔;"`
 }
 
 func (m *CronConfig) TableName() string {

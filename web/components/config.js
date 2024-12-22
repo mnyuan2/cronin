@@ -13,30 +13,36 @@ var MyConfig = Vue.extend({
             </div>
         </el-menu>
         <el-row>
-            <el-form :inline="true" :model="listParam" size="small" class="search-form">
+            <el-form :inline="true" :model="listParam" size="mini" class="search-form">
                 <el-form-item label="名称">
                     <el-input v-model="listParam.name" placeholder="搜索名称"></el-input>
                 </el-form-item>
                 <el-form-item label="协议">
-                    <el-select v-model="listParam.protocol" placeholder="所有" multiple style="width: 150px">
+                    <el-select v-model="listParam.protocol" placeholder="所有" multiple style="width: 140px">
                         <el-option v-for="item in dic.protocol" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="状态">
-                    <el-select v-model="listParam.status" placeholder="所有" multiple style="width: 160px">
+                    <el-select v-model="listParam.status" placeholder="所有" multiple style="width: 150px">
                         <el-option v-for="item in dic.config_status" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="处理人">
-                    <el-select v-model="listParam.handle_user_ids" placeholder="所有" multiple>
+                    <el-select v-model="listParam.handle_user_ids" placeholder="所有" multiple style="width: 150px">
                         <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="创建人">
-                    <el-select v-model="listParam.create_user_ids" placeholder="所有" multiple>
+                    <el-select v-model="listParam.create_user_ids" placeholder="所有" multiple style="width: 150px">
                         <el-option v-for="item in dic.user" :label="item.name" :value="item.id"></el-option>
                     </el-select>
                 </el-form-item>
+                <el-form-item label="标签">
+                    <el-select v-model="listParam.tag_ids" placeholder="所有" multiple style="width: 150px">
+                        <el-option v-for="item in dic.tag" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                
                 <el-form-item>
                     <el-button type="primary" @click="getList">查询</el-button>
                 </el-form-item>
@@ -75,6 +81,7 @@ var MyConfig = Vue.extend({
             <el-table-column prop="remark" label="备注"></el-table-column>
             <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
             <el-table-column prop="create_user_name" label="创建人" width="80"></el-table-column>
+            <el-table-column prop="tag_names" label="标签"></el-table-column>
         </el-table>
         <el-pagination
                 @size-change="handleSizeChange"
@@ -105,6 +112,7 @@ var MyConfig = Vue.extend({
                 config_status:[],
                 user:[],
                 protocol: [],
+                tag: [],
             },
             // dic_sql_source:[],
             // dic_sql_driver:[],
@@ -804,6 +812,7 @@ var MyConfig = Vue.extend({
                 // Enum.dicHostSource,
                 // Enum.dicCmdType,
                 Enum.dicUser,
+                Enum.dicTag,
                 // Enum.dicMsg
             ]
             api.dicList(types,(res) =>{
@@ -813,6 +822,7 @@ var MyConfig = Vue.extend({
                 // this.dic_git_event = res[Enum.dicGitEvent]
                 // this.dic_host_source =res[Enum.dicHostSource]
                 this.dic.user = res[Enum.dicUser]
+                this.dic.tag = res[Enum.dicTag]
                 // this.dic_msg = res[Enum.dicMsg]
                 // this.dic_cmd_type = res[Enum.dicCmdType]
                 // this.dic_sql_driver = res[Enum.dicSqlDriver]

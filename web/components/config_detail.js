@@ -84,6 +84,10 @@ var MyConfigDetail = Vue.extend({
                         <template slot="label">参数实现</template>
                         <el-input type="textarea" v-model="detail.var_params" autosize disabled></el-input>
                     </el-descriptions-item>
+                    <el-descriptions-item span="2" v-if="detail.tag_ids && detail.tag_ids.length">
+                        <template slot="label">标签</template>
+                        <div>{{detail.tag_names}}</div>
+                    </el-descriptions-item>
                     
                     <el-descriptions-item span="2">
                         <template slot="label">细节</template>

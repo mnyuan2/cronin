@@ -52,8 +52,19 @@ type GitEventFileUpdate struct {
 	Branch  string `json:"branch"`  // 分支名称
 }
 
+type GetEventPRList struct {
+	Owner   string `json:"owner"`    // 空间地址
+	Repo    string `json:"repo"`     // 项目名称（仓库路径）
+	State   string `json:"state"`    // 可选。Pull Request 状态: open、closed、merged、all
+	Head    string `json:"head"`     // 可选。Pull Request 提交的源分支。格式：branch 或者：username:branch
+	Base    string `json:"base"`     // 可选。Pull Request 提交目标分支的名称。
+	Page    int    `json:"page"`     // 当前的页码
+	PerPage int    `json:"per_page"` // 每页的数量，最大为 100
+}
+
 // 任务列表
 type CronConfigListRequest struct {
+	IsExecRatio          int    `json:"is_exec_ratio"` // 执行率
 	Ids                  []int  `form:"ids[]"`
 	Type                 int    `form:"type"`
 	Page                 int    `form:"page"`
@@ -64,6 +75,7 @@ type CronConfigListRequest struct {
 	HandleUserIds        []int  `form:"handle_user_ids[]"`
 	CreateOrHandleUserId int    `form:"create_or_handle_user_id"`
 	Name                 string `form:"name"`
+	TagIds               []int  `json:"tag_ids"`
 }
 type CronConfigListReply struct {
 	List []*CronConfigListItem `json:"list"`
@@ -88,9 +100,25 @@ type CronConfigListItem struct {
 	VarFields      []*KvItem `json:"var_fields" gorm:"-"` // 定义变量参数
 	VarFieldsStr   []byte    `json:"-" gorm:"column:var_fields;"`
 	HandleUserStr  []byte    `json:"-" gorm:"column:handle_user_ids;"`
+	TagIdsStr      []byte    `json:"-" gorm:"column:tag_ids"`
 	CreateUserId   int       `json:"create_user_id"`
 	CreateUserName string    `json:"create_user_name" gorm:"-"`
 	HandleUserIds  []int     `json:"handle_user_ids" gorm:"-"` // 处理人
+	TagIds         []int     `json:"tag_ids" gorm:"-"`         //
+	TagNames       string    `json:"tag_names"`                //
+}
+
+// 任务匹配列表
+type CronMatchListRequest struct {
+	Search []*CronMatchListSearchItem `json:"search"`
+}
+type CronMatchListSearchItem struct {
+	Type  string   `json:"type"`
+	Value []string `json:"value"`
+}
+type CronMatchListReply struct {
+	List      []*CronConfigListItem `json:"list"`
+	VarParams map[string]string     `json:"var_params"` // 这里还要返回pr的变量实现，还有就是任务中所有包含的变量。
 }
 
 type CronConfigDetailRequest struct {
@@ -129,6 +157,8 @@ type CronConfigDetailReply struct {
 	AuditUserId      int                `json:"audit_user_id"`
 	AuditUserName    string             `json:"audit_user_name"`
 	HandleUserIds    []int              `json:"handle_user_ids"` // 处理人
+	TagIds           []int              `json:"tag_ids"`
+	TagNames         string             `json:"tag_names"`
 }
 
 // 任务设置
@@ -145,6 +175,7 @@ type CronConfigSetRequest struct {
 	StatusRemark  string             `json:"status_remark"`      // （审核时）状态备注
 	HandleUserIds []int              `json:"handle_user_ids"`    // 处理人
 	Remark        string             `json:"remark"`             // 备注
+	TagIds        []int              `json:"tag_ids"`            // 标签
 	MsgSet        []*CronMsgSet      `json:"msg_set"`            // 消息设置
 	AfterSleep    int                `json:"after_sleep"`        // 延迟关闭
 	ErrRetryNum   int                `json:"err_retry_num"`      // 错误重试次数

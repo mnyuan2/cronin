@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"time"
 )
 
@@ -87,6 +88,7 @@ func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 		)
 		return errs.New(_db.Error, "连接失败")
 	}
+	_db.Logger = logger.Discard // 取消日志打印
 
 	statement := []*pb.KvItem{} // value.具体sql、key.描述备注
 

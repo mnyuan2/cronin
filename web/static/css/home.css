@@ -82,6 +82,9 @@ i.hover:hover{
 *:hover{
     scrollbar-color: #8b8b8b #fcfcfc;
 }
+.el-container>.el-main{
+    padding: 15px;
+}
 .el-menu--horizontal>.el-menu-item,
 .el-submenu{
     height: 46px;
@@ -223,7 +226,7 @@ i.el-alert__icon{
 }
 /*边栏*/
 .aside-card{
-    margin-top: 20px;
+    margin-bottom: 15px;
 }
 .aside-card .el-card__header{
     padding: 5px 15px;
@@ -252,6 +255,9 @@ i.el-alert__icon{
     display: inline;
 }
 
+.form-inline .el-input{
+    width: auto;
+}
 /*任务表单弹窗*/
 .pipeline-form{
     padding: 0 10px 10px 10px;

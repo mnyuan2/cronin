@@ -55,6 +55,11 @@ func (m *Str) IsChinese(str string) bool {
 	return false
 }
 
+// 是否包含指定字符
+func (m *Str) Contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
 // 分切字符串
 func (m *Str) Slice(val string, out interface{}) (err error) {
 	if val == "" {

@@ -175,6 +175,17 @@ func (h *ChangeLogHandle) diffConfig(old, new *models.CronConfig) (content []*mo
 			NewValName: new.Remark,
 		})
 	}
+	if old.TagIds != new.TagIds {
+		content = append(content, &models.ChangeLogField{
+			Field:      "tag_ids",
+			VType:      reflect.Int.String(),
+			OldVal:     old.TagIds,
+			NewVal:     new.TagIds,
+			FieldName:  "标签",
+			OldValName: old.TagNames,
+			NewValName: new.TagNames,
+		})
+	}
 	if old.Status != new.Status {
 		content = append(content, &models.ChangeLogField{
 			Field:      "status",

@@ -41,6 +41,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.POST("/foundation/parse_spec", routerParseSpec)
 
 	r.GET("/config/list", httpList)
+	r.POST("/config/match_list", httpMatchList)
 	r.GET("/config/detail", httpConfigDetail)
 	r.POST("/config/set", httpSet)
 	r.POST("/config/change_status", httpChangeStatus)
@@ -101,6 +102,11 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/role/auth_list", routerAuthList)
 	r.POST("/role/auth_set", routerRoleAuthSet)
 	r.POST("/role/change_status")
+
+	// tag
+	r.GET("/tag/list", routerTagList)
+	r.POST("/tag/set", routerTagSet)
+	r.POST("/tag/change_status", routerTagChangeStatus)
 
 	// 视图
 	r.GET("/", func(ctx *gin.Context) {
