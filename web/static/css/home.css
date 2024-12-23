@@ -224,6 +224,9 @@ i.el-alert__icon{
 .search-form .el-form-item__label{
     padding-right: 5px;
 }
+.search-form .el-input__inner{
+    padding: 0 6px;
+}
 /*边栏*/
 .aside-card{
     margin-bottom: 15px;
@@ -250,6 +253,7 @@ i.el-alert__icon{
     border-bottom: 1px solid #f5f5f5;
     padding: 7px 2px;
     font-size: 14px;
+    white-space: nowrap;
 }
 .aside-card ol li .el-link{
     display: inline;

@@ -44,7 +44,7 @@ func (m *CronLogData) GetList(where *db.Where, page, size int, list interface{})
 func (m *CronLogData) SumConfTopError(w *db.Where) (list map[int]*SumConfTop, err error) {
 	where, args := w.Build()
 	sql := strings.Replace(`SELECT
-	ref_id conf_id,
+	ref_id,
 	sum(status_empty_num) status_empty_num,
 	sum(status_error_num) status_error_num,
 	sum(status_success_num) status_success_num
@@ -53,7 +53,7 @@ FROM cron_log_span_index
 GROUP BY ref_id;`, "%WHERE", "WHERE "+where, 1)
 	temps := []*models.CronLogSpanIndex{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Raw(sql, args...).Find(&temps).Error
+	err = m.db.Raw(sql, args...).Scan(&temps).Error
 	if err != nil {
 		return list, err
 	}

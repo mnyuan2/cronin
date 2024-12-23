@@ -48,19 +48,19 @@ func MysqlCollectorListen() {
 		}
 	}()
 
-	// 每小时合计指标
+	// 合计指标
 	go func() {
 		getKey := func(row *models.CronLogSpanIndex) string {
 			return fmt.Sprintf("%s|%s|%s|%s", row.Timestamp, row.Env, row.RefId, row.Operation)
 		}
-		for end := range time.Tick(time.Minute * 30) {
+		for tmp := range time.Tick(time.Minute) {
 			ctx := context.Background()
-			//curDateTime := end.Format("2006-01-02 15:00:00")
-			tmp := end.Add(time.Hour - 1)
+			tmp = tmp.Add(-time.Minute)
 			y, m, d := tmp.Date()
-			start := time.Date(y, m, d, tmp.Hour(), 0, 0, 0, tmp.Location())
+			start := time.Date(y, m, d, tmp.Hour(), tmp.Minute(), 0, 0, tmp.Location())
+			end := start.Add(time.Minute).Add(-time.Microsecond)
 
-			cli := db.New(ctx).Debug()
+			cli := db.New(ctx)
 			// 统计近期指标
 			list := data.NewCronLogSpanIndexData(ctx).
 				SumIndex(db.NewWhere().Gte("timestamp", start.UnixMicro()).Lte("timestamp", end.UnixMicro()))
@@ -69,23 +69,20 @@ func MysqlCollectorListen() {
 				continue
 			}
 			for _, item := range list {
-				//if item.Timestamp == curDateTime { // 当前小时统计不完整，忽略
-				//	continue
-				//}
 				listMap[getKey(item)] = item
 			}
 			// 对已经存在的指标进行更新
-			oldList := []*models.CronLogSpanIndex{}
-			cli.Where("`timestamp` >= ? AND `timestamp` <= ?", start.Format(time.DateTime), end.Format(time.DateTime)).
-				Find(&oldList)
-			for _, item := range oldList {
-				k := getKey(item)
-				if row, ok := listMap[k]; ok {
-					row.Id = item.Id
-					cli.Select("status_empty_number", "status_error_number", "status_success_number", "duration_max", "duration_avg").Updates(row)
-					delete(listMap, k)
-				}
-			}
+			//oldList := []*models.CronLogSpanIndex{}
+			//cli.Where("`timestamp` >= ? AND `timestamp` <= ?", start.Format(time.DateTime), end.Format(time.DateTime)).
+			//	Find(&oldList)
+			//for _, item := range oldList {
+			//	k := getKey(item)
+			//	if row, ok := listMap[k]; ok {
+			//		row.Id = item.Id
+			//		cli.Select("status_empty_number", "status_error_number", "status_success_number", "duration_max", "duration_avg").Updates(row)
+			//		delete(listMap, k)
+			//	}
+			//}
 			// 写入新指标
 			newList := []*models.CronLogSpanIndex{}
 			for _, item := range listMap {

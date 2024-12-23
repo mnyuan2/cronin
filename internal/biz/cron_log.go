@@ -44,8 +44,10 @@ func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListRe
 		}
 	}
 
-	list := []*models.CronLogSpan{}
-	_, err = data.NewCronLogSpanData(dm.ctx).ListPage(w, 1, r.Limit, &list)
+	list, err := data.NewCronLogSpanData(dm.ctx).List(w, r.Limit)
+	if err != nil {
+		return nil, errs.New(err, "查询失败")
+	}
 	resp = &pb.CronLogListResponse{List: make([]*pb.CronLogSpan, len(list))}
 	for i, item := range list {
 		resp.List[i] = dm.toOut(item)
@@ -99,6 +101,9 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 	resp = &pb.CronLogDelResponse{}
 	w := db.NewWhere().Lte("timestamp", end.UnixMicro())
 	resp.Count, err = data.NewCronLogSpanData(dm.ctx).Del(w)
+	if resp.Count > 0 {
+		data.NewCronLogSpanIndexData(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.Format(time.DateTime)))
+	}
 
 	return resp, err
 }
