@@ -14,7 +14,7 @@ type CronLogSpanIndex struct {
 	DurationMax      int64 `json:"duration_max" gorm:"column:duration_max;type:bigint(20);default:0;comment:最大耗时us/微秒;"`
 	DurationAvg      int64 `json:"duration_avg" gorm:"column:duration;type:bigint(20);default:0;comment:平均耗时us/微秒;"`
 
-	//TraceIds string `json:"trace_ids" gorm:"column:trace_ids;type:json;default:null;comment:踪迹id集合;"` // mediumtext
+	TraceIds string `json:"trace_ids" gorm:"column:trace_ids;type:json;default:null;comment:踪迹id集合;"` // mediumtext
 	// 平均耗时、最高耗时
 }
 

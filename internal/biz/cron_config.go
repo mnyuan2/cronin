@@ -230,6 +230,7 @@ func (dm *CronConfigService) MatchList(r *pb.CronMatchListRequest) (resp *pb.Cro
 
 			row := &pb.CronConfigListItem{
 				Id:             item.Id,
+				Env:            item.Env,
 				Name:           item.Name,
 				Spec:           item.Spec,
 				Protocol:       item.Protocol,

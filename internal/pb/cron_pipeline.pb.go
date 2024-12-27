@@ -17,6 +17,7 @@ type CronPipelineListReply struct {
 }
 type CronPipelineListItem struct {
 	Id                      int                   `json:"id"`
+	Env                     string                `json:"env"`
 	EntryId                 int                   `json:"entry_id"`
 	Name                    string                `json:"name"`
 	Spec                    string                `json:"spec"`
@@ -92,6 +93,7 @@ type CronPipelineDetailRequest struct {
 }
 type CronPipelineDetailReply struct {
 	Id                      int                   `json:"id"`
+	Env                     string                `json:"env"`
 	EntryId                 int                   `json:"entry_id"`
 	Name                    string                `json:"name"`
 	Spec                    string                `json:"spec"`

@@ -83,6 +83,7 @@ type CronConfigListReply struct {
 }
 type CronConfigListItem struct {
 	Id             int       `json:"id"`
+	Env            string    `json:"env"`
 	Name           string    `json:"name"`
 	Spec           string    `json:"spec"`
 	Protocol       int       `json:"protocol"`
@@ -127,6 +128,7 @@ type CronConfigDetailRequest struct {
 }
 type CronConfigDetailReply struct {
 	Id               int                `json:"id"`
+	Env              string             `json:"env"`
 	EntryId          int                `json:"entry_id"`
 	Name             string             `json:"name"`
 	Spec             string             `json:"spec"`

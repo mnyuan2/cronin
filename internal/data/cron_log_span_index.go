@@ -30,11 +30,12 @@ func (m *CronLogSpanIndexData) SumIndex(w *db.Where) []*models.CronLogSpanIndex 
 				"ref_id",
 				"operation",
 				"sum(status=0) status_empty_num", "sum(status=1) status_error_num", "sum(status=2) status_success_num",
-				"max(duration) duration_max", "round(avg(duration)) duration_avg").
+				"max(duration) duration_max", "round(avg(duration)) duration_avg",
+				"JSON_ARRAYAGG(trace_id) trace_ids").
 			Group("FROM_UNIXTIME(LEFT(`timestamp`,10),'%Y-%m-%d %H:%i'), env, operation, ref_id").Scan(&list)
 	} else if m.db.GetDriver() == db.DriverSqlite {
 		m.db.Model(&models.CronLogSpan{}).Where(where, args...).
-			Select("strftime('%Y-%m-%d %H:%i:00', leftstr(`timestamp`, 10), 'unixepoch') AS timestamp",
+			Select("strftime('%Y-%m-%d %H:%M:00', leftstr(`timestamp`, 10), 'unixepoch') AS timestamp",
 				"env",
 				"ref_id",
 				"operation",
@@ -42,8 +43,9 @@ func (m *CronLogSpanIndexData) SumIndex(w *db.Where) []*models.CronLogSpanIndex 
 				"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS status_error_num",
 				"SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS status_success_num",
 				"MAX(duration) AS duration_max",
-				"ROUND(AVG(duration)) AS duration_avg").
-			Group("strftime('%Y-%m-%d %H:%i', leftstr(`timestamp`, 10), 'unixepoch'), env, operation, ref_id").Scan(&list)
+				"ROUND(AVG(duration)) AS duration_avg",
+				"concat('[',GROUP_CONCAT(concat('\"', trace_id,'\"')),']') AS trace_ids").
+			Group("strftime('%Y-%m-%d %H:%M:00', leftstr(`timestamp`, 10), 'unixepoch'), env, operation, ref_id").Scan(&list)
 	} else {
 
 	}
@@ -69,4 +71,15 @@ func (m *CronLogSpanIndexData) Del(where *db.Where) (count int, err error) {
 	}
 
 	return count, nil
+}
+
+// 查询指标
+func (m *CronLogSpanIndexData) List(where *db.Where, limit int) ([]*models.CronLogSpanIndex, error) {
+	list := []*models.CronLogSpanIndex{}
+	w, args := where.Build()
+	err := m.db.Where(w, args...).Limit(limit).Order("timestamp desc").Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
 }

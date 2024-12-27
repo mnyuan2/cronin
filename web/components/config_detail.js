@@ -248,7 +248,7 @@ var MyConfigDetail = Vue.extend({
         
         <el-row>
             <h3>执行日志</h3>
-            <my-config-log :tags="logs.tags"></my-config-log>
+            <my-config-log :search="logs.search"></my-config-log>
         </el-row>
         
         <el-dialog title="编辑任务" :visible.sync="detail_form_box.show && req.type=='config'" :close-on-click-modal="false" class="config-form-box" :before-close="formClose">
@@ -291,7 +291,7 @@ var MyConfigDetail = Vue.extend({
             },
             // 执行日志
             logs:{
-                tags:{}
+                search:{}
             },
             // 变更日志
             change_logs:{
@@ -329,7 +329,13 @@ var MyConfigDetail = Vue.extend({
         if (this.$route.query.entry_id){
             this.req.entry_id = Number(this.$route.query.entry_id)
         }
-        this.logs.tags = {ref_id: this.req.id, component:this.req.type}
+        this.logs.search = {
+            env: this.detail.env,
+            tags: JSON.stringify({
+                ref_id: this.req.id,
+                component:this.req.type
+            })
+        }
         this.change_logs.search.ref_id= this.req.id
         this.change_logs.search.ref_type= this.req.type
     },
