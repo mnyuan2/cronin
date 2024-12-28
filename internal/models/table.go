@@ -339,5 +339,19 @@ func historyDataRevise(db *db.MyDB) {
 		set.Content = `{"version":"0.8.1"}`
 		db.Select("content").Updates(set)
 	}
+	if set.Content == `{"version":"0.8.1"}` {
+		list := []*CronSetting{}
+		db.Where("scene in ?", []string{SceneGitSource, SceneHostSource}).Find(&list)
+		for _, item := range list {
+			if !strings.Contains(item.Content, "\"type\"") {
+				continue
+			}
+			item.Content = strings.ReplaceAll(item.Content, "\"type\"", "\"driver\"")
+			db.Select("content").Updates(item)
+		}
+
+		set.Content = `{"version":"0.8.3"}`
+		db.Select("content").Updates(set)
+	}
 
 }

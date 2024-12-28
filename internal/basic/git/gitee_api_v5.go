@@ -1,8 +1,7 @@
-package gitee
+package git
 
 import (
 	"bytes"
-	"cron/internal/basic/git"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -18,19 +17,19 @@ const (
 	apiV5BaseUrl = "https://gitee.com/api/v5"
 )
 
-type ApiV5 struct {
-	conf *git.Config
+type GiteeApiV5 struct {
+	conf *Config
 }
 
-func NewApiV5(c *git.Config) *ApiV5 {
-	return &ApiV5{conf: c}
+func NewGiteeApiV5(c *Config) *GiteeApiV5 {
+	return &GiteeApiV5{conf: c}
 }
 
 // User 用户信息
-func (m *ApiV5) User(handler *git.Handler) (user *git.User, err error) {
-	handler.OnStartTime(time.Now())
+func (m *GiteeApiV5) User(h *Handler) (res *User, err error) {
+	h.OnStartTime(time.Now())
 	defer func() {
-		handler.OnEndTime(time.Now())
+		h.OnEndTime(time.Now())
 	}()
 	u, _ := url.Parse(fmt.Sprintf("%s/user", apiV5BaseUrl))
 	params := url.Values{}
@@ -38,9 +37,9 @@ func (m *ApiV5) User(handler *git.Handler) (user *git.User, err error) {
 	u.RawQuery = params.Encode()
 
 	resp, err := http.Get(u.String())
-	handler.OnGeneral(http.MethodGet, u.String(), resp.StatusCode)
-	handler.OnRequestHeader(resp.Request.Header)
-	handler.OnResponseHeader(resp.Header)
+	h.OnGeneral(http.MethodGet, u.String(), resp.StatusCode)
+	h.OnRequestHeader(resp.Request.Header)
+	h.OnResponseHeader(resp.Header)
 
 	if err != nil {
 		return nil, fmt.Errorf("请求失败，%w", err)
@@ -48,7 +47,7 @@ func (m *ApiV5) User(handler *git.Handler) (user *git.User, err error) {
 	defer resp.Body.Close()
 
 	b, er := io.ReadAll(resp.Body)
-	handler.OnResponseBody(b)
+	h.OnResponseBody(b)
 	if er != nil {
 		return nil, fmt.Errorf("响应获取失败，%w", err)
 	}
@@ -60,11 +59,17 @@ func (m *ApiV5) User(handler *git.Handler) (user *git.User, err error) {
 			return nil, errors.New(message.(string))
 		}
 	}
-	user = &git.User{}
+	user := &giteeV5User{}
 	if err := jsoniter.Unmarshal(b, &user); err != nil {
 		return nil, fmt.Errorf("用户信息序列化失败，%w", err)
 	}
-	return user, nil
+	return &User{
+		Id:        strconv.Itoa(user.Id),
+		Login:     user.Login,
+		Name:      user.Name,
+		Bio:       user.Bio,
+		AvatarUrl: user.AvatarUrl,
+	}, nil
 }
 
 // FileGet 获取仓库具体路径下的文件内容
@@ -74,7 +79,7 @@ func (m *ApiV5) User(handler *git.Handler) (user *git.User, err error) {
 //		@param string repo 项目名称 仓库路径(path)
 //		@param string path 文件的路径
 //		@param string ref 分支、tag或commit。默认: 仓库的默认分支(通常是master)
-func (m *ApiV5) FileGet(handler *git.Handler, r *git.FileGetRequest) (res *git.FileGetResponse, err error) {
+func (m *GiteeApiV5) FileGet(handler *Handler, r *FileGetRequest) (res *FileGetResponse, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
@@ -106,17 +111,19 @@ func (m *ApiV5) FileGet(handler *git.Handler, r *git.FileGetRequest) (res *git.F
 		return nil, fmt.Errorf("响应获取失败，%w", err)
 	}
 
-	out := &FileGetResponse{}
-	_ = jsoniter.Unmarshal(b, &out)
 	if resp.StatusCode != 200 { // {"message":"401 Unauthorized: Access token is expired"}
+		out := &errorResponse{}
+		_ = jsoniter.Unmarshal(b, &out)
 		return nil, errors.New(out.Message)
 	}
+	out := &fileGetResponse{}
+	_ = jsoniter.Unmarshal(b, &out)
 
-	res = &git.FileGetResponse{}
-	res.Content, err = base64.StdEncoding.DecodeString(out.Content.Content)
+	content, err := base64.StdEncoding.DecodeString(out.Content.Content)
 	if err != nil {
 		return nil, fmt.Errorf("文件内容解码错误，%w", err)
 	}
+	res = &FileGetResponse{Content: string(content)}
 
 	return res, nil
 }
@@ -124,7 +131,7 @@ func (m *ApiV5) FileGet(handler *git.Handler, r *git.FileGetRequest) (res *git.F
 // FileUpdate 文件更新
 //
 //	https://gitee.com/api/v5/swagger#/putV5ReposOwnerRepoContentsPath
-func (m *ApiV5) FileUpdate(handler *git.Handler, r *git.FileUpdateRequest) (res *git.FileUpdateResponse, err error) {
+func (m *GiteeApiV5) FileUpdate(handler *Handler, r *FileUpdateRequest) (res *FileUpdateResponse, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
@@ -166,7 +173,7 @@ func (m *ApiV5) FileUpdate(handler *git.Handler, r *git.FileUpdateRequest) (res 
 	if er != nil {
 		return nil, fmt.Errorf("响应获取失败，%w", err)
 	}
-	res = &git.FileUpdateResponse{}
+	res = &FileUpdateResponse{}
 	_ = jsoniter.Unmarshal(respByte, res)
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(res.Message)
@@ -174,13 +181,13 @@ func (m *ApiV5) FileUpdate(handler *git.Handler, r *git.FileUpdateRequest) (res 
 	if res.Commit != nil {
 		res.Commit.CommitUrl = fmt.Sprintf("https://gitee.com/%s/%s/commit/%s", r.Owner, r.Repo, res.Commit.Sha)
 	} else {
-		res.Commit = &git.Commit{}
+		res.Commit = &Commit{}
 	}
 	return res, nil
 }
 
 // 获取 pr 列表
-func (m *ApiV5) Pulls(handler *git.Handler, r *git.Pulls) (res *git.PullsResponse, err error) {
+func (m *GiteeApiV5) Pulls(handler *Handler, r *Pulls) (res *PullsResponse, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
@@ -243,11 +250,11 @@ func (m *ApiV5) Pulls(handler *git.Handler, r *git.Pulls) (res *git.PullsRespons
 	}
 
 	if resp.StatusCode != http.StatusOK { //
-		msg := &ErrorResponse{}
+		msg := &errorResponse{}
 		_ = jsoniter.Unmarshal(respByte, msg)
 		return res, errors.New(msg.Message)
 	}
-	res = &git.PullsResponse{}
+	res = &PullsResponse{}
 	_ = jsoniter.Unmarshal(respByte, &res)
 
 	return res, nil
@@ -256,7 +263,7 @@ func (m *ApiV5) Pulls(handler *git.Handler, r *git.Pulls) (res *git.PullsRespons
 // 创建 pr
 //
 //	https://gitee.com/api/v5/swagger#/postV5ReposOwnerRepoPulls
-func (m *ApiV5) PullCreate(handler *git.Handler, r *git.PullsCreateRequest) (res *git.Pull, err error) {
+func (m *GiteeApiV5) PullCreate(handler *Handler, r *PullsCreateRequest) (res *Pull, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
@@ -303,7 +310,7 @@ func (m *ApiV5) PullCreate(handler *git.Handler, r *git.PullsCreateRequest) (res
 			return nil, errors.New(message.(string))
 		}
 	}
-	res = &git.Pull{}
+	res = &Pull{}
 	if err = jsoniter.Unmarshal(respByte, &res); err != nil {
 		return nil, fmt.Errorf("响应解析失败，%w", err)
 	}
@@ -311,7 +318,7 @@ func (m *ApiV5) PullCreate(handler *git.Handler, r *git.PullsCreateRequest) (res
 }
 
 // pr 审查 确认
-func (m *ApiV5) PullsReview(handler *git.Handler, r *PullsReviewRequest) (res []byte, err error) {
+func (m *GiteeApiV5) PullsReview(handler *Handler, r *PullsReviewRequest) (res []byte, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
@@ -358,7 +365,7 @@ func (m *ApiV5) PullsReview(handler *git.Handler, r *PullsReviewRequest) (res []
 }
 
 // pr 测试 确认
-func (m *ApiV5) PullsTest(handler *git.Handler, r *PullsTestRequest) (res []byte, err error) {
+func (m *GiteeApiV5) PullsTest(handler *Handler, r *PullsTestRequest) (res []byte, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
@@ -403,15 +410,16 @@ func (m *ApiV5) PullsTest(handler *git.Handler, r *PullsTestRequest) (res []byte
 	return respByte, nil
 }
 
-// PullGet pr是否合并
+// PullGet pr详情
 //
-//	https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoPullsNumberMerge
-func (m *ApiV5) PullGet(handler *git.Handler, r *git.PullsMergeRequest) (res *git.Pull, err error) {
+//	https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoPullsNumber
+func (m *GiteeApiV5) PullGet(handler *Handler, r *PullsMergeRequest) (res *Pull, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
 	}()
-	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/pulls/%v/merge", apiV5BaseUrl, r.Owner, r.Repo, r.Number))
+
+	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/pulls/%v", apiV5BaseUrl, r.Owner, r.Repo, r.Number))
 	params := url.Values{}
 	if m.conf.GetAccessToken() != "" {
 		params.Add("access_token", m.conf.GetAccessToken())
@@ -421,7 +429,7 @@ func (m *ApiV5) PullGet(handler *git.Handler, r *git.PullsMergeRequest) (res *gi
 	}
 
 	resp, err := http.Get(u.String())
-	res = &git.Pull{
+	res = &Pull{
 		Url: fmt.Sprintf("https://gitee.com/%s/%s/pulls/%v", r.Owner, r.Repo, r.Number),
 	}
 
@@ -440,26 +448,68 @@ func (m *ApiV5) PullGet(handler *git.Handler, r *git.PullsMergeRequest) (res *gi
 		return res, fmt.Errorf("响应获取失败，%w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK { // {"error": "Pull Request未合并或不存在"}
-		tmp := &PullsMergeResponse{}
+	if resp.StatusCode != http.StatusOK {
+		tmp := &errorResponse{}
 		_ = jsoniter.Unmarshal(respByte, tmp)
 		return res, errors.New(tmp.Error + tmp.Message)
 	}
-	if err = jsoniter.Unmarshal(respByte, res); err != nil {
-		return nil, fmt.Errorf("响应解析失败，%w", err)
+	body := &giteeV5Pull{}
+	if err = jsoniter.Unmarshal(respByte, body); err != nil {
+		return res, fmt.Errorf("响应解析失败，%w", err)
+	}
+	res.Id = strconv.Itoa(body.Id)
+	res.Title = body.Title
+	res.Number = body.Number
+	res.State = body.State
+	res.Merged = false
+	res.Mergeable = "unknown"
+	res.CreateAt = body.CreatedAt
+	res.Url = body.HtmlUrl
+	res.HeadRefName = body.Head.Ref
+	res.BaseRefName = body.Base.Ref
+	if body.MergedAt != nil {
+		res.Merged = true
+	}
+	if body.Mergeable {
+		res.Mergeable = "mergeable"
+	}
+	if !body.CanMergeCheck && res.State == "open" {
+		res.Mergeable = "conflicting"
 	}
 	return res, nil
+}
+
+func (m *GiteeApiV5) PullsIsMerge(handler *Handler, r *PullsMergeRequest) (err error) {
+	res, err := m.PullGet(handler, r)
+	if err != nil {
+		return err
+	}
+	if res.State == "open" {
+		if res.Mergeable == "mergeable" {
+			return nil // ok
+		}
+		if res.Mergeable == "conflicting" {
+			return errors.New("pr 存在冲突")
+		}
+	}
+	if res.State == "merged" {
+		return errors.New("pr 已合并")
+	}
+	if res.State == "closed" {
+		return errors.New("pr 已关闭")
+	}
+	return errors.New("pr 错误")
 }
 
 // PullMerge pr合并
 //
 //	https://gitee.com/api/v5/swagger#/putV5ReposOwnerRepoPullsNumberMerge
-func (m *ApiV5) PullMerge(handler *git.Handler, r *git.PullsMergeRequest) (res *git.Pull, err error) {
+func (m *GiteeApiV5) PullMerge(handler *Handler, r *PullsMergeRequest) (res *Pull, err error) {
 	handler.OnStartTime(time.Now())
 	defer func() {
 		handler.OnEndTime(time.Now())
 	}()
-	res = &git.Pull{
+	res = &Pull{
 		Url: fmt.Sprintf("https://gitee.com/%s/%s/pulls/%v", r.Owner, r.Repo, r.Number),
 	}
 
@@ -495,7 +545,7 @@ func (m *ApiV5) PullMerge(handler *git.Handler, r *git.PullsMergeRequest) (res *
 	}
 
 	if resp.StatusCode != http.StatusOK { // {"message":"此 Pull Request 未通过设置的审查"}、{"message":"此 Pull Request 未通过设置的测试"}
-		tmp := &PullsMergeResponse{}
+		tmp := &errorResponse{}
 		_ = jsoniter.Unmarshal(respByte, tmp)
 		return res, errors.New(tmp.Message)
 	}

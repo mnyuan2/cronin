@@ -190,6 +190,19 @@ func CheckGit(c *pb.CronGit) error {
 	}
 	for i, e := range c.Events {
 		switch e.Id {
+		case enum.GitEventPullsDetail:
+			if e.PRDetail.Owner == "" {
+				return errors.New("git 仓库空间 未设置")
+			}
+			if !regexp.MustCompile(`^[a-zA-Z][\w-]{1,}[a-zA-Z0-9]$`).MatchString(e.PRDetail.Owner) {
+				return errors.New("git 仓库空间 只允许字母、数字或者下划线（_）、中划线（-），至少 2 个字符，必须以字母开头，不能以特殊字符结尾")
+			}
+			if e.PRDetail.Repo == "" {
+				return errors.New("git 项目名称 未设置")
+			}
+			if e.PRDetail.Number == "" {
+				return errors.New("git 仓库PR的序数为必填")
+			}
 		case enum.GitEventPullsIsMerge:
 			if e.PRIsMerge.Owner == "" {
 				return errors.New("git 仓库空间 未设置")

@@ -1,25 +1,26 @@
-package github
+package git
 
 import (
 	"context"
-	"cron/internal/basic/git"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
+	"net/http"
+	"strings"
 	"time"
 )
 
-type ApiV4 struct {
-	conf *git.Config
+type GithubApiV4 struct {
+	conf *Config
 }
 
-func NewApiV4(c *git.Config) *ApiV4 {
-	return &ApiV4{conf: c}
+func NewGithubApiV4(c *Config) *GithubApiV4 {
+	return &GithubApiV4{conf: c}
 }
 
-func (m *ApiV4) client(ctx context.Context) *githubv4.Client {
+func (m *GithubApiV4) client(ctx context.Context) *githubv4.Client {
 	// 基础
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{
@@ -32,21 +33,29 @@ func (m *ApiV4) client(ctx context.Context) *githubv4.Client {
 }
 
 // User 用户信息
-func (m *ApiV4) User(h *git.Handler) (user *git.User, err error) {
+func (m *GithubApiV4) User(h *Handler) (user *User, err error) {
+	h.OnStartTime(time.Now())
+	defer func() {
+		h.OnEndTime(time.Now())
+	}()
 	cli := m.client(h.GetContext())
 
 	// 查询
 	q := &userGet{}
 	err = cli.Query(context.Background(), q, nil)
 	if err != nil {
-		return nil, fmt.Errorf("请求失败，%w", err)
+		return nil, fmt.Errorf("user query error: %w", err)
 	}
 
 	return q.Viewer, nil
 }
 
 // 获取文件内容
-func (m *ApiV4) FileGet(h *git.Handler, r *git.FileGetRequest) (res *git.FileGetResponse, err error) {
+func (m *GithubApiV4) FileGet(h *Handler, r *FileGetRequest) (res *FileGetResponse, err error) {
+	h.OnStartTime(time.Now())
+	defer func() {
+		h.OnEndTime(time.Now())
+	}()
 	cli := m.client(h.GetContext())
 
 	// 查询
@@ -57,25 +66,33 @@ func (m *ApiV4) FileGet(h *git.Handler, r *git.FileGetRequest) (res *git.FileGet
 		"path":  githubv4.String(r.Ref + ":" + r.Path),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("请求失败，%w", err)
+		return nil, fmt.Errorf("file query error: %w", err)
 	}
 	// 检查并处理查询结果
-	res = &git.FileGetResponse{}
+	res = &FileGetResponse{}
 	if q.Repository.Object.Blob.Text != "" {
-		decodedContent, err := base64.StdEncoding.DecodeString(q.Repository.Object.Blob.Text)
-		if err != nil {
-			return nil, fmt.Errorf("解码文件内容错误，%w", err)
-		}
-		res.Content = decodedContent
+		res.Content = q.Repository.Object.Blob.Text
+		h.OnResponseBody([]byte(res.Content))
 	}
 	return res, nil
 }
 
 // 更新文件
-func (m *ApiV4) FileUpdate(h *git.Handler, r *git.FileUpdateRequest) (res *git.FileUpdateResponse, err error) {
+func (m *GithubApiV4) FileUpdate(h *Handler, r *FileUpdateRequest) (res *FileUpdateResponse, err error) {
+	h.OnStartTime(time.Now())
+	defer func() {
+		h.OnEndTime(time.Now())
+	}()
 	cli := m.client(h.GetContext())
 
-	in := &githubv4.CreateCommitOnBranchInput{
+	// 获取最后一次 commit id
+	res1, err := m.CommitHistoryGet(h, r.Owner, r.Repo, r.Branch, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	req := &fileUpdateBody{}
+	in := githubv4.CreateCommitOnBranchInput{ // 注意此处不能使用指针
 		Branch: githubv4.CommittableBranch{
 			RepositoryNameWithOwner: githubv4.NewString(githubv4.String(r.Owner + "/" + r.Repo)),
 			BranchName:              githubv4.NewString(githubv4.String(r.Branch)),
@@ -84,10 +101,9 @@ func (m *ApiV4) FileUpdate(h *git.Handler, r *git.FileUpdateRequest) (res *git.F
 			Headline: githubv4.String(r.Message),
 			//Body:     githubv4.NewString(githubv4.String(r.Message)),
 		},
-		ExpectedHeadOid:  "", //
+		ExpectedHeadOid:  githubv4.GitObjectID(res1.LastOid), //
 		ClientMutationID: githubv4.NewString(githubv4.String("cronin")),
 		FileChanges: &githubv4.FileChanges{
-			Deletions: nil,
 			Additions: &[]githubv4.FileAddition{
 				{
 					Path:     githubv4.String(r.Path),
@@ -97,21 +113,14 @@ func (m *ApiV4) FileUpdate(h *git.Handler, r *git.FileUpdateRequest) (res *git.F
 		},
 	}
 
-	// 获取最后一次 commit id
-	res1, err := m.CommitHistoryGet(h, r.Owner, r.Repo, r.Branch, 1)
-	if err != nil {
-		return nil, fmt.Errorf("commit get error: %s", err.Error())
-	}
-	in.ExpectedHeadOid = githubv4.GitObjectID(res1.LastOid)
-
-	req := &fileUpdateBody{}
+	h.OnRequestBody([]byte(r.Content))
 	err = cli.Mutate(h.GetContext(), req, in, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return &git.FileUpdateResponse{
-		Commit: &git.Commit{
+	return &FileUpdateResponse{
+		Commit: &Commit{
 			CommitUrl: req.CreateCommitOnBranch.Commit.CommitUrl,
 			Oid:       req.CreateCommitOnBranch.Commit.Oid,
 		},
@@ -119,7 +128,11 @@ func (m *ApiV4) FileUpdate(h *git.Handler, r *git.FileUpdateRequest) (res *git.F
 }
 
 // 获取提交列表
-func (m *ApiV4) CommitHistoryGet(h *git.Handler, owner, repo, branch string, limit int) (res *CommitHistoryGetResponse, err error) {
+func (m *GithubApiV4) CommitHistoryGet(h *Handler, owner, repo, branch string, limit int) (res *CommitHistoryGetResponse, err error) {
+	h.OnStartTime(time.Now())
+	defer func() {
+		h.OnEndTime(time.Now())
+	}()
 	cli := m.client(h.GetContext())
 
 	// 查询
@@ -131,7 +144,7 @@ func (m *ApiV4) CommitHistoryGet(h *git.Handler, owner, repo, branch string, lim
 		"limit":  githubv4.Int(limit),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get commit request error: %s", err.Error())
+		return nil, fmt.Errorf("commit history query error: %s", err.Error())
 	}
 	// 检查并处理查询结果
 	res = &CommitHistoryGetResponse{
@@ -142,7 +155,7 @@ func (m *ApiV4) CommitHistoryGet(h *git.Handler, owner, repo, branch string, lim
 }
 
 // 获取 pr 列表
-func (m *ApiV4) Pulls(h *git.Handler, r *git.Pulls) (res *git.PullsResponse, err error) {
+func (m *GithubApiV4) Pulls(h *Handler, r *Pulls) (res *PullsResponse, err error) {
 	h.OnStartTime(time.Now())
 	defer func() {
 		h.OnEndTime(time.Now())
@@ -164,10 +177,10 @@ func (m *ApiV4) Pulls(h *git.Handler, r *git.Pulls) (res *git.PullsResponse, err
 
 	err = cli.Query(context.Background(), q, v)
 	if err != nil {
-		return nil, fmt.Errorf("get pulls request error: %s", err.Error())
+		return nil, fmt.Errorf("pulls query error: %s", err.Error())
 	}
 	// 检查并处理查询结果
-	res = &git.PullsResponse{
+	res = &PullsResponse{
 		Total: q.Repository.PullRequests.TotalCount,
 		List:  q.Repository.PullRequests.Nodes,
 	}
@@ -175,7 +188,7 @@ func (m *ApiV4) Pulls(h *git.Handler, r *git.Pulls) (res *git.PullsResponse, err
 }
 
 // 创建 pr
-func (m *ApiV4) PullCreate(h *git.Handler, r *git.PullsCreateRequest) (res *git.Pull, err error) {
+func (m *GithubApiV4) PullCreate(h *Handler, r *PullsCreateRequest) (res *Pull, err error) {
 	h.OnStartTime(time.Now())
 	defer func() {
 		h.OnEndTime(time.Now())
@@ -183,7 +196,8 @@ func (m *ApiV4) PullCreate(h *git.Handler, r *git.PullsCreateRequest) (res *git.
 
 	cli := m.client(h.GetContext())
 
-	in := &githubv4.CreatePullRequestInput{
+	req := &createPull{}
+	in := githubv4.CreatePullRequestInput{
 		RepositoryID:     githubv4.ID(""), // 获取方式待定
 		BaseRefName:      githubv4.String(r.Base),
 		HeadRefName:      githubv4.String(r.Head),
@@ -192,7 +206,6 @@ func (m *ApiV4) PullCreate(h *git.Handler, r *git.PullsCreateRequest) (res *git.
 		ClientMutationID: githubv4.NewString(githubv4.String("cronin")),
 	}
 
-	req := &createPull{}
 	err = cli.Mutate(h.GetContext(), req, in, nil)
 
 	//h.OnGeneral(req.Method, u.String(), resp.StatusCode)
@@ -208,11 +221,12 @@ func (m *ApiV4) PullCreate(h *git.Handler, r *git.PullsCreateRequest) (res *git.
 }
 
 // PullGet pr是否合并
-func (m *ApiV4) PullGet(h *git.Handler, r *git.PullsMergeRequest) (res *git.Pull, err error) {
+func (m *GithubApiV4) PullGet(h *Handler, r *PullsMergeRequest) (res *Pull, err error) {
 	h.OnStartTime(time.Now())
 	defer func() {
 		h.OnEndTime(time.Now())
 	}()
+	h.OnGeneral(http.MethodPost, "https://api.github.com/graphql", 0)
 
 	cli := m.client(h.GetContext())
 	// 查询
@@ -224,14 +238,41 @@ func (m *ApiV4) PullGet(h *git.Handler, r *git.PullsMergeRequest) (res *git.Pull
 	}
 	err = cli.Query(context.Background(), q, v)
 	if err != nil {
-		return nil, fmt.Errorf("get pull request error: %s", err.Error())
+		return &Pull{
+			Url: fmt.Sprintf("https://github.com/%s/%s/pull/%v", r.Owner, r.Repo, r.Number),
+		}, fmt.Errorf("pull query error: %s", err.Error())
 	}
+	res = q.Repository.PullRequest
+	res.State = strings.ToLower(res.State)
+	res.Mergeable = strings.ToLower(res.Mergeable)
+	return res, nil
+}
 
-	return q.Repository.PullRequest, nil
+// PullsIsMerge pr是否可合并
+func (m *GithubApiV4) PullsIsMerge(handler *Handler, r *PullsMergeRequest) (err error) {
+	res, err := m.PullGet(handler, r)
+	if err != nil {
+		return err
+	}
+	if res.State == "open" {
+		if res.Mergeable == "mergeable" {
+			return nil // ok
+		}
+		if res.Mergeable == "conflicting" {
+			return errors.New("pr 存在冲突")
+		}
+	}
+	if res.State == "merged" || res.Merged {
+		return errors.New("pr 已合并")
+	}
+	if res.State == "closed" {
+		return errors.New("pr 已关闭")
+	}
+	return errors.New("pr 错误")
 }
 
 // PullsMerge pr合并
-func (m *ApiV4) PullMerge(h *git.Handler, r *git.PullsMergeRequest) (res *git.Pull, err error) {
+func (m *GithubApiV4) PullMerge(h *Handler, r *PullsMergeRequest) (res *Pull, err error) {
 	h.OnStartTime(time.Now())
 	defer func() {
 		h.OnEndTime(time.Now())
@@ -240,23 +281,29 @@ func (m *ApiV4) PullMerge(h *git.Handler, r *git.PullsMergeRequest) (res *git.Pu
 	// 查询pr 获取id
 	pr, err := m.PullGet(h, r)
 	if err != nil {
-		return nil, err
+		return pr, err
 	}
 	if pr.Merged {
-		return nil, errors.New("pr 已合并")
+		return pr, errors.New("pr has been merged")
 	}
 
 	cli := m.client(h.GetContext())
-	in := &githubv4.MergePullRequestInput{
+
+	req := &pullMerge{}
+	in := githubv4.MergePullRequestInput{
 		PullRequestID:    githubv4.ID(pr.Id),
 		ClientMutationID: githubv4.NewString(githubv4.String("cronin")),
-		CommitHeadline:   githubv4.NewString(githubv4.String(r.Title)),
-		CommitBody:       githubv4.NewString(githubv4.String(r.Description)),
-		AuthorEmail:      nil,
 	}
-	*in.MergeMethod = githubv4.PullRequestMergeMethod(r.MergeMethod)
+	if r.MergeMethod != "" {
+		in.MergeMethod = newPullRequestMergeMethod(githubv4.PullRequestMergeMethod(strings.ToUpper(r.MergeMethod)))
+	}
+	if r.Title != "" {
+		in.CommitHeadline = githubv4.NewString(githubv4.String(r.Title))
+	}
+	if r.Description != "" {
+		in.CommitBody = githubv4.NewString(githubv4.String(r.Description))
+	}
 
-	req := &createPull{}
 	err = cli.Mutate(h.GetContext(), req, in, nil)
 
 	//h.OnGeneral(req.Method, u.String(), resp.StatusCode)
@@ -265,8 +312,8 @@ func (m *ApiV4) PullMerge(h *git.Handler, r *git.PullsMergeRequest) (res *git.Pu
 	//h.OnResponseHeader(resp.Header)
 	//h.OnResponseBody(respByte)
 	if err != nil {
-		return nil, err
+		return pr, err
 	}
 
-	return req.CreatePullRequest.PullRequest, nil
+	return req.MergePullRequest.PullRequest, nil
 }

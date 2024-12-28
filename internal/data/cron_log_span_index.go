@@ -35,7 +35,7 @@ func (m *CronLogSpanIndexData) SumIndex(w *db.Where) []*models.CronLogSpanIndex 
 			Group("FROM_UNIXTIME(LEFT(`timestamp`,10),'%Y-%m-%d %H:%i'), env, operation, ref_id").Scan(&list)
 	} else if m.db.GetDriver() == db.DriverSqlite {
 		m.db.Model(&models.CronLogSpan{}).Where(where, args...).
-			Select("strftime('%Y-%m-%d %H:%M:00', leftstr(`timestamp`, 10), 'unixepoch') AS timestamp",
+			Select("strftime('%Y-%m-%d %H:%M:00', `timestamp`/1000000, 'unixepoch') AS timestamp",
 				"env",
 				"ref_id",
 				"operation",
@@ -45,7 +45,7 @@ func (m *CronLogSpanIndexData) SumIndex(w *db.Where) []*models.CronLogSpanIndex 
 				"MAX(duration) AS duration_max",
 				"ROUND(AVG(duration)) AS duration_avg",
 				"concat('[',GROUP_CONCAT(concat('\"', trace_id,'\"')),']') AS trace_ids").
-			Group("strftime('%Y-%m-%d %H:%M:00', leftstr(`timestamp`, 10), 'unixepoch'), env, operation, ref_id").Scan(&list)
+			Group("strftime('%Y-%m-%d %H:%M:00', `timestamp`/1000000, 'unixepoch'), env, operation, ref_id").Scan(&list)
 	} else {
 
 	}

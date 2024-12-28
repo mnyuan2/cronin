@@ -1,8 +1,7 @@
-package gitee
+package git
 
 import (
 	"context"
-	"cron/internal/basic/git"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -10,13 +9,13 @@ import (
 	"testing"
 )
 
-var conf = &git.Config{AccessToken: "e6a28b06d79d492f9809069d5550b436"}
+var conf = &Config{AccessToken: "e6a28b06d79d492f9809069d5550b436"}
 
-func TestUrl(t *testing.T) {
-	api := NewApiV5(conf)
-	handler := git.NewHandler(context.Background())
-	res, err := api.FileGet(handler, &git.FileGetRequest{
-		BaseRequest: git.BaseRequest{
+func TestApiV5_Url(t *testing.T) {
+	api := NewGiteeApiV5(conf)
+	handler := NewHandler(context.Background())
+	res, err := api.FileGet(handler, &FileGetRequest{
+		BaseRequest: BaseRequest{
 			Owner: "mnyuan",
 			Repo:  "cronin",
 		},
@@ -31,16 +30,16 @@ func TestUrl(t *testing.T) {
 	fmt.Println(string(res.Content))
 }
 
-func TestPath(t *testing.T) {
+func TestApiV5_Path(t *testing.T) {
 	str := `2024/sm0713/that day.sql`
 	s := url.PathEscape(str)
 	fmt.Println(s)
 	fmt.Println(url.QueryEscape(str))
 }
 
-func TestUser(t *testing.T) {
-	api := NewApiV5(conf)
-	handler := git.NewHandler(context.Background())
+func TestApiV5_User(t *testing.T) {
+	api := NewGiteeApiV5(conf)
+	handler := NewHandler(context.Background())
 	res, err := api.User(handler)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -50,11 +49,11 @@ func TestUser(t *testing.T) {
 }
 
 func TestApiV5_PullsCreate(t *testing.T) {
-	api := NewApiV5(conf)
-	handler := git.NewHandler(context.Background())
+	api := NewGiteeApiV5(conf)
+	handler := NewHandler(context.Background())
 
-	res, err := api.PullCreate(handler, &git.PullsCreateRequest{
-		BaseRequest: git.BaseRequest{
+	res, err := api.PullCreate(handler, &PullsCreateRequest{
+		BaseRequest: BaseRequest{
 			Owner: "mnyuan",
 			Repo:  "cronin",
 		},
@@ -84,8 +83,8 @@ func TestApiV5_PullsCreate(t *testing.T) {
 }
 
 func TestApiV5_PullsReview(t *testing.T) {
-	api := NewApiV5(conf)
-	handler := git.NewHandler(context.Background())
+	api := NewGiteeApiV5(conf)
+	handler := NewHandler(context.Background())
 
 	res, err := api.PullsReview(handler, &PullsReviewRequest{
 		BaseRequest: BaseRequest{
@@ -104,8 +103,8 @@ func TestApiV5_PullsReview(t *testing.T) {
 }
 
 func TestApiV5_PullsTest(t *testing.T) {
-	api := NewApiV5(conf)
-	handler := git.NewHandler(context.Background())
+	api := NewGiteeApiV5(conf)
+	handler := NewHandler(context.Background())
 
 	res, err := api.PullsTest(handler, &PullsTestRequest{
 		BaseRequest: BaseRequest{
@@ -124,12 +123,12 @@ func TestApiV5_PullsTest(t *testing.T) {
 }
 
 // 合并分支
-func TestPullsMerge(t *testing.T) {
-	api := NewApiV5(conf)
-	handler := git.NewHandler(context.Background())
+func TestApiV5_PullsMerge(t *testing.T) {
+	api := NewGiteeApiV5(conf)
+	handler := NewHandler(context.Background())
 
-	res, err := api.PullMerge(handler, &git.PullsMergeRequest{
-		BaseRequest: git.BaseRequest{
+	res, err := api.PullMerge(handler, &PullsMergeRequest{
+		BaseRequest: BaseRequest{
 			Owner: "mnyuan",
 			Repo:  "cronin",
 		},
@@ -147,7 +146,7 @@ func TestPullsMerge(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestName(t *testing.T) {
+func TestApiV5_Name(t *testing.T) {
 	// 最后一个字符串+1
 	// 层级为4，不足时补0
 	str := `release_v3.5.87.2`

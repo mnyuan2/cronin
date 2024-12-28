@@ -87,7 +87,7 @@ func (m *ConfigData) PRList(ctx context.Context, r *pb.GetEventPRList) (resp []*
 		return nil, errs.New(er, "链接配置解析错误")
 	}
 	api := git.NewApi(git.Config{
-		Type:        conf.Git.Type,
+		Driver:      conf.Git.Driver,
 		AccessToken: conf.Git.AccessToken,
 	})
 	h := git.NewHandler(ctx)

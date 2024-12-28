@@ -129,8 +129,8 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 	case enum.DicJenkinsSource:
 		r.Source.Jenkins.Hostname = strings.Trim(r.Source.Jenkins.Hostname, "/")
 	case enum.DicGitSource:
-		if r.Source.Git.Type != "gitee" && r.Source.Git.Type != "github" {
-			return nil, fmt.Errorf("git 类型错误 %s", r.Source.Git.Type)
+		if r.Source.Git.Driver != "gitee" && r.Source.Git.Driver != "github" {
+			return nil, fmt.Errorf("git 驱动错误 %s", r.Source.Git.Driver)
 		}
 	case enum.DicHostSource:
 		if r.Source.Host.Ip == "" {
@@ -213,11 +213,11 @@ func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingS
 
 	case enum.DicGitSource:
 		cli := git.NewApi(git.Config{
-			Type:        r.Source.Git.Type,
+			Driver:      r.Source.Git.Driver,
 			AccessToken: r.Source.Git.AccessToken,
 		})
 		if cli == nil {
-			return nil, fmt.Errorf("git 类型错误 %s", r.Source.Git.Type)
+			return nil, fmt.Errorf("git 驱动错误 %s", r.Source.Git.Driver)
 		}
 		_, er := cli.User(git.NewHandler(dm.ctx))
 		if err != nil {

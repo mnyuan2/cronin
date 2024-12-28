@@ -338,6 +338,18 @@ var MyConfigForm = Vue.extend({
                 
             </div>
             
+            <!-- pr详情 -->
+            <div v-if="gitSet.data.id==3"> 
+                <el-form-item label="空间*">
+                    <el-autocomplete v-model="gitSet.data.pr_detail.owner" :fetch-suggestions="preferenceGitSuggestions" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-autocomplete>
+                </el-form-item>
+                <el-form-item label="仓库*">
+                    <el-autocomplete v-model="gitSet.data.pr_detail.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.pr_detail.owner)" placeholder="仓库路径"></el-autocomplete>
+                </el-form-item>
+                <el-form-item label="PR 编号*">
+                    <el-input v-model="gitSet.data.pr_detail.number" placeholder="本仓库PR的序数"></el-input>
+                </el-form-item>
+            </div>
             <!-- pr是否合并 -->
             <div v-if="gitSet.data.id==8"> 
                 <el-form-item label="空间*">
@@ -616,6 +628,16 @@ var MyConfigForm = Vue.extend({
                         this.gitSet.data = {
                             id: v,
                             pr_create: {}
+                        }
+                        break
+                    case 3:
+                        this.gitSet.data = {
+                            id: v,
+                            pr_detail:{
+                                owner: this.preference.git.owner ?? '', // 空间
+                                repo: this.preference.git.repo ?? '', // 仓库
+                                number: '',
+                            }
                         }
                         break
                     case 8:
@@ -1074,6 +1096,16 @@ var MyConfigForm = Vue.extend({
 
             if (this.gitSet.data.id == 2){
                 // 待完善...
+            }else if (this.gitSet.data.id == 3){ // pr 详情
+                if (this.gitSet.data.pr_detail.owner == ""){
+                    return this.$message.warning("空间为必填")
+                }
+                if (this.gitSet.data.pr_detail.repo == ""){
+                    return this.$message.warning("仓库为必填")
+                }
+                if (!this.gitSet.data.pr_detail.number){
+                    return this.$message.warning("仓库PR编号为必填")
+                }
             }else if (this.gitSet.data.id == 8){ // pr 是否 合并
                 if (this.gitSet.data.pr_is_merge.owner == ""){
                     return this.$message.warning("空间为必填")
@@ -1302,6 +1334,9 @@ var MyConfigForm = Vue.extend({
             switch (data.id){
                 case 2:
                     data.desc = '完善中...'
+                    break
+                case 3:
+                    data.desc = `<b>pr详情</b> <a href="https://gitee.com/${data.pr_detail.owner}/${data.pr_detail.repo}/pulls/${data.pr_detail.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> <b class="b">${data.pr_detail.owner}/${data.pr_detail.repo}</b>/pulls/<b class="b">${data.pr_detail.number}</b>`
                     break
                 case 8:
                     data.desc = `<b>pr是否合并</b> <a href="https://gitee.com/${data.pr_is_merge.owner}/${data.pr_is_merge.repo}/pulls/${data.pr_is_merge.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> <b class="b">${data.pr_is_merge.owner}/${data.pr_is_merge.repo}</b>/pulls/<b class="b">${data.pr_is_merge.number}</b>`

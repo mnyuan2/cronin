@@ -1,8 +1,7 @@
-package github
+package git
 
 import (
 	"context"
-	"cron/internal/basic/git"
 	"encoding/base64"
 	"fmt"
 	"github.com/shurcooL/githubv4"
@@ -69,8 +68,8 @@ func TestGetFile(t *testing.T) {
 
 // 获取历史提交
 func TestApiV4_GetCommitHistory(t *testing.T) {
-	api := NewApiV4(&git.Config{AccessToken: token})
-	h := git.NewHandler(context.Background())
+	api := NewGithubApiV4(&Config{AccessToken: token})
+	h := NewHandler(context.Background())
 
 	owner := "mnyuan2" // 仓库所有者
 	name := "cronin"   // 仓库名称

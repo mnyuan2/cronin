@@ -5,6 +5,7 @@ const (
 	// pr 列表 1
 	GitEventPullsCreate = 2 // pr创建
 	// pr 详情 3
+	GitEventPullsDetail = 3 // pr详情
 	// pr 更新 4
 	// pr 操作日志 5
 	// pr commit信息 6
@@ -118,6 +119,7 @@ const (
 
 var GitEventMap = map[int]string{
 	GitEventPullsCreate:  "pr创建",
+	GitEventPullsDetail:  "pr详情",
 	GitEventPullsIsMerge: "pr校验是否合并",
 	GitEventPullsMerge:   "pr合并",
 	GitEventFileUpdate:   "文件更新",

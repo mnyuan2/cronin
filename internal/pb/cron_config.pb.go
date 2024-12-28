@@ -24,6 +24,7 @@ type Git struct {
 
 type GitEvent struct {
 	Id         int                 `json:"id"`                    // 事件id
+	PRDetail   *GitEventPRMerge    `json:"pr_detail,omitempty"`   // pr详情
 	PRIsMerge  *GitEventPRMerge    `json:"pr_is_merge,omitempty"` // pr是否合并
 	PRMerge    *GitEventPRMerge    `json:"pr_merge"`              // pr合并内容
 	FileUpdate *GitEventFileUpdate `json:"file_update,omitempty"` // 文件更新

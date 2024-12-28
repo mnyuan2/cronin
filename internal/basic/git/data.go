@@ -22,9 +22,8 @@ type FileGetRequest struct {
 
 // 文件获取 响应
 type FileGetResponse struct {
-	Message string `json:"message"` // 错误描述
 	Sha     string `json:"sha"`
-	Content []byte `json:"content"`
+	Content string `json:"content"`
 }
 
 // 文件更新
@@ -43,11 +42,11 @@ type FileUpdateResponse struct {
 }
 
 type Commit struct {
-	Sha           string `json:"sha"` // gitee 使用
+	Sha           string `json:"sha" graphql:""` // gitee 使用
 	CommitUrl     string `json:"commit_url"`
 	Oid           string `json:"oid"`
 	Message       string `json:"message"`
-	CommittedDate string `json:"committedDate"`
+	CommittedDate string `json:"committed_date" graphql:"committedDate"`
 	Author        struct {
 		Name  string `json:"name"`
 		Email string `json:"email"`
@@ -71,13 +70,15 @@ type PullsResponse struct {
 }
 type Pull struct {
 	Id          string `json:"id"`
+	Title       string `json:"title"`
 	Number      int    `json:"number"`
 	State       string `json:"state"`
-	Merged      bool   `json:"merged"`
-	CreateAt    string `json:"createAt"`
+	Merged      bool   `json:"merged"`    // 是否已合并
+	Mergeable   string `json:"mergeable"` // 是否可合并：conflicting·冲突、mergeable·可以合并、unknown·未知的
+	CreateAt    string `json:"create_at" graphql:"createdAt"`
 	Url         string `json:"url"`
-	HeadRefName string `json:"headRefName"`
-	BaseRefName string `json:"baseRefName"`
+	HeadRefName string `json:"head_ref_name" graphql:"headRefName"`
+	BaseRefName string `json:"base_ref_name" graphql:"baseRefName"`
 }
 
 type PullsCreateRequest struct {
@@ -114,6 +115,24 @@ type PullsCreateRequest struct {
 	Draft bool
 	// 接受 Pull Request 时使用扁平化（Squash）合并
 	Squash bool
+}
+
+// pr 审查 确认
+type PullsReviewRequest struct {
+	BaseRequest
+	// 第几个PR，即本仓库PR的序数
+	Number int32
+	// 是否强制测试通过（默认否），只对管理员生效
+	Force bool
+}
+
+// pr 测试 确认
+type PullsTestRequest struct {
+	BaseRequest
+	// 第几个PR，即本仓库PR的序数
+	Number int32
+	// 是否强制审查通过（默认否），只对管理员生效
+	Force bool
 }
 
 // pr 合并

@@ -32,12 +32,14 @@ func (job *JobConfig) gitFunc(ctx context.Context, r *pb.CronGit) (resp []byte, 
 	}
 
 	api := git.NewApi(git.Config{
-		Type:        conf.Git.Type,
+		Driver:      conf.Git.Driver,
 		AccessToken: conf.Git.AccessToken,
 	})
 
 	for i, e := range r.Events {
 		switch e.Id {
+		case enum.GitEventPullsDetail:
+			resp, err = job.PRDetail(ctx, api, e.PRDetail)
 		case enum.GitEventPullsIsMerge:
 			resp, err = job.PRIsMerge(ctx, api, e.PRIsMerge)
 		case enum.GitEventPullsMerge:
@@ -66,7 +68,7 @@ func (job *JobConfig) getGitFile(ctx context.Context, r *pb.Git) (flies []*dtos.
 	}
 
 	api := git.NewApi(git.Config{
-		Type:        conf.Git.Type,
+		Driver:      conf.Git.Driver,
 		AccessToken: conf.Git.AccessToken,
 	})
 	flies = []*dtos.File{}
@@ -182,6 +184,35 @@ func (job *JobConfig) PRList(ctx context.Context, api git.Api, r *pb.GetEventPRL
 	return resp, nil
 }
 
+// pr 详情
+func (job *JobConfig) PRDetail(ctx context.Context, api git.Api, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
+	h := git.NewHandler(ctx)
+	defer func() {
+		job.handlerLog("PRDetail", h, err)
+	}()
+	num, er := strconv.Atoi(r.Number)
+	if er != nil {
+		return nil, errs.New(er, "pr编号输入有误")
+	}
+	if r.Owner == "" || r.Repo == "" || num == 0 {
+		return nil, errs.New(nil, "必填参数不足")
+	}
+
+	request := &git.PullsMergeRequest{
+		BaseRequest: git.BaseRequest{
+			Owner: r.Owner,
+			Repo:  r.Repo,
+		},
+		Number: int32(num),
+	}
+	res, er := api.PullGet(h, request)
+	if er != nil {
+		return nil, errs.New(er, "pr详情查询失败")
+	}
+	resp, _ = jsoniter.Marshal(res)
+	return resp, nil
+}
+
 // pr 是否合并
 func (job *JobConfig) PRIsMerge(ctx context.Context, api git.Api, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
 	h := git.NewHandler(ctx)
@@ -204,11 +235,11 @@ func (job *JobConfig) PRIsMerge(ctx context.Context, api git.Api, r *pb.GitEvent
 		},
 		Number: int32(num),
 	}
-	res, er := api.PullGet(h, request)
+	er = api.PullsIsMerge(h, request)
 	if er != nil {
-		return []byte(res.Url), errs.New(er)
+		return []byte(""), errs.New(er)
 	}
-	return []byte(res.Url), nil
+	return []byte(""), nil
 }
 
 // pr 合并
@@ -251,7 +282,6 @@ func (job *JobConfig) FileUpdate(ctx context.Context, api git.Api, r *pb.GitEven
 	}()
 
 	// 获取原文件信息
-
 	res1, er := api.FileGet(h1, &git.FileGetRequest{
 		BaseRequest: git.BaseRequest{
 			Owner: r.Owner,

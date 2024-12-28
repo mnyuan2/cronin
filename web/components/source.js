@@ -70,8 +70,8 @@ var MySource = Vue.extend({
                         </el-form-item>
                     </el-tab-pane>
                     <el-tab-pane label="git" name="13">
-                        <el-form-item label="类型">
-                            <el-select v-model="form.data.source.git.type">
+                        <el-form-item label="驱动">
+                            <el-select v-model="form.data.source.git.driver">
                                 <el-option label="gitee" value="gitee"></el-option>
                                 <el-option label="github" value="github"></el-option>
                             </el-select>
@@ -82,8 +82,8 @@ var MySource = Vue.extend({
                         </el-form-item>
                     </el-tab-pane>
                     <el-tab-pane label="主机" name="14">
-                        <el-form-item label="类型">
-                            <el-select v-model="form.data.source.host.type">
+                        <el-form-item label="驱动">
+                            <el-select v-model="form.data.source.host.driver">
                                 <el-option label="linux" value="linux"></el-option>
                             </el-select>
                         </el-form-item>
@@ -249,11 +249,11 @@ var MySource = Vue.extend({
                             username: ""
                         },
                         git:{
-                            type: 'gitee',
+                            driver: 'gitee',
                             access_token: ''
                         },
                         host:{
-                            type: 'linux',
+                            driver: 'linux',
                             ip: "",
                             port:"22",
                             user:"",
