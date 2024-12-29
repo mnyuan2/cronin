@@ -5,6 +5,8 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/models"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -40,7 +42,8 @@ func (m *CronConfigData) Set(data *models.CronConfig) error {
 	if data.Id > 0 {
 		return m.db.Where("id=?", data.Id).
 			Select("name", "spec", "protocol", "command", "remark", "update_dt", "type", "msg_set", "var_fields",
-				"after_tmpl", "command_hash", "msg_set_hash", "var_fields_hash", "after_sleep", "err_retry_num", "audit_user_id", "audit_user_name").
+				"after_tmpl", "command_hash", "msg_set_hash", "var_fields_hash", "after_sleep", "err_retry_num", "err_retry_sleep", "err_retry_mode",
+				"audit_user_id", "audit_user_name").
 			Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
@@ -64,4 +67,26 @@ func (m *CronConfigData) SetEntryId(data *models.CronConfig) error {
 func (m *CronConfigData) GetOne(env string, Id int) (data *models.CronConfig, err error) {
 	data = &models.CronConfig{}
 	return data, m.db.Where("env=? and id=?", env, Id).Take(data).Error
+}
+
+// Del 删除
+func (m *CronConfigData) Del(where *db.Where) (count int, err error) {
+	if where.Len() == 0 {
+		return 0, errors.New("未指定 config 删除条件")
+	}
+	count = 0
+	w, args := where.Build()
+	err = m.db.Model(&models.CronConfig{}).Where(w, args...).Select("count(*)").Find(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	if count == 0 {
+		return count, nil
+	}
+
+	err = m.db.Where(w, args...).Delete(&models.CronConfig{}).Error
+	if err != nil {
+		return 0, fmt.Errorf("删除失败，%w", err)
+	}
+	return count, nil
 }

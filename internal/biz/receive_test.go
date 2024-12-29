@@ -354,6 +354,7 @@ func TestReceiveTapd(t *testing.T) {
 [[end]]
 
 {
+	"title": "[[$data.event.object_info.title]]",
 	"user": "[[$data.event.user]]",
 	"type": "[[$data.event.object_type]]",
 	"event": "[[$data.event.event_key]]",

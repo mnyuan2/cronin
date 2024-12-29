@@ -20,7 +20,13 @@ var MyMessageTemplate = Vue.extend({
                     <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
 <!--                http消息-->
-                <el-form-item label="请求地址" class="http_url_box">
+                <el-form-item class="http_url_box">
+                    <span slot="label" style="white-space: nowrap;">
+                        地址
+                        <el-tooltip effect="dark" content="支持模板语法，点击查看更多" placement="top-start">
+                            <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                        </el-tooltip>
+                    </span>
                     <el-input class="input-input" v-model="form.data.template.http.url" placeholder="请输入http:// 或 https:// 开头的完整地址">
                         <el-select v-model="form.data.template.http.method" placeholder="请选请求方式" slot="prepend" style="width: 70px;">
                             <el-option label="GET" value="GET"></el-option>
@@ -28,19 +34,30 @@ var MyMessageTemplate = Vue.extend({
                         </el-select>
                     </el-input>
                 </el-form-item>
-                <el-form-item label="请求Header" class="http_header_box">
+                <el-form-item class="http_header_box">
+                    <span slot="label" style="white-space: nowrap;">
+                        Header
+                        <el-tooltip effect="dark" content="支持模板语法，点击查看更多" placement="top-start">
+                            <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                        </el-tooltip>
+                    </span>
                     <el-input class="input-input" v-for="(header_v,header_i) in form.data.template.http.header" v-model="header_v.value" placeholder="参数值">
                         <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="httpHeaderInput"></el-input>
                         <el-button slot="append" icon="el-icon-delete" @click="httpHeaderDel(header_i)"></el-button>
                     </el-input>
                 </el-form-item>
-                <el-form-item label="请求Body">
-                    <el-input type="textarea" v-model="form.data.template.http.body" rows="5" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
+                <el-form-item label="">
+                    <span slot="label" style="white-space: nowrap;">
+                        Body
+                        <el-tooltip effect="dark" content="支持模板语法，点击查看更多" placement="top-start">
+                            <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                        </el-tooltip>
+                    </span>
+                    <el-input type="textarea" v-model="form.data.template.http.body" :autosize="{minRows:5}" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                 </el-form-item>
                 <el-form-item label="模板变量">
-                  <el-alert title="请求地址、请求Header、请求Body 中使用[[var_name]] 双中括号包含变量名称，消息推送时会被实际值替换。" type="info" :closable="false"></el-alert>
                     <el-table :data="varDesc">
-                        <el-table-column label="name" property="name" width="100"></el-table-column>
+                        <el-table-column label="字段" property="name" width="100"></el-table-column>
                         <el-table-column label="说明" property="description"></el-table-column>
                     </el-table>
                 </el-form-item>

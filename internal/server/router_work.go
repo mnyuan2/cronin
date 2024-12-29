@@ -21,3 +21,19 @@ func routerWorkTable(ctx *gin.Context) {
 	rep, err := biz.NewWorkService(ctx.Request.Context(), user).Table(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
+
+// 删除日志
+func routerWorkTaskDel(ctx *gin.Context) {
+	r := &pb.WorkTaskDelRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	//user, err := GetUser(ctx)
+	//if err != nil {
+	//	NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
+	//	return
+	//}
+	rep, err := biz.NewWorkService(ctx.Request.Context(), nil).TaskDel(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}

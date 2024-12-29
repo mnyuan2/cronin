@@ -5,9 +5,11 @@ import (
 	"cron/internal/basic/auth"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
+	"time"
 )
 
 type WorkService struct {
@@ -82,4 +84,41 @@ SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GRO
 		}
 	}
 	return resp, nil
+}
+
+// TaskDel 删除任务
+func (dm *WorkService) TaskDel(r *pb.WorkTaskDelRequest) (resp *pb.WorkTaskDelReply, err error) {
+	if r.Retention == "" {
+		return nil, fmt.Errorf("retention 参数为必须")
+	}
+
+	re, err := time.ParseDuration(r.Retention)
+	if err != nil {
+		return nil, fmt.Errorf("retention 参数有误, %s", err.Error())
+	} else if re.Hours() < 24 {
+		return nil, fmt.Errorf("retention 参数不得小于24h")
+	}
+	end := time.Now().Add(-re)
+	resp = &pb.WorkTaskDelReply{}
+	w := db.NewWhere().Lte("status_dt", end.Format(time.DateTime)).Eq("status", models.ConfigStatusClosed)
+	// 删除 config
+	countConf, err := data.NewCronConfigData(dm.ctx).Del(w)
+	if err != nil {
+		return nil, fmt.Errorf("config 删除错误，%w", err)
+	}
+	resp.Info += fmt.Sprintf(" config delete count %v;", countConf)
+	// 删除 pipeline
+	countLine, err := data.NewCronPipelineData(dm.ctx).Del(w)
+	if err != nil {
+		return nil, fmt.Errorf("pipeline 删除错误，%w", err)
+	}
+	resp.Info += fmt.Sprintf(" pipeline delete count %v;", countLine)
+	// 删除 receive
+	countRece, err := data.NewCronReceiveData(dm.ctx).Del(w)
+	if err != nil {
+		return nil, fmt.Errorf("receive 删除错误，%w", err)
+	}
+	resp.Info += fmt.Sprintf(" receive delete count %v;", countRece)
+
+	return resp, err
 }

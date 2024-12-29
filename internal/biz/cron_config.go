@@ -138,11 +138,12 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
 			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
 		},
-		MsgSet:        []*pb.CronMsgSet{},
-		TypeName:      models.ConfigTypeMap[one.Type],
-		StatusName:    models.ConfigStatusMap[one.Status],
-		ProtocolName:  models.ProtocolMap[one.Protocol],
-		HandleUserIds: []int{},
+		MsgSet:           []*pb.CronMsgSet{},
+		TypeName:         models.ConfigTypeMap[one.Type],
+		StatusName:       models.ConfigStatusMap[one.Status],
+		ProtocolName:     models.ProtocolMap[one.Protocol],
+		ErrRetryModeName: models.RetryModeMap[one.ErrRetryMode],
+		HandleUserIds:    []int{},
 	}
 	err = conv.NewMapper().Exclude("VarFields", "Command", "MsgSet", "HandleUserIds").Map(one, resp)
 	if err != nil {
@@ -259,6 +260,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if d.Status == models.ConfigStatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
+		if d.Status == models.ConfigStatusClosed {
+			return nil, fmt.Errorf("请先恢复任务后编辑")
+		}
 		g.SetType(models.LogTypeUpdateDiy).OldConfig(*d)
 	} else {
 		g.SetType(models.LogTypeCreate).OldConfig(*d)
@@ -331,6 +335,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	} else if r.ErrRetryNum < 0 {
 		return nil, errors.New("最大重试次数不得小于0")
 	}
+	if _, ok := models.RetryModeMap[r.ErrRetryMode]; !ok {
+		return nil, errors.New("重试模式有误")
+	}
 	pl := len(r.VarFields)
 	for i, param := range r.VarFields {
 		if param.Key == "" && i < (pl-1) {
@@ -342,6 +349,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	for i, msg := range r.MsgSet {
 		if msg.MsgId == 0 {
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
+		}
+		if len(msg.Status) == 0 {
+			return nil, fmt.Errorf("推送%v未设置消息状态", i)
 		}
 	}
 
@@ -360,6 +370,8 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.AfterTmpl = r.AfterTmpl
 	d.AfterSleep = r.AfterSleep
 	d.ErrRetryNum = r.ErrRetryNum
+	d.ErrRetryMode = r.ErrRetryMode
+	d.ErrRetrySleep = r.ErrRetrySleep
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
@@ -447,8 +459,19 @@ func (dm *CronConfigService) ChangeStatus(r *pb.CronConfigSetRequest) (resp *pb.
 		}
 		conf.AuditUserId = dm.user.UserId
 		conf.AuditUserName = dm.user.UserName
+
 	case models.ConfigStatusReject: // 驳回
 		if conf.Status != models.ConfigStatusAudited {
+			return nil, fmt.Errorf("不支持的状态变更操作")
+		}
+		conf.AuditUserId = dm.user.UserId
+		conf.AuditUserName = dm.user.UserName
+
+	case models.ConfigStatusClosed:
+		if conf.Status != models.ConfigStatusDisable &&
+			conf.Status != models.ConfigStatusReject &&
+			conf.Status != models.ConfigStatusFinish &&
+			conf.Status != models.ConfigStatusError {
 			return nil, fmt.Errorf("不支持的状态变更操作")
 		}
 		conf.AuditUserId = dm.user.UserId

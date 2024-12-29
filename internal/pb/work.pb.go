@@ -13,3 +13,11 @@ type WorkTableItem struct {
 	Type     string `json:"type"`
 	Total    int64  `json:"total"`
 }
+
+// 删除任务
+type WorkTaskDelRequest struct {
+	Retention string `json:"retention"`
+}
+type WorkTaskDelReply struct {
+	Info string `json:"info"`
+}

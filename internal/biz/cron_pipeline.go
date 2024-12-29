@@ -117,6 +117,9 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 		if d.Status == models.ConfigStatusActive {
 			return nil, fmt.Errorf("请先停用任务后编辑")
 		}
+		if d.Status == models.ConfigStatusClosed {
+			return nil, fmt.Errorf("请先恢复任务后编辑")
+		}
 		g.SetType(models.LogTypeUpdateDiy).OldPipeline(*d)
 	} else {
 		g.SetType(models.LogTypeCreate).OldPipeline(*d)
@@ -169,6 +172,9 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 	for i, msg := range r.MsgSet {
 		if msg.MsgId == 0 {
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
+		}
+		if len(msg.Status) == 0 {
+			return nil, fmt.Errorf("推送%v未设置消息状态", i)
 		}
 	}
 	if _, ok := models.DisableActionMap[r.ConfigDisableAction]; !ok {
@@ -374,6 +380,15 @@ func (dm *CronPipelineService) ChangeStatus(r *pb.CronPipelineChangeStatusReques
 		conf.AuditUserId = dm.user.UserId
 		conf.AuditUserName = dm.user.UserName
 
+	case models.ConfigStatusClosed:
+		if conf.Status != models.ConfigStatusDisable &&
+			conf.Status != models.ConfigStatusReject &&
+			conf.Status != models.ConfigStatusFinish &&
+			conf.Status != models.ConfigStatusError {
+			return nil, fmt.Errorf("不支持的状态变更操作")
+		}
+		conf.AuditUserId = dm.user.UserId
+		conf.AuditUserName = dm.user.UserName
 	default:
 		return nil, fmt.Errorf("错误状态请求")
 	}

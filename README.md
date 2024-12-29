@@ -38,11 +38,12 @@ cronin 是企业内部任务管理平台，支持linux、windows服务器；具�
 
 
 ### 文档
-* [任务设置](https://gitee.com/mnyuan/cronin/blob/master/work/config_set.md)
-* [流水线设置](https://gitee.com/mnyuan/cronin/blob/master/work/pipeline_set.md)
-* [人员设置](https://gitee.com/mnyuan/cronin/blob/master/work/user_set.md)
-* [消息设置](https://gitee.com/mnyuan/cronin/blob/master/work/message_template_set.md)
-* [链接设置](https://gitee.com/mnyuan/cronin/blob/master/work/source_set.md)
+#### 手册
+* [任务设置](./work/config_set.md)
+* [流水线设置](./work/pipeline_set.md)
+* [人员设置](./work/user_set.md)
+* [消息设置](./work/message_template_set.md)
+* [链接设置](./work/source_set.md)
 * 环境设置
 
 

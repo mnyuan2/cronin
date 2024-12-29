@@ -15,7 +15,8 @@ type HttpConf struct {
 	Port string `yaml:"port"`
 }
 type TaskConf struct {
-	LogRetention string `yaml:"log_retention"` // 日志保留时间
+	LogRetention     string `yaml:"log_retention"`      // 日志保留时间
+	TaskDelRetention string `yaml:"task_del_retention"` // 任务保留时间
 }
 type CryptoConf struct {
 	Secret string `yaml:"secret"`

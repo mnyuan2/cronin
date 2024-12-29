@@ -144,7 +144,10 @@ func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 	}
 
 	job.commandParse = &pb.CronConfigCommand{}
-	job.msgSetParse = &dtos.MsgSetParse{MsgIds: []int{}, StatusIn: map[int]any{}, NotifyUserIds: []int{}, Set: []*pb.CronMsgSet{}}
+	job.msgSetParse = &dtos.MsgSetParse{
+		StatusList: map[int][]*dtos.MsgSetItem{},
+		Set:        []*pb.CronMsgSet{},
+	}
 	if cmd != nil {
 		if err := jsoniter.Unmarshal(cmd, job.commandParse); err != nil {
 			return errs.New(err, "配置解析错误")
@@ -156,10 +159,17 @@ func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 		}
 	}
 
-	for _, s := range job.msgSetParse.Set {
-		job.msgSetParse.StatusIn[s.Status] = struct{}{}
-		job.msgSetParse.NotifyUserIds = append(job.msgSetParse.NotifyUserIds, s.NotifyUserIds...)
-		job.msgSetParse.MsgIds = append(job.msgSetParse.MsgIds, s.MsgId)
+	for _, msgSet := range job.msgSetParse.Set {
+		for _, state := range msgSet.Status {
+			if _, ok := job.msgSetParse.StatusList[state]; !ok {
+				job.msgSetParse.StatusList[state] = []*dtos.MsgSetItem{}
+			}
+			job.msgSetParse.StatusList[state] = append(job.msgSetParse.StatusList[state], &dtos.MsgSetItem{
+				MsgId:         msgSet.MsgId,
+				Status:        state,
+				NotifyUserIds: msgSet.NotifyUserIds,
+			})
+		}
 	}
 	return nil
 }
@@ -233,17 +243,35 @@ func (job *JobConfig) Run() {
 	}
 
 	for i := 0; i <= job.conf.ErrRetryNum; i++ {
+		if i > 0 {
+			s := job.conf.ErrRetrySleep
+			if job.conf.ErrRetryMode == models.RetryModeIncr {
+				s *= i
+			}
+			job.Sleep(ctx, time.Second*time.Duration(s))
+		}
 		res, err = job.Exec(ctx)
 		if err == nil {
 			res, err = job.AfterTmpl(res, param)
 		}
-
 		if err != nil {
 			job.ErrorCount++
-			go job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
+			go job.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusDisable,
+				StatusDesc: err.Desc(),
+				Body:       []byte(err.Error()),
+				Duration:   time.Since(job.runTime).Seconds(),
+				RetryNum:   i,
+			})
 		} else {
 			job.ErrorCount = 0
-			go job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
+			go job.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusActive,
+				StatusDesc: "ok",
+				Body:       res,
+				Duration:   time.Since(job.runTime).Seconds(),
+				RetryNum:   i,
+			})
 			break // 成功后调出，不再重试
 		}
 	}
@@ -299,16 +327,35 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	}
 
 	for i := 0; i <= job.conf.ErrRetryNum; i++ {
+		if i > 0 {
+			s := job.conf.ErrRetrySleep
+			if job.conf.ErrRetryMode == models.RetryModeIncr {
+				s *= i
+			}
+			job.Sleep(ctx, time.Second*time.Duration(s))
+		}
 		res, err = job.Exec(ctx)
 		if err == nil {
 			res, err = job.AfterTmpl(res, params)
 		}
 		if err != nil {
 			job.ErrorCount++
-			job.messagePush(ctx, enum.StatusDisable, err.Desc(), []byte(err.Error()), time.Since(job.runTime).Seconds())
+			job.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusDisable,
+				StatusDesc: err.Desc(),
+				Body:       []byte(err.Error()),
+				Duration:   time.Since(job.runTime).Seconds(),
+				RetryNum:   i,
+			})
 		} else {
 			job.ErrorCount = 0
-			job.messagePush(ctx, enum.StatusActive, "ok", res, time.Since(job.runTime).Seconds())
+			job.messagePush(ctx, &dtos.MsgPushRequest{
+				Status:     enum.StatusActive,
+				StatusDesc: "ok",
+				Body:       res,
+				Duration:   time.Since(job.runTime).Seconds(),
+				RetryNum:   i,
+			})
 			break
 		}
 	}
@@ -643,8 +690,9 @@ func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, 
 }
 
 // 发送消息
-func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc string, body []byte, duration float64) {
-	if _, ok := job.msgSetParse.StatusIn[status]; !ok {
+func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
+	sets, ok := job.msgSetParse.StatusList[r.Status]
+	if !ok {
 		return
 	}
 
@@ -657,12 +705,21 @@ func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc st
 		span.End()
 	}()
 
+	msgIds, userIds := []int{}, []int{}
+	for _, set := range sets {
+		msgIds = append(msgIds, set.MsgId)
+		userIds = append(userIds, set.NotifyUserIds...)
+	}
+
 	w := db.NewWhere().
 		Eq("scene", models.SceneMsg).
-		In("id", job.msgSetParse.MsgIds, db.RequiredOption()).
+		In("id", msgIds, db.RequiredOption()).
 		Eq("status", enum.StatusActive)
 	msgs, er := data.NewCronSettingData(ctx).Gets(w)
-	if er != nil || len(msgs) == 0 {
+	if er != nil {
+		span.SetStatus(tracing.StatusError, "消息查询错误："+er.Error())
+		return
+	} else if len(msgs) == 0 {
 		return
 	}
 	msgMaps := map[int]*models.CronSetting{}
@@ -670,32 +727,37 @@ func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc st
 		msgMaps[m.Id] = m
 	}
 
-	users, _ := data.NewCronUserData(ctx).
-		GetList(db.NewWhere().In("id", job.msgSetParse.NotifyUserIds, db.RequiredOption()))
+	users, _ := data.NewCronUserData(ctx).GetList(db.NewWhere().In("id", userIds, db.RequiredOption()))
 	userMaps := map[int]*models.CronUser{}
 	for _, user := range users {
 		userMaps[user.Id] = user
 	}
 
 	// 重组临时变量，默认置空，有效的写入新值
-	args := map[string]string{
-		"env":                  job.conf.Env,
-		"config.name":          job.conf.Name,
-		"config.protocol_name": job.conf.GetProtocolName(),
-		"log.status_name":      models.LogStatusMap[status],
-		"log.status_desc":      statusDesc,
-		"log.body":             strings.ReplaceAll(string(body), `"`, `\\\"`), // 内部存在双引号会引发错误
-		"log.duration":         conv.Float64s().ToString(duration, 3),
-		"log.create_dt":        time.Now().Format(time.DateTime),
-		"user.username":        "",
-		"user.mobile":          "",
+	args := map[string]any{
+		"env": job.conf.Env,
+		"config": map[string]any{
+			"name":          job.conf.Name,
+			"protocol_name": job.conf.GetProtocolName(),
+		},
+		"log": map[string]any{
+			"retry_number": r.RetryNum,
+			"status_name":  models.LogStatusMap[r.Status],
+			"status_desc":  r.StatusDesc,
+			"body":         strings.ReplaceAll(string(r.Body), `"`, `\\\"`), // 内部存在双引号会引发错误
+			"duration":     conv.Float64s().ToString(r.Duration, 3),
+			"create_dt":    time.Now().Format(time.DateTime),
+		},
+		"user": map[string]any{
+			"username": "",
+			"mobile":   "",
+		},
+	}
+	for k, v := range r.Args {
+		args[k] = v
 	}
 
-	for _, set := range job.msgSetParse.Set {
-		if set.Status != status {
-			continue
-		}
-
+	for _, set := range sets {
 		// 查询模板
 		msg, ok := msgMaps[set.MsgId]
 		if !ok {
@@ -713,10 +775,13 @@ func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc st
 				}
 			}
 		}
-		args["user.username"], _ = jsoniter.MarshalToString(username)
-		args["user.mobile"], _ = jsoniter.MarshalToString(mobile)
-		args["user.username"] = strings.ReplaceAll(args["user.username"], `"`, `\"`)
-		args["user.mobile"] = strings.ReplaceAll(args["user.mobile"], `"`, `\"`)
+
+		name, _ := jsoniter.MarshalToString(username)
+		bile, _ := jsoniter.MarshalToString(mobile)
+		args["user"] = map[string]any{
+			"username_": strings.ReplaceAll(name, `"`, `\"`),
+			"mobile":    strings.ReplaceAll(bile, `"`, `\"`),
+		}
 
 		res, err := job.messagePushItem(ctx, []byte(msg.Content), args)
 		if err != nil {
@@ -729,16 +794,18 @@ func (job *JobConfig) messagePush(ctx context.Context, status int, statusDesc st
 }
 
 // 消息发送
-func (job *JobConfig) messagePushItem(ctx context.Context, templateByte []byte, args map[string]string) (res []byte, err errs.Errs) {
+func (job *JobConfig) messagePushItem(ctx context.Context, templateByte []byte, args map[string]any) (res []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "message-push-item")
 	defer span.End()
-	// 变量替换
-	for k, v := range args {
-		templateByte = bytes.Replace(templateByte, []byte("[["+k+"]]"), []byte(v), -1)
+
+	// 进行模板替换
+	b, er := conv.DefaultStringTemplate().SetParam(args).Execute(templateByte)
+	if er != nil {
+		return nil, errs.New(er, "消息模板解析错误[0]")
 	}
 
 	template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
-	if er := jsoniter.Unmarshal(templateByte, template); err != nil {
+	if er := jsoniter.Unmarshal(b, template); err != nil {
 		return nil, errs.New(er, "消息模板解析错误")
 	}
 

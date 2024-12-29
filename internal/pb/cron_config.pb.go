@@ -98,34 +98,37 @@ type CronConfigDetailRequest struct {
 	VarParams string `json:"var_params" form:"var_params"`
 }
 type CronConfigDetailReply struct {
-	Id             int                `json:"id"`
-	EntryId        int                `json:"entry_id"`
-	Name           string             `json:"name"`
-	Spec           string             `json:"spec"`
-	Protocol       int                `json:"protocol"`
-	ProtocolName   string             `json:"protocol_name"`
-	Remark         string             `json:"remark"`
-	Status         int                `json:"status"`
-	StatusName     string             `json:"status_name"`
-	StatusRemark   string             `json:"status_remark"`
-	StatusDt       string             `json:"status_dt"`
-	Type           int                `json:"type"`
-	TypeName       string             `json:"type_name"`
-	TopNumber      int                `json:"top_number"`       // 最近执行次数（最大5次）
-	TopErrorNumber int                `json:"top_error_number"` // 最近执行次数中，失败的次数
-	UpdateDt       string             `json:"update_dt"`
-	CreateDt       string             `json:"create_dt"`
-	AfterTmpl      string             `json:"after_tmpl"` // 结果模板
-	VarFields      []*KvItem          `json:"var_fields"` // 定义变量参数
-	Command        *CronConfigCommand `json:"command"`
-	MsgSet         []*CronMsgSet      `json:"msg_set"`
-	AfterSleep     int                `json:"after_sleep"`
-	ErrRetryNum    int                `json:"err_retry_num"`
-	CreateUserId   int                `json:"create_user_id"`
-	CreateUserName string             `json:"create_user_name"`
-	AuditUserId    int                `json:"audit_user_id"`
-	AuditUserName  string             `json:"audit_user_name"`
-	HandleUserIds  []int              `json:"handle_user_ids"` // 处理人
+	Id               int                `json:"id"`
+	EntryId          int                `json:"entry_id"`
+	Name             string             `json:"name"`
+	Spec             string             `json:"spec"`
+	Protocol         int                `json:"protocol"`
+	ProtocolName     string             `json:"protocol_name"`
+	Remark           string             `json:"remark"`
+	Status           int                `json:"status"`
+	StatusName       string             `json:"status_name"`
+	StatusRemark     string             `json:"status_remark"`
+	StatusDt         string             `json:"status_dt"`
+	Type             int                `json:"type"`
+	TypeName         string             `json:"type_name"`
+	TopNumber        int                `json:"top_number"`       // 最近执行次数（最大5次）
+	TopErrorNumber   int                `json:"top_error_number"` // 最近执行次数中，失败的次数
+	UpdateDt         string             `json:"update_dt"`
+	CreateDt         string             `json:"create_dt"`
+	AfterTmpl        string             `json:"after_tmpl"` // 结果模板
+	VarFields        []*KvItem          `json:"var_fields"` // 定义变量参数
+	Command          *CronConfigCommand `json:"command"`
+	MsgSet           []*CronMsgSet      `json:"msg_set"`
+	AfterSleep       int                `json:"after_sleep"`
+	ErrRetryNum      int                `json:"err_retry_num"`
+	ErrRetrySleep    int                `json:"err_retry_sleep"` // 错误重试间隔
+	ErrRetryMode     int                `json:"err_retry_mode"`  // 错误重试模式：1.固定间隔、2.增长间隔
+	ErrRetryModeName string             `json:"err_retry_mode_name"`
+	CreateUserId     int                `json:"create_user_id"`
+	CreateUserName   string             `json:"create_user_name"`
+	AuditUserId      int                `json:"audit_user_id"`
+	AuditUserName    string             `json:"audit_user_name"`
+	HandleUserIds    []int              `json:"handle_user_ids"` // 处理人
 }
 
 // 任务设置
@@ -145,6 +148,8 @@ type CronConfigSetRequest struct {
 	MsgSet        []*CronMsgSet      `json:"msg_set"`            // 消息设置
 	AfterSleep    int                `json:"after_sleep"`        // 延迟关闭
 	ErrRetryNum   int                `json:"err_retry_num"`      // 错误重试次数
+	ErrRetrySleep int                `json:"err_retry_sleep"`    // 错误重试间隔
+	ErrRetryMode  int                `json:"err_retry_mode"`     // 错误重试模式：1.固定间隔、2.增长间隔
 }
 type CronConfigSetResponse struct {
 	Id int `json:"id"`
@@ -152,7 +157,7 @@ type CronConfigSetResponse struct {
 
 type CronMsgSet struct {
 	MsgId         int   `json:"msg_id"`
-	Status        int   `json:"status"`
+	Status        []int `json:"status"`
 	NotifyUserIds []int `json:"notify_user_ids"`
 }
 type CronConfigCommand struct {
