@@ -569,6 +569,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
+	d.EmptyNotMsg = r.EmptyNotMsg
 	d.VarFieldsHash = fmt.Sprintf("%x", md5.Sum(d.VarFields))
 	d.CommandHash = fmt.Sprintf("%x", md5.Sum(d.Command))
 	d.MsgSetHash = fmt.Sprintf("%x", md5.Sum(d.MsgSet))

@@ -692,6 +692,9 @@ func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, 
 
 // 发送消息
 func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
+	if job.conf.EmptyNotMsg == enum.BoolYes && len(r.Body) == 0 {
+		return
+	}
 	sets, ok := job.msgSetParse.StatusList[r.Status]
 	if !ok {
 		return

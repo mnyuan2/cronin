@@ -4,6 +4,7 @@ import (
 	"context"
 	"cron/internal/basic/auth"
 	"cron/internal/basic/db"
+	"cron/internal/basic/enum"
 	"cron/internal/models"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -228,6 +229,17 @@ func (h *ChangeLogHandle) diffConfig(old, new *models.CronConfig) (content []*mo
 			FieldName:  "消息推送",
 			OldValName: "",
 			NewValName: "",
+		})
+	}
+	if old.EmptyNotMsg != new.EmptyNotMsg {
+		content = append(content, &models.ChangeLogField{
+			Field:      "empty_not_msg",
+			VType:      reflect.Int.String(),
+			OldVal:     old.EmptyNotMsg,
+			NewVal:     new.EmptyNotMsg,
+			FieldName:  "空结果不发消息",
+			OldValName: enum.BoolMap[old.EmptyNotMsg],
+			NewValName: enum.BoolMap[new.EmptyNotMsg],
 		})
 	}
 	if old.VarFieldsHash != new.VarFieldsHash {

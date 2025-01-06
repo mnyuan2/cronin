@@ -72,7 +72,7 @@ func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListRe
 			return nil, errs.New(err, "查询失败")
 		}
 		if len(list) == 0 {
-			return resp, nil
+			return &pb.CronLogListResponse{List: []*pb.CronLogSpan{}}, nil
 		}
 		idAll := []string{}
 		t, _ := time.ParseInLocation(time.DateTime, list[0].Timestamp, time.Local)

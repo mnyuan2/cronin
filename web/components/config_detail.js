@@ -23,12 +23,6 @@ var MyConfigDetail = Vue.extend({
                 <template slot="label">类型</template>
                 {{detail.type_name}}
             </el-descriptions-item>
-            <el-descriptions-item span="3">
-                <template slot="label">消息</template>
-                <div>
-                   <el-row class="input-box" v-for="(msg,msg_index) in detail.msg_set" v-html="msg.descrition" style="padding: 2px 4px;"></el-row>
-                </div>
-            </el-descriptions-item>
             <el-descriptions-item>
                 <template slot="label">处理人</template>
                 {{detail.handle_user_names}}
@@ -219,6 +213,13 @@ var MyConfigDetail = Vue.extend({
                             </div>
                         </el-form>
                     </el-descriptions-item>
+                    <el-descriptions-item span="2" v-if="detail.var_fields && detail.var_fields.length">
+                        <template slot="label">消息</template>
+                        <div>
+                            <el-checkbox v-model="detail.empty_not_msg==1" disabled v-show="detail.empty_not_msg==1">空结果不发消息</el-checkbox>
+                            <el-row class="input-box" v-for="(msg,msg_index) in detail.msg_set" v-html="msg.descrition" style="padding: 2px 4px;"></el-row>
+                        </div>
+                    </el-descriptions-item>
                 </el-descriptions>
             </el-tab-pane>
             <el-tab-pane label="变更历史" name="change_log">
@@ -248,7 +249,7 @@ var MyConfigDetail = Vue.extend({
         
         <el-row>
             <h3>执行日志</h3>
-            <my-config-log :search="logs.search"></my-config-log>
+            <my-config-log :search="logs.search" v-if="logs.show"></my-config-log>
         </el-row>
         
         <el-dialog title="编辑任务" :visible.sync="detail_form_box.show && req.type=='config'" :close-on-click-modal="false" class="config-form-box" :before-close="formClose">
@@ -291,6 +292,7 @@ var MyConfigDetail = Vue.extend({
             },
             // 执行日志
             logs:{
+                show: false,
                 search:{}
             },
             // 变更日志
@@ -330,7 +332,6 @@ var MyConfigDetail = Vue.extend({
             this.req.entry_id = Number(this.$route.query.entry_id)
         }
         this.logs.search = {
-            env: this.detail.env,
             tags: JSON.stringify({
                 ref_id: this.req.id,
                 component:this.req.type
@@ -410,6 +411,10 @@ var MyConfigDetail = Vue.extend({
 
                 this.detail = res.data
                 setDocumentTitle(res.data.name)
+                if (!this.logs.show){
+                    this.logs.show = true
+                    this.logs.search.env = res.data.env
+                }
             })
         },
         // 获取变更日志

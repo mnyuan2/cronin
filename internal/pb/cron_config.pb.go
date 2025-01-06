@@ -150,6 +150,7 @@ type CronConfigDetailReply struct {
 	VarFields        []*KvItem          `json:"var_fields"` // 定义变量参数
 	Command          *CronConfigCommand `json:"command"`
 	MsgSet           []*CronMsgSet      `json:"msg_set"`
+	EmptyNotMsg      int                `json:"empty_not_msg"` // 空结果不发送消息：2.空结果发送消息（默认）、1.空结果不发送消息
 	AfterSleep       int                `json:"after_sleep"`
 	ErrRetryNum      int                `json:"err_retry_num"`
 	ErrRetrySleep    int                `json:"err_retry_sleep"` // 错误重试间隔
@@ -180,6 +181,7 @@ type CronConfigSetRequest struct {
 	Remark        string             `json:"remark"`             // 备注
 	TagIds        []int              `json:"tag_ids"`            // 标签
 	MsgSet        []*CronMsgSet      `json:"msg_set"`            // 消息设置
+	EmptyNotMsg   int                `json:"empty_not_msg"`      // 空结果不发消息
 	AfterSleep    int                `json:"after_sleep"`        // 延迟关闭
 	ErrRetryNum   int                `json:"err_retry_num"`      // 错误重试次数
 	ErrRetrySleep int                `json:"err_retry_sleep"`    // 错误重试间隔
