@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -170,7 +171,80 @@ func (m *ApiV5) User(handler *Handler) (res []byte, err error) {
 	return b, nil
 }
 
-// 创建pr
+// 获取 pr 列表
+func (m *ApiV5) Pulls(handler *Handler, r *Pulls) (res []*PullsItem, err error) {
+	handler.startTime = time.Now()
+	defer func() {
+		handler.endTime = time.Now()
+	}()
+	u, _ := url.Parse(fmt.Sprintf("%s/repos/%s/%s/pulls", apiV5BaseUrl, r.Owner, r.Repo))
+	params := url.Values{}
+	if m.conf.GetAccessToken() != "" {
+		params.Add("access_token", m.conf.GetAccessToken())
+	}
+	// 有很多参数需要补充，看一下怎么搞？
+	b, _ := jsoniter.Marshal(r)
+	p := map[string]any{}
+	if err := jsoniter.Unmarshal(b, &p); err != nil {
+		return nil, fmt.Errorf("请求数据序列化失败，%w", err)
+	}
+	for k, v := range p {
+		if k == "owner" || k == "repo" {
+			continue
+		}
+		switch val := v.(type) {
+		case string:
+			if val == "" {
+				continue
+			}
+			params.Add(k, val)
+		case int:
+			if val == 0 {
+				continue
+			}
+			params.Add(k, strconv.Itoa(val))
+		case float64:
+			if val == 0 {
+				continue
+			}
+			value := strconv.FormatFloat(val, 'E', -1, 64)
+			params.Add(k, value)
+		default:
+			return nil, fmt.Errorf("请求数据序类型异常，%v", v)
+		}
+	}
+	if len(params) > 0 {
+		u.RawQuery = params.Encode()
+	}
+
+	resp, err := http.Get(u.String())
+
+	handler.OnGeneral(http.MethodGet, u.String(), resp.StatusCode)
+	handler.OnRequestHeader(resp.Request.Header)
+	handler.OnResponseHeader(resp.Header)
+
+	if err != nil {
+		return res, fmt.Errorf("请求失败，%w", err)
+	}
+	defer resp.Body.Close()
+
+	respByte, er := io.ReadAll(resp.Body)
+	handler.OnResponseBody(respByte)
+	if er != nil {
+		return res, fmt.Errorf("响应获取失败，%w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK { //
+		msg := &ErrorResponse{}
+		_ = jsoniter.Unmarshal(respByte, msg)
+		return res, errors.New(msg.Message)
+	}
+	_ = jsoniter.Unmarshal(respByte, &res)
+
+	return res, nil
+}
+
+// 创建 pr
 //
 //	https://gitee.com/api/v5/swagger#/postV5ReposOwnerRepoPulls
 func (m *ApiV5) PullsCreate(handler *Handler, r *PullsCreateRequest) (res []byte, err error) {
@@ -355,8 +429,8 @@ func (m *ApiV5) PullsIsMerge(handler *Handler, r *PullsMergeRequest) (res *Pulls
 
 	_ = jsoniter.Unmarshal(respByte, res)
 
-	if resp.StatusCode != http.StatusOK { // {"message":"此 Pull Request 未通过设置的审查"}、{"message":"此 Pull Request 未通过设置的测试"}
-		return res, errors.New(res.Message)
+	if resp.StatusCode != http.StatusOK { // {"error": "Pull Request未合并或不存在"}
+		return res, errors.New(res.Error + res.Message)
 	}
 	return res, nil
 }

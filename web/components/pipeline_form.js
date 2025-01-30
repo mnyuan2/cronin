@@ -32,7 +32,10 @@ var MyPipelineForm = Vue.extend({
             </el-form-item>
             
             <el-form-item label="任务" label-width="76px">
-                <div><el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button></div>
+                <div>
+                    <el-button type="text" @click="configSelectBox('show')">添加<i class="el-icon-plus"></i></el-button>
+                    <el-button type="text" @click="matchStepNext(999)" style="margin-left:46px">快捷添加<i class="el-icon-plus"></i></el-button>
+                </div>
                 <div id="config-selected-box" class="sort-drag-box">
                     <div class="input-box" v-for="(conf,conf_index) in form.configs" @mouseover="configDetailPanel(conf, true)" @mouseout="configDetailPanel(conf, false)">
                         <div class="drag">
@@ -102,6 +105,60 @@ var MyPipelineForm = Vue.extend({
             <el-button type="primary" size="small" @click="submitForm()" v-if="(form.status==Enum.StatusDisable || form.status==Enum.StatusFinish || form.status==Enum.StatusError || form.status==Enum.StatusReject) && $auth_tag.pipeline_set">保存草稿</el-button>
         </div>
         
+        <!-- 快捷添加弹窗 -->
+        <el-dialog title="快捷添加" :visible.sync="match_add.show" width="60%" top="10vh" class="config-select-wrap" :modal="false">
+            <el-steps :active="match_add.step_index" simple>
+                <el-step title="条件" icon="el-icon-edit"></el-step>
+                <el-step title="列表" icon="el-icon-s-order"></el-step>
+            </el-steps>
+            <div id="match-add-search" class="sort-drag-box form-inline" style="margin-top: 20px;" v-show="match_add.step_index == 0">
+                <div class="input-box" v-for="(s,index) in match_add.search">
+                    <div class="drag">
+                        <i class="el-icon-more-outline" style="transform: rotate(90deg);"></i>
+                    </div>
+                    <div v-if="s.type=='pr_merge'" style="display: flex; padding: 0 0px 0 10px; align-items: center;">
+                        <span class="h4">pr_merge</span>
+                        <el-input size="small" placeholder="源分支*" v-model="s.value[0]" style="padding: 0 0 0 10px;"></el-input>
+                        <i class="el-icon-minus" style="margin-right: -8px;"></i>
+                        <i class="el-icon-right"></i>
+                        <el-input size="small" placeholder="目标分支*" v-model="s.value[1]"></el-input>
+                    </div>
+                    <div v-if="s.type=='tag'" style="display: flex; padding: 0 0px 0 10px; align-items: center;">
+                        <span class="h4">标签</span>
+                        <el-select size="small" v-model="s.value" multiple filterable placeholder="请选择" style="flex: 1; padding: 0 0 0 10px;">
+                            <el-option v-for="item in dic.tag" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                        </el-select>
+                    </div>
+                </div>
+            </div>
+            <div v-show="match_add.step_index == 1">
+                <el-table :data="match_add.list" @selection-change="matchSelectedChange" max-height="460">
+                    <el-table-column type="selection" width="55"></el-table-column>
+                    <el-table-column prop="name" label="任务名称">
+                        <div slot-scope="{row}" class="abc" style="display: flex;">
+                            <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+                                <router-link target="_blank" :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                            </span>
+                        </div>
+                    </el-table-column>
+                    <el-table-column prop="protocol_name" label="协议" width="80"></el-table-column>
+                    <el-table-column prop="" label="状态" width="100">
+                        <template slot-scope="{row}">
+                            <el-tooltip placement="top-start">
+                                <div slot="content">{{row.status_dt}}  {{row.status_remark}}</div>
+                                <el-button :type="statusTypeName(row.status)" plain size="mini" round disabled>{{row.status_name}}</el-button>
+                            </el-tooltip>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="remark" label="备注"></el-table-column>
+                </el-table>
+            </div>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" type="primary" @click="matchStepNext(1)" v-show="match_add.step_index == 0">查询&下一步</el-button>
+                <el-button size="small" @click="matchStepNext(-1)" v-show="match_add.step_index == 1">上一步</el-button>
+                <el-button size="small" type="primary" @click="matchStepNext(1)" v-show="match_add.step_index == 1">添加</el-button>
+            </div>
+        </el-dialog>
         <!-- 任务选择弹窗 -->
         <el-dialog title="任务选择" :visible.sync="config.boxShow" width="60%" top="10vh" class="config-select-wrap" :modal="false">
             <my-config-select v-if="config.boxShow" ref="selection"></my-config-select>
@@ -142,14 +199,6 @@ var MyPipelineForm = Vue.extend({
         </el-dialog>
     </div>`,
 
-    // StatusDisable: 1, // 草稿
-    // StatusAudited: 5, // 待审核
-    // StatusReject: 6, // 6 驳回
-    // StatusActive: 2, // 2 激活
-    // StatusFinish: 3, // 完成
-    // StatusError: 4, // 错误
-    // StatusDelete: 9, // 删除
-
     name: "MyPipelineForm",
     props: {
         request:{
@@ -162,9 +211,12 @@ var MyPipelineForm = Vue.extend({
             dic:{
                 user: [],
                 msg: [],
+                tag: [],
             },
             // 表单
-            form:{},
+            form:{
+                var_params: '',
+            },
             hintSpec: "* * * * * *",
             // 日期选择器设置
             pickerOptions: {
@@ -172,6 +224,19 @@ var MyPipelineForm = Vue.extend({
                     return time.getTime() < Date.now() - 8.64e7
                 },
                 selectableRange: "00:00:00 - 23:01:59",
+            },
+            // 快捷添加
+            match_add:{
+                show: false,
+                step_index: 0,
+                search:[
+                    {"type":"pr_merge","value":["",""]},
+                    {"type":"tag", "value":[]},
+                ],
+                list:[],
+                selected: [],
+                var_params:[],
+                sort: null,
             },
             // 任务弹窗
             config:{
@@ -195,6 +260,7 @@ var MyPipelineForm = Vue.extend({
                 pipeline: {}
             },
             sort: null,
+            sort2: null,
         }
     },
     watch:{
@@ -369,12 +435,74 @@ var MyPipelineForm = Vue.extend({
         },
         // 枚举
         getDic(){
-            api.dicList([Enum.dicUser, Enum.dicMsg],(res) =>{
+            api.dicList([Enum.dicUser, Enum.dicMsg, Enum.dicTag],(res) =>{
                 this.dic.user = res[Enum.dicUser]
                 this.dic.msg = res[Enum.dicMsg]
+                this.dic.tag = res[Enum.dicTag]
             })
         },
 
+        // 快捷添加
+        matchStepNext(step = 1){
+            console.log("step", step)
+            let index = this.match_add.step_index + step
+
+            switch (index) {
+                case 1:
+                    let body = copyJSON(this.match_add.search).map(function (item){
+                        item.value = item.value.map(function (item2){
+                            return item2.toString()
+                        })
+                        return item
+                    })
+
+                    api.innerPost('/config/match_list', {search:body}, res=>{
+                        if (!res.status){
+                            return this.$message.error(res.message)
+                        }
+                        this.match_add.list = res.data.list
+                        this.match_add.var_params = res.data.var_params
+                        this.match_add.step_index = index
+                    },{async:false})
+                    break
+                case 2:
+                    let params = parseJSON(this.form.var_params)
+                    if (this.match_add.selected.length > 0){
+                        this.match_add.selected.forEach((item)=>{
+                            let temp = copyJSON(item)
+                            temp.view_panel = false
+                            temp.var_fields.forEach((item2)=>{
+                                params[item2.key] = this.match_add.var_params[item2.key]
+                            })
+                            this.form.configs.push(temp)
+                        })
+                        this.form.var_params = stringifyJSON(params)
+                    }
+                    this.match_add.step_index = 0
+                    this.match_add.show = false
+                    break
+                default:
+                    this.match_add.step_index = 0
+                    this.match_add.show = true
+                    if (this.match_add.sort == null){
+                        this.$nextTick(() => {
+                            this.match_add.sort = MySortable(document.getElementById("match-add-search"), (oldIndex, newIndex)=>{
+                                const oldlist = copyJSON(this.match_add.search);
+                                const oldItem = oldlist.splice(oldIndex, 1)[0];
+                                oldlist.splice(newIndex, 0, oldItem);
+                                this.match_add.search = []
+                                this.$nextTick(()=>{
+                                    this.match_add.search = oldlist
+                                    console.log("拖拽后",this.match_add.search, this)
+                                })
+                            })
+                        })
+                    }
+            }
+        },
+        matchSelectedChange(val) {
+            this.match_add.selected = val;
+        },
         // 任务盒子弹窗
         configSelectBox(e='show'){
             if (e == 'show'){ // 显示
@@ -407,7 +535,6 @@ var MyPipelineForm = Vue.extend({
                         this.form.configs= oldlist
                         console.log("拖拽后",that.form.configs, this, t)
                     })
-
                 })
             })
         },

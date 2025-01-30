@@ -43,7 +43,7 @@ var MyUsers = Vue.extend({
         </el-dialog>
         
         <el-drawer title="用户详情" :visible.sync="detail_box.show" direction="rtl" size="40%" wrapperClosable="false">
-            <my-user v-if="detail_box.show" :data_id="detail_box.data_id"></my-user>
+            <my-user v-if="detail_box.show" :data_id="detail_box.data_id" @close="detailClose"></my-user>
         </el-drawer>
     </el-main>`,
 
@@ -153,6 +153,11 @@ var MyUsers = Vue.extend({
             }else{
                 this.detail_box.data_id = 0
             }
+        },
+        detailClose(e){
+          if (e.is_change){
+              this.getList()
+          }
         },
         detailDelete(row){
             this.$confirm('确认删除用户', '提示',{

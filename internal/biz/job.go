@@ -40,6 +40,12 @@ func (dm *JobService) Stop(r *pb.JobStopRequest) (resp *pb.JobStopReply, err err
 			return nil, errs.New(nil, "注册任务信息不匹配")
 		}
 		err = job.conf.Stop(dm.ctx, "手动停止")
+	case *JobReceive:
+		job := v.Job.(*JobReceive)
+		if job.conf.conf.EntryId != r.EntryId {
+			return nil, errs.New(nil, "注册任务信息不匹配")
+		}
+		err = job.conf.Stop(dm.ctx, "手动停止")
 	case nil:
 		err = errs.New(nil, "任务未执行")
 	default:

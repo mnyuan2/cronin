@@ -255,6 +255,12 @@ var MyConfigForm = Vue.extend({
                 {{form.remark}}
             </div>
         </el-form-item>
+        <el-form-item label="标签" label-width="50px" v-show="form.tag_ids.length">
+            <div class="input-box">
+                <span class="input-header"><i class="el-icon-edit" @click="biggerShow(true)"></i></span>
+                {{form.tag_names}}
+            </div>
+        </el-form-item>
         <el-form-item label-width="2px">
             <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
             <div class="input-box" v-for="(msg,msg_index) in form.msg_set">
@@ -494,6 +500,14 @@ var MyConfigForm = Vue.extend({
             <el-form-item label="备注">
                 <el-input v-model="bigger_set.form.remark" placeholder="任务补充说明"></el-input>
             </el-form-item>
+            <el-form-item label="标签">
+                <el-select v-model="bigger_set.form.tag_ids" placeholder="无" multiple filterable multiple-limit="5" style="width:100%">
+                    <el-option v-for="item in dic.tag" :label="item.name" :value="item.id">
+                        <span style="float: left">{{ item.name }}</span>
+                        <span style="float: right; color: #8492a6; font-size: 13px">{{ item.extend.remark }}</span>
+                    </el-option>
+                </el-select>
+            </el-form-item>
            
         </el-form>
         <span slot="footer" class="dialog-footer">
@@ -518,6 +532,7 @@ var MyConfigForm = Vue.extend({
                 host_source:[],
                 user:[],
                 msg:[],
+                tag:[],
                 retry_mode: [],
             },
 
@@ -741,6 +756,8 @@ var MyConfigForm = Vue.extend({
                 err_retry_mode: 1,
                 err_retry_mode_name: '',
                 msg_set: [],
+                tag_ids: [],
+                tag_names: "",
                 status: '1',
             }
         },
@@ -1143,7 +1160,8 @@ var MyConfigForm = Vue.extend({
                     err_retry_num: this.form.err_retry_num,
                     err_retry_sleep: this.form.err_retry_sleep,
                     err_retry_mode: this.form.err_retry_mode,
-                    remark: this.form.remark
+                    remark: this.form.remark,
+                    tag_ids: this.form.tag_ids ?? [],
                 }
                 if (form.var_fields == null || form.var_fields.length == 0){
                     form.var_fields = [{key:'',value:'', remark:''}]
@@ -1170,6 +1188,12 @@ var MyConfigForm = Vue.extend({
                 }
             })
             this.form.remark = data.remark
+            this.form.tag_ids = data.tag_ids
+            this.form.tag_names = data.tag_ids.map(tag_id=>{
+                const item = this.dic.tag.find(opt => opt.id==tag_id)
+                return item.name
+            }).join(",")
+
             this.biggerShow(false)
         },
         // 推送弹窗
@@ -1308,6 +1332,7 @@ var MyConfigForm = Vue.extend({
                 Enum.dicCmdType,
                 Enum.dicUser,
                 Enum.dicMsg,
+                Enum.dicTag,
                 Enum.dicRetryMode
             ]
             api.dicList(types,(res) =>{
@@ -1318,10 +1343,11 @@ var MyConfigForm = Vue.extend({
                 this.dic.host_source =res[Enum.dicHostSource]
                 this.dic.user = res[Enum.dicUser]
                 this.dic.msg = res[Enum.dicMsg]
+                this.dic.tag = res[Enum.dicTag]
                 this.dic.cmd_type = res[Enum.dicCmdType]
                 this.dic.sql_driver = res[Enum.dicSqlDriver]
                 this.dic.retry_mode = res[Enum.dicRetryMode]
-            })
+            }, true)
         },
         // 解析proto内容
         parseProto(){

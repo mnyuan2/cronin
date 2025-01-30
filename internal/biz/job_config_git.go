@@ -149,6 +149,37 @@ func (job *JobConfig) handlerLog(name string, h *gitee.Handler, err errs.Errs) {
 	span.End(trace.WithTimestamp(h.EndTime()))
 }
 
+// pr 列表查询
+func (job *JobConfig) PRList(ctx context.Context, api *gitee.ApiV5, r *pb.GetEventPRList) (resp []byte, err errs.Errs) {
+	h := gitee.NewHandler(ctx)
+	defer func() {
+		job.handlerLog("PRList", h, err)
+	}()
+
+	if r.Owner == "" || r.Repo == "" {
+		return nil, errs.New(nil, "必填参数不足")
+	}
+
+	request := &gitee.Pulls{
+		BaseRequest: gitee.BaseRequest{
+			Owner: r.Owner,
+			Repo:  r.Repo,
+		},
+		State:   r.State,
+		Head:    r.Head,
+		Base:    r.Base,
+		Page:    r.Page,
+		PerPage: r.PerPage,
+	}
+	res, er := api.Pulls(h, request)
+	if er != nil {
+		return nil, errs.New(er)
+	}
+	resp, _ = jsoniter.Marshal(res)
+
+	return resp, nil
+}
+
 // pr 是否合并
 func (job *JobConfig) PRIsMerge(ctx context.Context, api *gitee.ApiV5, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
 	h := gitee.NewHandler(ctx)

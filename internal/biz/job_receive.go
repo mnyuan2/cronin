@@ -152,8 +152,9 @@ func (job *JobReceive) Run() {
 		StatusDesc: "开始",
 		Args: map[string]any{
 			"receive": map[string]any{
-				"title": job.params.Title,
-				"user":  job.params.User,
+				"title":      job.params.Title,
+				"html_url":   job.params.HtmlUrl,
+				"user_names": job.params.RelatedUserNames,
 			},
 		},
 	})
@@ -199,8 +200,9 @@ func (job *JobReceive) Run() {
 		Duration:   time.Since(job.conf.runTime).Seconds(),
 		Args: map[string]any{
 			"receive": map[string]any{
-				"title": job.params.Title,
-				"user":  job.params.User,
+				"title":      job.params.Title,
+				"html_url":   job.params.HtmlUrl,
+				"user_names": job.params.RelatedUserNames,
 			},
 		},
 	})

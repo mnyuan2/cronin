@@ -2,6 +2,7 @@ package biz
 
 import (
 	"cron/internal/basic/conv"
+	"cron/internal/biz/dtos"
 	"fmt"
 	"testing"
 )
@@ -341,6 +342,7 @@ func TestReceiveTapd(t *testing.T) {
 	temp := `[[$data := json_decode .request]]
 [[$project := slice_filter (str_split $data.event.object_info.custom_field_four " ") "^\\s*$"]]
 [[$pr := slice_filter (str_split $data.event.object_info.custom_field_five " ") "^\\s*$"]]
+[[$related_user := slice_filter (str_split (printf "%s;%s;%s" $data.event.user $data.event.object_info.fixer $data.event.object_info.te) ";") "^\\s*$"]]
 [[$dataset := make "[]map[string]string"]]
 
 [[range $pr]]
@@ -354,12 +356,14 @@ func TestReceiveTapd(t *testing.T) {
 [[end]]
 
 {
-	"title": "[[$data.event.object_info.title]]",
-	"user": "[[$data.event.user]]",
 	"type": "[[$data.event.object_type]]",
 	"event": "[[$data.event.event_key]]",
 	"project": [[json_encode $project]],
 	"pr": [[json_encode $pr]],
+
+	"title": "[[$data.event.object_info.title]]",
+	"html_url": "[[printf "https://www.tapd.cn/%s/bugtrace/bugs/view/%s" $data.event.workspace_id $data.event.id]]",
+	"related_user_names": [[json_encode $related_user]],
 	"dataset": [[json_encode $dataset]]
 }`
 	b, e := conv.DefaultStringTemplate().SetParam(p).Execute([]byte(temp))
@@ -367,4 +371,24 @@ func TestReceiveTapd(t *testing.T) {
 		t.Fatal(e)
 	}
 	fmt.Println(string(b))
+}
+
+func TestName(t *testing.T) {
+	a := dtos.ReceiveWebHook{
+		RelatedUserNames: []string{"a", "b"},
+	}
+
+	r := &dtos.MsgPushRequest{
+		Args: map[string]any{
+			"receive": map[string]any{
+				"user_names": a.RelatedUserNames,
+			},
+		},
+	}
+	//userAppend := []*models.CronUser{}
+	if temp, ok := r.Args["receive"].(map[string]any); ok {
+		if names, ok := temp["user_names"].([]string); ok && len(names) > 0 {
+			fmt.Println("ok", names)
+		}
+	}
 }

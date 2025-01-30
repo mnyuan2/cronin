@@ -28,12 +28,12 @@ func AutoMigrate(Db *db.MyDB) {
 		}
 		// 迁移表结构
 		err := Db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
 	} else if config.DbConf().Driver == db.DriverSqlite {
-		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{})
+		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
@@ -70,7 +70,7 @@ func AutoMigrate(Db *db.MyDB) {
     "http": {
         "method": "POST",
         "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx",
-        "body": "{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[.log.create_dt]]\\n任务：【[[.env]]】[[.config.name]]\\n状态：[[.log.status_name]]-[[.log.status_desc]]\\n耗时：[[.log.duration]]秒\\n响应：[[.log.body]]\",\n        \"mentioned_mobile_list\": [[.user.mobile]]\n    }\n}",
+        "body": "{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[.log.create_dt]]\\n任务：【[[.env]]】[[.config.name]]\\n状态：[[.log.status_name]]-[[.log.status_desc]][[if gt .log.retry_number 0]] 【重试 [[.log.retry_number]]】[[end]]\\n耗时：[[.log.duration]]秒\\n响应：[[.log.body]]\",\n        \"mentioned_mobile_list\": [[.user.mobile]]\n    }\n}",
         "header": []
     }
 }`,
@@ -93,21 +93,21 @@ func AutoMigrate(Db *db.MyDB) {
 				Id:      1,
 				Name:    "管理员",
 				Remark:  "所有权限",
-				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121,150,151,152,153,154,155",
+				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121,150,151,152,153,154,155,160,161,162,163",
 				Status:  enum.StatusActive,
 			},
 			{
 				Id:      2,
 				Name:    "负责人",
 				Remark:  "负责任务的创建与审核",
-				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,61,71,80,81,82,83,91,151,152,153,155",
+				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,61,71,80,81,82,83,91,151,152,153,155,160,161,162,163",
 				Status:  enum.StatusActive,
 			},
 			{
 				Id:      3,
 				Name:    "标准",
 				Remark:  "负责任务的创建并提交审核",
-				AuthIds: "21,22,23,25,31,32,33,35,71,81,151,155",
+				AuthIds: "21,22,23,25,31,32,33,35,71,81,151,155,161",
 				Status:  enum.StatusActive,
 			},
 		}, 10)

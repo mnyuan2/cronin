@@ -732,6 +732,12 @@ func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
 	for _, user := range users {
 		userMaps[user.Id] = user
 	}
+	userAppend := []*models.CronUser{}
+	if temp, ok := r.Args["receive"].(map[string]any); ok {
+		if names, ok := temp["user_names"].([]string); ok && len(names) > 0 {
+			userAppend, _ = data.NewCronUserData(ctx).GetList(db.NewWhere().In("username", names, db.RequiredOption()))
+		}
+	}
 
 	// 重组临时变量，默认置空，有效的写入新值
 	args := map[string]any{
@@ -773,6 +779,12 @@ func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
 				if user.Mobile != "" {
 					mobile = append(mobile, user.Mobile)
 				}
+			}
+		}
+		for _, user := range userAppend {
+			if user.Username != "" && user.Mobile != "" {
+				username = append(username, user.Username)
+				mobile = append(mobile, user.Mobile)
 			}
 		}
 

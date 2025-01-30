@@ -155,6 +155,23 @@ function isJSON(str) {
 }
 
 /**
+ * 解析json字符串
+ * @param str
+ * @returns {{}|any}
+ */
+function parseJSON(str, defaultValue = {}){
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        return defaultValue;
+    }
+}
+
+function stringifyJSON(data){
+    return JSON.stringify(data, null, 4)
+}
+
+/**
  * json深拷贝
  * @param data
  * @returns {any}
@@ -310,6 +327,7 @@ const Enum ={
     dicMsg: 3,
     dicUser: 4,
     dicRole: 5,
+    dicTag: 6,
     dicSqlSource: 11,
     dicJenkinsSource: 12,
     dicGitSource: 13,
