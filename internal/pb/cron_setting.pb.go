@@ -199,3 +199,27 @@ type SettingPreferenceGetReply struct {
 	Git      *SettingPreferenceGit      `json:"git"`
 	Other    *SettingPreferenceOther    `json:"other"`
 }
+
+// 全局变量列表
+type GlobalVariateListRequest struct{}
+type GlobalVariateListReply struct {
+	List []*GlobalVariateListItem `json:"list"`
+}
+type GlobalVariateListItem struct {
+	Id         int    `json:"id"`
+	Name       string `json:"name"`
+	Value      string `json:"value"`
+	Remark     string `json:"remark"`
+	Status     int    `json:"status"`
+	StatusName string `json:"status_name"`
+}
+
+// 全局变量 设置
+type GlobalVariateSetRequest struct {
+	Id     int    `json:"id"`
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Remark string `json:"remark"`
+	Status int    `json:"status"`
+}
+type GlobalVariateSetReply struct{}

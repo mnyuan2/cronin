@@ -87,7 +87,7 @@ var authList = []*Permission{
 	{Id: 71, Path: "/setting/env_list", Title: "列表", Group: "环境", Type: AuthTypeGrant, Tag: "env_list"},
 	{Id: 72, Path: "/setting/env_set", Title: "新增/编辑", Group: "环境", Type: AuthTypeGrant, Tag: "env_set"},
 	{Id: 73, Path: "/setting/env_set_content", Title: "-", Group: "环境", Type: AuthTypeLogin},
-	{Id: 74, Path: "/setting/env_change_status", Title: "变更状态", Group: "环境", Type: AuthTypeGrant, Tag: "env_status"},
+	{Id: 74, Path: "/setting/env_change_status", Title: "状态变更", Group: "环境", Type: AuthTypeGrant, Tag: "env_status"},
 	{Id: 75, Path: "/setting/env_del", Title: "删除", Group: "环境", Type: AuthTypeGrant},
 
 	{Id: 80, Path: "/setting/", Title: "消息", Group: "", Type: AuthTypeGrant},
@@ -96,16 +96,20 @@ var authList = []*Permission{
 	{Id: 83, Path: "/setting/message_run", Title: "执行一下", Group: "消息", Type: AuthTypeGrant},
 
 	//120~139
-	{Id: 120, Path: "/setting/", Title: "设置", Group: "", Type: AuthTypeGrant},
-	{Id: 121, Path: "/setting/preference_set", Title: "偏好设置", Group: "设置", Type: AuthTypeGrant, Tag: "preference_set"},
-	{Id: 122, Path: "/setting/preference_get", Title: "偏好查看", Group: "设置", Type: AuthTypeLogin},
+	{Id: 120, Path: "/setting/", Title: "设置", Group: "", Type: AuthTypeLogin},
+	{Id: 122, Path: "/setting/preference_get", Title: "查看", Group: "偏好", Type: AuthTypeLogin},
+	{Id: 121, Path: "/setting/preference_set", Title: "设置", Group: "偏好", Type: AuthTypeGrant, Tag: "preference_set"},
+
+	{Id: 123, Path: "/global_variate/list", Title: "查看", Group: "全局变量", Type: AuthTypeLogin},
+	{Id: 124, Path: "/global_variate/set", Title: "新增/编辑", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_set"},
+	{Id: 125, Path: "/global_variate/change_status", Title: "状态变更", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_status"},
 
 	{Id: 90, Path: "/user/", Title: "用户", Group: "", Type: AuthTypeGrant},
 	{Id: 91, Path: "/user/list", Title: "列表", Group: "用户", Type: AuthTypeGrant, Tag: "user_list"},
 	{Id: 92, Path: "/user/set?auth_type=set", Title: "新增/编辑", Group: "用户", Type: AuthTypeGrant, Tag: "user_set"},
 	{Id: 98, Path: "/user/set", Title: "编辑自己", Group: "用户", Type: AuthTypeLogin},
 	{Id: 93, Path: "/user/change_password", Title: "修改密码", Group: "用户", Type: AuthTypeLogin},
-	{Id: 94, Path: "/user/change_status", Title: "变更状态", Group: "用户", Type: AuthTypeLogin},
+	{Id: 94, Path: "/user/change_status", Title: "状态变更", Group: "用户", Type: AuthTypeLogin},
 	{Id: 95, Path: "/user/change_account", Title: "设置账号", Group: "用户", Type: AuthTypeGrant, Tag: "user_account"},
 	{Id: 96, Path: "/user/detail", Title: "详情", Group: "用户", Type: AuthTypeLogin},
 	{Id: 97, Path: "/user/login", Title: "登录", Group: "用户", Type: AuthTypeOpen},
@@ -115,7 +119,7 @@ var authList = []*Permission{
 	{Id: 102, Path: "/role/set", Title: "新增/编辑", Group: "角色", Type: AuthTypeGrant, Tag: "role_set"},
 	{Id: 103, Path: "/role/auth_list", Title: "权限列表", Group: "角色", Type: AuthTypeLogin},
 	{Id: 104, Path: "/role/auth_set", Title: "权限设置", Group: "角色", Type: AuthTypeGrant, Tag: "auth_set"},
-	{Id: 105, Path: "/role/change_status", Title: "变更状态", Group: "角色", Type: AuthTypeGrant},
+	{Id: 105, Path: "/role/change_status", Title: "状态变更", Group: "角色", Type: AuthTypeGrant},
 	// 160~169
 	{Id: 160, Path: "/tag/", Title: "标签", Group: "", Type: AuthTypeGrant},
 	{Id: 161, Path: "/tag/list", Title: "列表", Group: "标签", Type: AuthTypeGrant, Tag: "tag_list"},

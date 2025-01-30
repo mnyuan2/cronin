@@ -2,8 +2,10 @@ package data
 
 import (
 	"context"
+	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/basic/errs"
 	"cron/internal/models"
 )
 
@@ -94,4 +96,57 @@ func (m *CronSettingData) GetEnvOne(id int) (one *models.CronSetting, err error)
 func (m *CronSettingData) GetMessageOne(id int) (one *models.CronSetting, err error) {
 	w := db.NewWhere().Eq("scene", models.SceneMsg).Eq("id", id, db.RequiredOption())
 	return m.GetOne(w)
+}
+
+// 全局变量列表
+func (m *CronSettingData) GetGlobalVariateList() (list []*models.CronSetting, err error) {
+	list = []*models.CronSetting{}
+	return list, m.db.Where("scene=?", models.SceneGlobalVar).Find(&list).Error
+}
+
+// 全局变量设置
+func (m *CronSettingData) SetGlobalVariate(one *models.CronSetting) error {
+	one.UpdateDt = conv.TimeNew().String()
+	if one.Id > 0 {
+		row := &models.CronSetting{}
+		m.db.Where("scene=? and name=? and id!=?", models.SceneGlobalVar, one.Name, one.Id).Find(row)
+		if row.Id > 0 {
+			return errs.New(nil, "名称已存在")
+		}
+		return m.db.Where("id=?", one.Id).Omit("id", "scene", "env", "create_dt", "status").Updates(one).Error
+	} else {
+		one.Status = enum.StatusDisable
+		one.CreateDt = one.UpdateDt
+		one.Env = ""
+		one.Scene = models.SceneGlobalVar
+		row := &models.CronSetting{}
+		m.db.Where("scene=? and name=?", models.SceneGlobalVar, one.Name).Find(row)
+		if row.Id > 0 {
+			return errs.New(nil, "名称已存在")
+		}
+		return m.db.Create(one).Error
+	}
+}
+
+// 全局变量 状态设置
+func (m *CronSettingData) ChangeGlobalVariateStatus(one *models.CronSetting) error {
+	row := &models.CronSetting{}
+	m.db.Where("scene=? and id=?", models.SceneGlobalVar, one.Id).Find(one)
+	if row.Id == 0 {
+		return errs.New(nil, "数据不存在")
+	}
+	if one.Status == enum.StatusDelete {
+		if row.Status != enum.StatusDisable {
+			return errs.New(nil, "数据激活中，删除失败")
+		}
+		return m.db.Where("id=?", row.Id).Delete(row).Error
+	}
+	row.UpdateDt = conv.TimeNew().String()
+	row.Status = one.Status
+	err := m.db.Where("id=? and status!=?", one.Id, one.Status).Select("status", "update_dt").Updates(row).Error
+	if err != nil {
+		return err
+	}
+	one = row
+	return err
 }

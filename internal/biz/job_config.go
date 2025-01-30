@@ -132,6 +132,12 @@ func (job *JobConfig) ParseParams(in map[string]any) (map[string]any, errs.Errs)
 			job.varParams[k] = v
 		}
 	}
+	// 如果没有包含全局变量的名称，进行补充
+	for k, v := range globalVariateList.GetAll() {
+		if _, ok := job.varParams[k]; !ok {
+			job.varParams[k] = v
+		}
+	}
 	return job.varParams, nil
 }
 
@@ -692,7 +698,7 @@ func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, 
 
 // 发送消息
 func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
-	if job.conf.EmptyNotMsg == enum.BoolYes && len(r.Body) == 0 {
+	if job.conf.EmptyNotMsg == enum.BoolYes && len(bytes.TrimSpace(r.Body)) == 0 {
 		return
 	}
 	sets, ok := job.msgSetParse.StatusList[r.Status]

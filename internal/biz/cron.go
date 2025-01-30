@@ -1,6 +1,10 @@
 package biz
 
 import (
+	"context"
+	"cron/internal/basic/cache"
+	"cron/internal/data"
+	"fmt"
 	"github.com/robfig/cron/v3"
 	"log"
 	"os"
@@ -12,9 +16,13 @@ var cronRun *cron.Cron
 // 时间解释器 （主要用于验证时间格式）
 var secondParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 
+// 全局变量
+var globalVariateList = &cache.Memory{}
+
 // 全局初始化
 func init() {
 	cronInit()
+	globalVariateInit()
 }
 
 func cronInit() {
@@ -58,5 +66,16 @@ func SkipIfStillRunning(logger cron.Logger) cron.JobWrapper {
 				}
 			}
 		})
+	}
+}
+
+// 初始化环境变量
+func globalVariateInit() {
+	list, err := data.NewCronSettingData(context.Background()).GetGlobalVariateList()
+	if err != nil {
+		panic(fmt.Sprintf("全局变量初始化失败: %s", err.Error()))
+	}
+	for _, row := range list {
+		globalVariateList.Set(row.Name, row.Content)
 	}
 }

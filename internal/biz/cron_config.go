@@ -708,13 +708,14 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 	}
 
 	conf := &models.CronConfig{
-		Id:         r.Id,
-		Env:        dm.user.Env,
-		Name:       r.Name,
-		Type:       r.Type,
-		Protocol:   r.Protocol,
-		AfterTmpl:  r.AfterTmpl,
-		AfterSleep: r.AfterSleep,
+		Id:          r.Id,
+		Env:         dm.user.Env,
+		Name:        r.Name,
+		Type:        r.Type,
+		Protocol:    r.Protocol,
+		AfterTmpl:   r.AfterTmpl,
+		AfterSleep:  r.AfterSleep,
+		EmptyNotMsg: r.EmptyNotMsg,
 	}
 	conf.Command, err = jsoniter.Marshal(r.Command)
 	if err != nil {

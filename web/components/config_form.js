@@ -263,7 +263,7 @@ var MyConfigForm = Vue.extend({
         </el-form-item>
         <el-form-item label-width="2px">
             <div>
-                <el-button type="text" @click="msgBoxShow()">推送<i class="el-icon-plus"></i></el-button>
+                <el-button type="text" @click="msgBoxShow()">消息<i class="el-icon-plus"></i></el-button>
                 <span v-show="form.empty_not_msg==1" style="float:right">空结果不发消息</span>
             </div>
             <div class="input-box" v-for="(msg,msg_index) in form.msg_set">
@@ -434,7 +434,7 @@ var MyConfigForm = Vue.extend({
         </span>
     </el-dialog>
     <!-- 推送设置弹窗 -->
-    <el-dialog title="推送设置" :visible.sync="msg_set_box.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
+    <el-dialog title="消息设置" :visible.sync="msg_set_box.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
         <div>
             <el-checkbox v-model="msg_set_box.form.empty_not_msg">空结果不发消息</el-checkbox>
         </div>
@@ -787,7 +787,7 @@ var MyConfigForm = Vue.extend({
                 err_retry_mode: 1,
                 err_retry_mode_name: '',
                 msg_set: [],
-                empty_not_msg: false,
+                empty_not_msg: 2,
                 tag_ids: [],
                 tag_names: "",
                 status: '1',
@@ -1435,6 +1435,7 @@ var MyConfigForm = Vue.extend({
                     after_tmpl: this.form.after_tmpl,
                     var_fields: this.form.var_fields,
                     msg_set: this.form.msg_set,
+                    empty_not_msg: this.form.empty_not_msg,
                 })
                 body.command.sql.err_action = Number(body.command.sql.err_action)
                 body.command.sql.interval = Number(body.command.sql.interval)

@@ -313,7 +313,7 @@ func (dm *UserService) Login(r *pb.UserLoginRequest) (resp *pb.UserLoginReply, e
 	}
 
 	// 缓存用户信息
-	cache.Add(fmt.Sprintf("user_menu_%v", resp.User.Id), menusMap)
-	cache.Add(fmt.Sprintf("user_role_%v", resp.User.Id), resp.User.RoleIds)
+	cache.Set(fmt.Sprintf("user_menu_%v", resp.User.Id), menusMap)
+	cache.Set(fmt.Sprintf("user_role_%v", resp.User.Id), resp.User.RoleIds)
 	return resp, err
 }
