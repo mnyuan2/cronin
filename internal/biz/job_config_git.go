@@ -213,7 +213,7 @@ func (job *JobConfig) PRDetail(ctx context.Context, api git.Api, r *pb.GitEventP
 	return resp, nil
 }
 
-// pr 是否合并
+// pr 合并校验
 func (job *JobConfig) PRIsMerge(ctx context.Context, api git.Api, r *pb.GitEventPRMerge) (resp []byte, err errs.Errs) {
 	h := git.NewHandler(ctx)
 	defer func() {
@@ -227,6 +227,11 @@ func (job *JobConfig) PRIsMerge(ctx context.Context, api git.Api, r *pb.GitEvent
 	if r.Owner == "" || r.Repo == "" || num == 0 {
 		return nil, errs.New(nil, "必填参数不足")
 	}
+	if r.State == "" {
+		r.State = "merge"
+	} else if r.State != "merge" && r.State != "open" {
+		return []byte(""), errs.New(nil, "不支持的合并类型")
+	}
 
 	request := &git.PullsMergeRequest{
 		BaseRequest: git.BaseRequest{
@@ -234,6 +239,7 @@ func (job *JobConfig) PRIsMerge(ctx context.Context, api git.Api, r *pb.GitEvent
 			Repo:  r.Repo,
 		},
 		Number: int32(num),
+		State:  r.State,
 	}
 	er = api.PullsIsMerge(h, request)
 	if er != nil {
