@@ -216,6 +216,12 @@ func CheckGit(c *pb.CronGit) error {
 			if e.PRIsMerge.Number == "" {
 				return errors.New("git 仓库PR的序数为必填")
 			}
+			if e.PRIsMerge.State == "" {
+				return errors.New("git 目标状态 必填")
+			}
+			if e.PRIsMerge.State != "open" && e.PRIsMerge.State != "merge" {
+				return errors.New("git 目标状态 错误")
+			}
 		case enum.GitEventPullsMerge:
 			if e.PRMerge.Owner == "" {
 				return errors.New("git 仓库空间 未设置")

@@ -43,6 +43,8 @@ type GitEventPRMerge struct {
 	Title string `json:"title"`
 	// 可选。合并描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
 	Description string `json:"description"`
+	// 状态
+	State string `json:"state"`
 }
 type GitEventFileUpdate struct {
 	Owner   string `json:"owner"`   // 空间地址
