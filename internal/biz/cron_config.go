@@ -458,17 +458,44 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		return nil, fmt.Errorf("类型输入有误")
 	}
 
+	// 验证参数
+	pl := len(r.VarFields)
+	for i, param := range r.VarFields {
+		if param.Key == "" && i < (pl-1) {
+			return nil, fmt.Errorf("变量参数 %v 名称不得为空", i+1)
+		} else if strings.Contains(param.Key, ".") {
+			return nil, fmt.Errorf("参数key %v 不得包含.点符合", i+1)
+		}
+	}
+	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
+
+	// 模板解析
+	vars, err := dtos.ParseParams(d.VarFields, func(list map[string]any) {
+		for k, v := range globalVariateList.GetAll() { // 全局变量
+			if _, ok := list[k]; !ok {
+				list[k] = v
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	cmdStr, _ := jsoniter.Marshal(r.Command)
+	cmd, err := dtos.ParseCommon(cmdStr, vars)
+	if err != nil {
+		return nil, err
+	}
+	// 任务校验
 	if r.Protocol == models.ProtocolHttp {
-		if err := dtos.CheckHttp(r.Command.Http); err != nil {
+		if err := dtos.CheckHttp(cmd.Http); err != nil {
 			return nil, err
 		}
 	} else if r.Protocol == models.ProtocolRpc {
-		if err := dtos.CheckRPC(r.Command.Rpc); err != nil {
+		if err := dtos.CheckRPC(cmd.Rpc); err != nil {
 			return nil, err
 		}
-
 	} else if r.Protocol == models.ProtocolCmd {
-		if err := dtos.CheckCmd(r.Command.Cmd); err != nil {
+		if err := dtos.CheckCmd(cmd.Cmd); err != nil {
 			return nil, err
 		}
 		if r.Command.Cmd.Host.Id > 0 {
@@ -477,7 +504,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			}
 		}
 	} else if r.Protocol == models.ProtocolSql {
-		if err := dtos.CheckSql(r.Command.Sql); err != nil {
+		if err := dtos.CheckSql(cmd.Sql); err != nil {
 			return nil, err
 		}
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Sql.Source.Id); one.Id == 0 || one.Scene != models.SceneSqlSource {
@@ -486,14 +513,14 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			return nil, errors.New("sql 连接 驱动有误，请确认")
 		}
 	} else if r.Protocol == models.ProtocolJenkins {
-		if err := dtos.CheckJenkins(r.Command.Jenkins); err != nil {
+		if err := dtos.CheckJenkins(cmd.Jenkins); err != nil {
 			return nil, err
 		}
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Jenkins.Source.Id); one.Id == 0 || one.Scene != models.SceneJenkinsSource {
 			return nil, errors.New("jenkins 连接 配置有误，请确认")
 		}
 	} else if r.Protocol == models.ProtocolGit {
-		if err := dtos.CheckGit(r.Command.Git); err != nil {
+		if err := dtos.CheckGit(r.Command.Git, cmd.Git); err != nil {
 			return nil, err
 		}
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Git.LinkId); one.Id == 0 || one.Scene != models.SceneGitSource {
@@ -508,14 +535,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	if _, ok := models.RetryModeMap[r.ErrRetryMode]; !ok {
 		return nil, errors.New("重试模式有误")
 	}
-	pl := len(r.VarFields)
-	for i, param := range r.VarFields {
-		if param.Key == "" && i < (pl-1) {
-			return nil, fmt.Errorf("变量参数 %v 名称不得为空", i+1)
-		} else if strings.Contains(param.Key, ".") {
-			return nil, fmt.Errorf("参数key %v 不得包含.点符合", i+1)
-		}
-	}
+
 	for i, msg := range r.MsgSet {
 		if msg.MsgId == 0 {
 			return nil, fmt.Errorf("推送%v未设置消息模板", i)
@@ -566,7 +586,6 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.ErrRetryNum = r.ErrRetryNum
 	d.ErrRetryMode = r.ErrRetryMode
 	d.ErrRetrySleep = r.ErrRetrySleep
-	d.VarFields, _ = jsoniter.Marshal(r.VarFields)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.EmptyNotMsg = r.EmptyNotMsg

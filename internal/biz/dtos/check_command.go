@@ -74,7 +74,6 @@ func CheckSql(sql *pb.CronSql) error {
 			if item.Local == "" {
 				return errors.New("未设置 sql 执行语句")
 			}
-			item.IsBatch = enum.BoolYes
 		} else if sql.Origin == enum.SqlStatementSourceGit {
 			if item.Git.LinkId == 0 {
 				return errors.New("未设置 sql 语句 连接")
@@ -91,17 +90,6 @@ func CheckSql(sql *pb.CronSql) error {
 			if len(item.Git.Path) < 1 {
 				return errors.New("未设置 sql 语句 文件路径")
 			}
-			paths := []string{}
-			for _, path := range item.Git.Path {
-				list := strings.Split(path, ",")
-				for _, item2 := range list {
-					item2 = strings.Trim(strings.TrimSpace(item2), "/")
-					if item2 != "" {
-						paths = append(paths, item2)
-					}
-				}
-			}
-			item.Git.Path = paths
 		} else {
 			return errors.New("sql来源有误")
 		}
@@ -113,16 +101,14 @@ func CheckSql(sql *pb.CronSql) error {
 		return errors.New("sql 驱动设置有误")
 	}
 
-	name, ok := models.SqlErrActionMap[sql.ErrAction]
-	if !ok {
+	if _, ok := models.SqlErrActionMap[sql.ErrAction]; !ok {
 		return errors.New("未设置 sql 错误行为")
 	}
-	sql.ErrActionName = name
 	if sql.ErrAction == models.SqlErrActionRollback && sql.Interval > 0 {
 		return errors.New("事务回滚 时禁用 执行间隔")
 	}
 	if sql.Interval < 0 {
-		sql.Interval = 0
+		return errors.New("sql 执行间隔不得小于0")
 	}
 	return nil
 }
@@ -154,10 +140,6 @@ func CheckCmd(cmd *pb.CronCmd) error {
 		} else if pathLen > 1 {
 			return errors.New("命令 文件路径 不支持多文件")
 		}
-
-		for i, path := range cmd.Statement.Git.Path {
-			cmd.Statement.Git.Path[i] = strings.Trim(strings.TrimSpace(path), "/")
-		}
 	} else {
 		return fmt.Errorf("未指定命令行来源")
 	}
@@ -181,7 +163,7 @@ func CheckJenkins(jks *pb.CronJenkins) error {
 	return nil
 }
 
-func CheckGit(c *pb.CronGit) error {
+func CheckGit(raw, c *pb.CronGit) error {
 	if c.LinkId <= 0 {
 		return fmt.Errorf("未指定有效连接")
 	}
@@ -257,8 +239,8 @@ func CheckGit(c *pb.CronGit) error {
 			if e.FileUpdate.Message == "" {
 				return errors.New("git 提交描述不得为空")
 			}
-			e.FileUpdate.Path = strings.Trim(strings.TrimSpace(e.FileUpdate.Path), "/")
-			e.FileUpdate.Content = base64.StdEncoding.EncodeToString([]byte(e.FileUpdate.Content))
+			// 内容需要获取到原文件后，进行模板解析，此处必须序列化防止模板解析
+			raw.Events[i].FileUpdate.Content = base64.StdEncoding.EncodeToString([]byte(raw.Events[i].FileUpdate.Content))
 		default:
 			return fmt.Errorf("未支持的事件 %v-%v", i, e.Id)
 		}

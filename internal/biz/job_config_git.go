@@ -286,6 +286,7 @@ func (job *JobConfig) FileUpdate(ctx context.Context, api git.Api, r *pb.GitEven
 		job.handlerLog("FileGet", h1, err)
 		job.handlerLog("FileUpdate", h2, err)
 	}()
+	r.Path = strings.Trim(strings.TrimSpace(r.Path), "/")
 
 	// 获取原文件信息
 	res1, er := api.FileGet(h1, &git.FileGetRequest{

@@ -106,65 +106,41 @@ func NewJobConfig(conf *models.CronConfig) *JobConfig {
 }
 
 // 解析参数
-func (job *JobConfig) ParseParams(in map[string]any) (map[string]any, errs.Errs) {
-	job.varParams = map[string]any{}
-	if len(job.conf.VarFields) > 5 {
-		// 参数也可以通过模板初始化，以获得动态默认值
-		str, err := conv.DefaultStringTemplate().Execute(job.conf.VarFields)
-		if err != nil {
-			return nil, errs.New(err, "模板错误")
-		}
-
-		temp := []*pb.KvItem{}
-		if err := jsoniter.Unmarshal(str, &temp); err != nil {
-			return nil, errs.New(err, "变量参数字段解析错误")
-		}
-		for _, item := range temp {
-			if item.Key == "" {
-				continue
+func (job *JobConfig) ParseParams(in map[string]any) (params map[string]any, err errs.Errs) {
+	job.varParams, err = dtos.ParseParams(job.conf.VarFields, func(list map[string]any) {
+		// 覆盖默认值
+		for k, v := range in {
+			if _, ok := list[k]; ok {
+				list[k] = v
 			}
-			job.varParams[item.Key] = item.Value
 		}
-	}
-
-	for k, v := range in {
-		if _, ok := job.varParams[k]; ok {
-			job.varParams[k] = v
+		// 如果没有包含全局变量的名称，进行补充
+		for k, v := range globalVariateList.GetAll() {
+			if _, ok := list[k]; !ok {
+				list[k] = v
+			}
 		}
-	}
-	// 如果没有包含全局变量的名称，进行补充
-	for k, v := range globalVariateList.GetAll() {
-		if _, ok := job.varParams[k]; !ok {
-			job.varParams[k] = v
-		}
-	}
+	})
 	return job.varParams, nil
 }
 
 // 解析
-func (job *JobConfig) Parse(params map[string]any) errs.Errs {
+func (job *JobConfig) Parse(params map[string]any) (err errs.Errs) {
 	// 进行模板替换
-	cmd, err := conv.DefaultStringTemplate().SetParam(params).Execute(job.conf.Command)
+	job.commandParse, err = dtos.ParseCommon(job.conf.Command, params)
 	if err != nil {
 		return errs.New(err, "模板错误")
 	}
 
-	job.commandParse = &pb.CronConfigCommand{}
 	job.msgSetParse = &dtos.MsgSetParse{
 		StatusList: map[int][]*dtos.MsgSetItem{},
 		Set:        []*pb.CronMsgSet{},
-	}
-	if cmd != nil {
-		if err := jsoniter.Unmarshal(cmd, job.commandParse); err != nil {
-			return errs.New(err, "配置解析错误")
-		}
 	}
 	if job.conf.MsgSet != nil {
 		if err := jsoniter.Unmarshal(job.conf.MsgSet, &job.msgSetParse.Set); err != nil {
 			return errs.New(err, "消息设置解析错误")
 		}
 	}
-
 	for _, msgSet := range job.msgSetParse.Set {
 		for _, state := range msgSet.Status {
 			if _, ok := job.msgSetParse.StatusList[state]; !ok {
