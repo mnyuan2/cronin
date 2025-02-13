@@ -66,6 +66,9 @@ func CheckSql(sql *pb.CronSql) error {
 	if sql.Source.Id == 0 {
 		return fmt.Errorf("请选择 sql 连接")
 	}
+	if sql.Origin == enum.SqlStatementSourceGit && sql.GitSourceId == 0 && len(sql.Statement) > 0 {
+		return fmt.Errorf("请选择 git 连接")
+	}
 	for _, item := range sql.Statement {
 		if sql.Origin != item.Type {
 			continue // 来源不一致的忽略
@@ -75,9 +78,9 @@ func CheckSql(sql *pb.CronSql) error {
 				return errors.New("未设置 sql 执行语句")
 			}
 		} else if sql.Origin == enum.SqlStatementSourceGit {
-			if item.Git.LinkId == 0 {
-				return errors.New("未设置 sql 语句 连接")
-			}
+			//if item.Git.LinkId == 0 {
+			//	return errors.New("未设置 sql 语句 连接")
+			//}
 			if item.Git.Owner == "" {
 				return errors.New("未设置 sql 语句 仓库空间")
 			}

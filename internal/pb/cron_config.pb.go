@@ -238,6 +238,7 @@ type CronSql struct {
 	ErrActionName string           `json:"err_action_name"` // 错误后行为名称
 	Interval      int64            `json:"interval"`        // 执行间隔
 	Origin        string           `json:"origin"`          // 语句来源
+	GitSourceId   int              `json:"git_source_id"`   // git资源id
 	Statement     []*CronStatement `json:"statement"`
 }
 

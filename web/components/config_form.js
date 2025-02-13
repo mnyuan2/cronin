@@ -138,6 +138,11 @@ var MyConfigForm = Vue.extend({
                                 <el-option label="本地" value="local"></el-option>
                                 <el-option label="git" value="git"></el-option>
                             </el-select>
+                            <span v-show="form.command.sql.origin=='git'">&nbsp;链接</span>
+                            <el-select v-model="form.command.sql.git_source_id" placement="链接" style="width:100px" v-show="form.command.sql.origin=='git'">
+                                <el-option v-for="(dic_v,dic_k) in dic.git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                            </el-select>
+                            &nbsp;
                             <el-button type="text" @click="sqlSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
                         </div>
                         <div class="sql-show-warp">
@@ -286,7 +291,7 @@ var MyConfigForm = Vue.extend({
     <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show && !request.disabled" :show-close="false" :modal="false" :close-on-click-modal="false">
         <el-form :model="sqlSet.statement.git" v-if="sqlSet.source=='git'" label-width="70px" size="small">
             <el-form-item label="连接">
-                <el-select v-model="sqlSet.statement.git.link_id" placement="请选择git链接">
+                <el-select v-model="form.command.sql.git_source_id" placement="未选择" disabled>
                     <el-option v-for="(dic_v,dic_k) in dic.git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                 </el-select>
             </el-form-item>
@@ -779,6 +784,7 @@ var MyConfigForm = Vue.extend({
                             // password:""
                         },
                         origin: 'local',
+                        git_source_id: '',
                         statement:[],
                         err_action: "1",
                     },
@@ -828,6 +834,9 @@ var MyConfigForm = Vue.extend({
             form.command.sql.err_action = form.command.sql.err_action.toString()
             if (form.command.sql.source.id == 0){
                 form.command.sql.source.id = ""
+            }
+            if (form.command.sql.git_source_id == 0){
+                form.command.sql.git_source_id = ""
             }
             for (let i in row.command.sql.statement){
                 form.command.sql.statement[i] = this.sqlGitBuildDesc(row.command.sql.statement[i])
@@ -892,6 +901,7 @@ var MyConfigForm = Vue.extend({
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.interval = Number(body.command.sql.interval)
             body.command.sql.source.id = Number(body.command.sql.source.id)
+            body.command.sql.git_source_id = Number(body.command.sql.git_source_id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
             body.command.git.link_id = Number(body.command.git.link_id)
@@ -1008,10 +1018,6 @@ var MyConfigForm = Vue.extend({
             }
 
             if (this.sqlSet.source == 'git'){
-                if (this.sqlSet.statement.git.link_id == ""){
-                    return this.$message.error("请选择连接")
-                }
-
                 if (this.sqlSet.statement.git.owner == ""){
                     return this.$message.error("空间为必填")
                 }
@@ -1022,7 +1028,6 @@ var MyConfigForm = Vue.extend({
                     return this.$message.error("请输入文件的路径")
                 }
                 let data = copyJSON(this.sqlSet.statement);
-                data.git.link_id = Number(data.git.link_id)
                 data.is_batch = Number(data.is_batch)
                 data.type = this.sqlSet.source
                 if (data.git.ref == ""){

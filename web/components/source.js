@@ -180,7 +180,7 @@ var MySource = Vue.extend({
             if (id<0){
                 return this.$message.warning('参数异常，操作取消')
             }
-            api.innerPost("/setting/sql_source_change_status", {id:id, status: 9}, (res) =>{
+            api.innerPost("/setting/source_change_status", {id:id, status: 9}, (res) =>{
                 console.log("sql源设置响应",res)
                 if (!res.status){
                     return this.$message.error(res.message)

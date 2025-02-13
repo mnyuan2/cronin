@@ -80,7 +80,7 @@ var authList = []*Permission{
 	{Id: 60, Path: "/setting/", Title: "链接", Group: "", Type: AuthTypeGrant},
 	{Id: 61, Path: "/setting/source_list", Title: "列表", Group: "链接", Type: AuthTypeGrant, Tag: "source_list"},
 	{Id: 62, Path: "/setting/source_set", Title: "新增/编辑", Group: "链接", Type: AuthTypeGrant, Tag: "source_set"},
-	{Id: 63, Path: "/setting/sql_source_change_status", Title: "状态变更", Group: "链接", Type: AuthTypeGrant, Tag: "source_status"},
+	{Id: 63, Path: "/setting/source_change_status", Title: "状态变更", Group: "链接", Type: AuthTypeGrant, Tag: "source_status"},
 	{Id: 64, Path: "/setting/source_ping", Title: "链接测试", Group: "链接", Type: AuthTypeLogin},
 
 	{Id: 70, Path: "/setting/", Title: "环境", Group: "", Type: AuthTypeGrant},

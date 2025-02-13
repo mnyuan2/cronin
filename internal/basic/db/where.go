@@ -219,10 +219,19 @@ func (builder *Where) JsonIndexEq(keyField, valField string, key, val any, optio
 
 // json包含查询
 func (builder *Where) JsonContains(field, path string, val any, options ...Option) *Where {
+	opt := ApplyOptions(options...)
 	if builder.driver == DriverMysql {
-		builder.Raw(fmt.Sprintf("json_contains(%s, ?, '%s')", field, path), fmt.Sprintf("%v", val))
+		builder.wheres = append(builder.wheres, WhereExpr{
+			sql:  fmt.Sprintf("json_contains(%s, ?, '%s')", field, path),
+			vars: []any{val},
+			with: opt.withSpace,
+		})
 	} else if builder.driver == DriverSqlite {
-		builder.Raw(fmt.Sprintf("json_extract(%s, '%s') = ?", field, path), val)
+		builder.wheres = append(builder.wheres, WhereExpr{
+			sql:  fmt.Sprintf("json_extract(%s, '%s') = ?", field, path),
+			vars: []any{val},
+			with: opt.withSpace,
+		})
 	}
 	return builder
 }

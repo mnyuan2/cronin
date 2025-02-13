@@ -39,7 +39,7 @@ func routerSqlSet(ctx *gin.Context) {
 }
 
 // 任务状态变更
-func routerSqlChangeStatus(ctx *gin.Context) {
+func routerChangeStatus(ctx *gin.Context) {
 	r := &pb.SettingChangeStatusRequest{}
 	if err := ctx.BindJSON(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
