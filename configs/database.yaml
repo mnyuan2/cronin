@@ -12,3 +12,4 @@ mysql:
 # sqlite 本地存储配置
 sqlite:
   path: "./data/" # 存储路径
+  debug: true # 是否开启调试模式

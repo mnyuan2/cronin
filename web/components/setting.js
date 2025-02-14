@@ -84,7 +84,7 @@ var MySetting = Vue.extend({
         <el-tab-pane name="global_variate" class="setting-wrap" :style="setting.body_style">
             <span slot="label" style="padding-right: 30px;"><i class="el-icon-key"></i> &nbsp; 全局变量</span>
             <el-card shadow="never" body-style="padding:12px">
-                <el-button size="mini" round plain @click="tabChangeName()" class="active">用户变量</el-button>
+                <el-button size="mini" round plain @click="tabChangeName()" class="active" disabled>用户变量</el-button>
                 <el-button type="text" size="mini" @click="globalVariateSet()" v-if="$auth_tag.global_variate_set" style="float: right">添加变量</el-button>
             </el-card>
             

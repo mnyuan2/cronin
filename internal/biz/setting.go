@@ -146,7 +146,7 @@ func (dm *SettingService) GlobalVariateChangeStatus(r *pb.GlobalVariateSetReques
 	if err != nil {
 		return nil, err
 	}
-	if enum.StatusActive != r.Status {
+	if enum.StatusActive == r.Status {
 		globalVariateList.Set(one.Name, one.Content)
 	} else if enum.StatusDisable == r.Status {
 		globalVariateList.Del(one.Name)

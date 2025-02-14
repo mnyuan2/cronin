@@ -222,8 +222,7 @@ func (builder *Where) JsonContains(field, path string, val any, options ...Optio
 	opt := ApplyOptions(options...)
 	if builder.driver == DriverMysql {
 		builder.wheres = append(builder.wheres, WhereExpr{
-			sql:  fmt.Sprintf("json_contains(%s, ?, '%s')", field, path),
-			vars: []any{val},
+			sql:  fmt.Sprintf("json_contains(%s, '%v', '%s')", field, val, path),
 			with: opt.withSpace,
 		})
 	} else if builder.driver == DriverSqlite {

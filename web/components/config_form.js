@@ -1462,6 +1462,7 @@ var MyConfigForm = Vue.extend({
                 body.command.sql.err_action = Number(body.command.sql.err_action)
                 body.command.sql.interval = Number(body.command.sql.interval)
                 body.command.sql.source.id = Number(body.command.sql.source.id)
+                body.command.sql.git_source_id = Number(body.command.sql.git_source_id)
                 body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
                 body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
                 body.command.git.link_id = Number(body.command.git.link_id)

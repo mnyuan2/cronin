@@ -131,7 +131,7 @@ func (m *CronSettingData) SetGlobalVariate(one *models.CronSetting) error {
 // 全局变量 状态设置
 func (m *CronSettingData) ChangeGlobalVariateStatus(one *models.CronSetting) error {
 	row := &models.CronSetting{}
-	m.db.Where("scene=? and id=?", models.SceneGlobalVar, one.Id).Find(one)
+	m.db.Where("scene=? and id=?", models.SceneGlobalVar, one.Id).Find(row)
 	if row.Id == 0 {
 		return errs.New(nil, "数据不存在")
 	}
@@ -147,6 +147,7 @@ func (m *CronSettingData) ChangeGlobalVariateStatus(one *models.CronSetting) err
 	if err != nil {
 		return err
 	}
-	one = row
+	one.Name = row.Name
+	one.Content = row.Content
 	return err
 }

@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"cron/internal/basic/cache"
+	"cron/internal/basic/enum"
 	"cron/internal/data"
 	"fmt"
 	"github.com/robfig/cron/v3"
@@ -76,6 +77,9 @@ func globalVariateInit() {
 		panic(fmt.Sprintf("全局变量初始化失败: %s", err.Error()))
 	}
 	for _, row := range list {
+		if row.Status != enum.StatusActive {
+			continue
+		}
 		globalVariateList.Set(row.Name, row.Content)
 	}
 }
