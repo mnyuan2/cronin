@@ -105,6 +105,10 @@ func (dm *SettingService) GlobalVariateList(r *pb.GlobalVariateListRequest) (res
 			Remark:     v.Title,
 			Status:     v.Status,
 			StatusName: enum.StatusMap[v.Status],
+			Register:   enum.BoolNot,
+		}
+		if val := globalVariateList.Get(v.Name); val != nil {
+			resp.List[i].Register = enum.BoolYes
 		}
 	}
 	return resp, err

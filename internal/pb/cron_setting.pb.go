@@ -212,6 +212,7 @@ type GlobalVariateListItem struct {
 	Remark     string `json:"remark"`
 	Status     int    `json:"status"`
 	StatusName string `json:"status_name"`
+	Register   int    `json:"register"`
 }
 
 // 全局变量 设置

@@ -30,7 +30,7 @@ var MyReceive = Vue.extend({
                     </el-select>
                 </el-form-item>
                 <el-form-item>
-                    <el-button type="primary" @click="getList">查询</el-button>
+                    <el-button type="primary" @click="getList(1)">查询</el-button>
                 </el-form-item>
             </el-form>
         </el-row>
@@ -160,9 +160,12 @@ var MyReceive = Vue.extend({
             if (param.create_user_ids){this.list.param.create_user_ids = param.create_user_ids.map(Number)}
         },
         // 任务列表
-        getList(){
+        getList(page=null){
             if (this.list.request){
                 return this.$message.info('请求执行中,请稍等.');
+            }
+            if (typeof page === "number" && page%1 === 0){
+                this.listParam.page = page
             }
             replaceHash('/receive', this.list.param)
             this.list.request = true

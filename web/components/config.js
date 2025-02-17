@@ -44,7 +44,7 @@ var MyConfig = Vue.extend({
                 </el-form-item>
                 
                 <el-form-item>
-                    <el-button type="primary" @click="getList">查询</el-button>
+                    <el-button type="primary" @click="getList(1)">查询</el-button>
                 </el-form-item>
             </el-form>
         </el-row>
@@ -226,9 +226,12 @@ var MyConfig = Vue.extend({
             if (param.create_user_ids){this.listParam.create_user_ids = param.create_user_ids.map(Number)}
         },
         // 任务列表
-        getList(){
+        getList(page=null){
             if (this.listRequest){
                 return this.$message.info('请求执行中,请稍等.');
+            }
+            if (typeof page === "number" && page%1 === 0){
+                this.listParam.page = page
             }
             replaceHash('/config', this.listParam)
             this.listRequest = true

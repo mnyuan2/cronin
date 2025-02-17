@@ -92,7 +92,13 @@ var MySetting = Vue.extend({
                 <el-table-column  prop="name" label="名称"></el-table-column>
                 <el-table-column prop="value" label="值"></el-table-column>
                 <el-table-column prop="remark" label="描述"></el-table-column>
-                <el-table-column prop="status_name" label="状态"></el-table-column>
+                <el-table-column prop="status_name" label="状态">
+                    <template slot-scope="{row}">
+                        <i v-show="row.register==1" class="el-badge__content is-dot el-badge__content--success" title="已注册"></i>
+                        <i v-show="row.register==2" class="el-badge__content is-dot el-badge__content--info" title="未注册"></i>
+                        {{row.status_name}}
+                    </template>
+                </el-table-column>
                 <el-table-column label="">
                     <template slot-scope="{row}">
                         <el-button type="text" size="small" @click="globalVariateSet(row)" v-show="$auth_tag.global_variate_set && row.status==Enum.StatusDisable">编辑</el-button>
