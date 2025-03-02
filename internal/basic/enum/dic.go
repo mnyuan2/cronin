@@ -20,6 +20,7 @@ const (
 )
 
 const (
+	StatusEmpty   = 0 // 空、未设置
 	StatusDisable = 1 // 停用
 	StatusActive  = 2 // 激活
 	StatusDelete  = 9 // 删除

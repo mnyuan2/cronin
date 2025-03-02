@@ -38,8 +38,6 @@ func (m *CronPipelineData) Set(data *models.CronPipeline) error {
 			Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)
-		data.StatusDt = data.CreateDt
-		data.StatusRemark = "新增"
 		return m.db.Create(data).Error
 	}
 }

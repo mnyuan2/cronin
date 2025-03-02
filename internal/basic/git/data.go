@@ -1,19 +1,59 @@
-package gitee
-
-import (
-	"encoding/base64"
-	"time"
-)
+package git
 
 type BaseRequest struct {
 	Owner string `json:"owner"` // 空间地址
 	Repo  string `json:"repo"`  // 项目名称（仓库路径）
 }
 
-type ErrorResponse struct {
-	Message string `json:"message"`
+type User struct {
+	Id        string `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	Bio       string `json:"bio"`
+	AvatarUrl string `json:"avatar_url" graphql:"avatarUrl"`
 }
 
+// 文件获取
+type FileGetRequest struct {
+	BaseRequest
+	Path string
+	Ref  string
+}
+
+// 文件获取 响应
+type FileGetResponse struct {
+	Sha     string `json:"sha"`
+	Content string `json:"content"`
+}
+
+// 文件更新
+type FileUpdateRequest struct {
+	BaseRequest
+	Path    string // branch
+	Content string // 文件内容, 要用 base64 编码
+	Sha     string // 文件的 Blob SHA，可通过 [获取仓库具体路径下的内容] API 获取
+	Message string // 提交(commit 描述)信息
+	Branch  string // 分支名称。默认为仓库对默认分支
+}
+
+type FileUpdateResponse struct {
+	Message string  `json:"message"` // 错误描述
+	Commit  *Commit `json:"commit"`
+}
+
+type Commit struct {
+	Sha           string `json:"sha" graphql:""` // gitee 使用
+	CommitUrl     string `json:"commit_url"`
+	Oid           string `json:"oid"`
+	Message       string `json:"message"`
+	CommittedDate string `json:"committed_date" graphql:"committedDate"`
+	Author        struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	} `json:"author"`
+}
+
+// pr 列表请求
 type Pulls struct {
 	BaseRequest
 	State   string `json:"state"`    // 可选。Pull Request 状态: open、closed、merged、all
@@ -23,16 +63,22 @@ type Pulls struct {
 	PerPage int    `json:"per_page"` // 每页的数量，最大为 100
 }
 
-type PullsResponse []*PullsItem
-type PullsItem struct {
-	Id     int           `json:"id"`
-	Number int           `json:"number"`
-	State  string        `json:"state"`
-	Head   *PullsItemRef `json:"head"`
-	Base   *PullsItemRef `json:"base"`
+// pr 列表响应
+type PullsResponse struct {
+	Total int     `json:"total"`
+	List  []*Pull `json:"list"`
 }
-type PullsItemRef struct {
-	Ref string `json:"ref"`
+type Pull struct {
+	Id          string `json:"id"`
+	Title       string `json:"title"`
+	Number      int    `json:"number"`
+	State       string `json:"state"`
+	Merged      bool   `json:"merged"`    // 是否已合并
+	Mergeable   string `json:"mergeable"` // 是否可合并：conflicting·冲突、mergeable·可以合并、unknown·未知的
+	CreateAt    string `json:"create_at" graphql:"createdAt"`
+	Url         string `json:"url"`
+	HeadRefName string `json:"head_ref_name" graphql:"headRefName"`
+	BaseRefName string `json:"base_ref_name" graphql:"baseRefName"`
 }
 
 type PullsCreateRequest struct {
@@ -102,89 +148,5 @@ type PullsMergeRequest struct {
 	Title string
 	// 可选。合并 commit 描述，默认为 "Merge pull request !{pr_id} from {author}/{source_branch}"，与页面显示的默认一致。
 	Description string
-}
-type PullsMergeResponse struct {
-	Sha     string `json:"sha"`
-	Merged  bool   `json:"merged"`
-	Message string `json:"message"`
-	Error   string `json:"error"`    // 部分业务错误时会返回此字段
-	HtmlUrl string `json:"html_url"` // 这是自定义字段
-}
-
-// 文件获取
-type FileGetRequest struct {
-	BaseRequest
-	Path string
-	Ref  string
-}
-
-// 文件获取 响应
-type FileGetResponse struct {
-	Message string `json:"message"` // 错误描述
-	Content
-}
-type Content struct {
-	Type        string `json:"type"`
-	Encoding    string `json:"encoding"`
-	Size        int    `json:"size"`
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	Content     string `json:"content"`
-	Sha         string `json:"sha"`
-	Url         string `json:"url"`
-	HtmlUrl     string `json:"html_url"`
-	DownloadUrl string `json:"download_url"`
-	Links       struct {
-		Self string `json:"self"`
-		Html string `json:"html"`
-	} `json:"_links"`
-}
-type Commit struct {
-	Sha     string `json:"sha"`
-	HtmlUrl string `json:"html_url"` // 这是自定义字段
-	Author  struct {
-		Name  string    `json:"name"`
-		Email string    `json:"email"`
-		Date  time.Time `json:"date"`
-	} `json:"author"`
-	Committer struct {
-		Name  string    `json:"name"`
-		Email string    `json:"email"`
-		Date  time.Time `json:"date"`
-	} `json:"committer"`
-	Message string `json:"message"`
-	Tree    struct {
-		Sha string `json:"sha"`
-		Url string `json:"url"`
-	} `json:"tree"`
-	Parents []struct {
-		Sha string `json:"sha"`
-		Url string `json:"url"`
-	} `json:"parents"`
-}
-
-// 解密内容
-func (m *FileGetResponse) DecodeContent() ([]byte, error) {
-	return base64.StdEncoding.DecodeString(m.Content.Content)
-}
-
-// 文件更新
-type FileUpdateRequest struct {
-	BaseRequest
-	Path    string // branch
-	Content string // 文件内容, 要用 base64 编码
-	Sha     string // 文件的 Blob SHA，可通过 [获取仓库具体路径下的内容] API 获取
-	Message string // 提交(commit 描述)信息
-	Branch  string // 分支名称。默认为仓库对默认分支
-}
-
-// 编码内容
-func (m *FileUpdateRequest) EncodeContent() string {
-	return base64.StdEncoding.EncodeToString([]byte(m.Content))
-}
-
-type FileUpdateResponse struct {
-	Message string   `json:"message"` // 错误描述
-	Content *Content `json:"content"`
-	Commit  *Commit  `json:"commit"`
+	State       string
 }

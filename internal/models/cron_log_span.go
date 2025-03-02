@@ -27,7 +27,7 @@ func (m *CronLogSpan) TableName() string {
 }
 
 var LogSpanStatusMap = map[int]string{
-	0:                  "-",
+	enum.StatusEmpty:   "-",
 	enum.StatusDisable: "失败",
 	enum.StatusActive:  "成功",
 }

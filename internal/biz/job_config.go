@@ -178,7 +178,7 @@ func (job *JobConfig) Parse(params map[string]any) errs.Errs {
 func (job *JobConfig) Run() {
 	var err errs.Errs
 	var res []byte
-	ctx1, span := job.tracer.Start(context.Background(), "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
+	ctx1, span := job.tracer.Start(context.Background(), "job-task", trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
 		job.isRun = false
 		if res != nil {
@@ -287,7 +287,7 @@ func (job *JobConfig) Run() {
 func (job *JobConfig) Running(ctx context.Context, remark string, params map[string]any) (res []byte, err errs.Errs) {
 	job.isRun = true
 	job.runTime = time.Now()
-	ctx, span := job.tracer.Start(ctx, "job-"+job.conf.GetProtocolName(), trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
+	ctx, span := job.tracer.Start(ctx, "job-task", trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
 	defer func() {
 		job.isRun = false
 		if res != nil {

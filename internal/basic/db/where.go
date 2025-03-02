@@ -280,6 +280,23 @@ func (builder *Where) Lte(field string, value interface{}, options ...Option) *W
 	return builder.op(field, OpLte, value, options...)
 }
 
+// Between 区间查询，
+//
+//	参数 start, end 为字符串型数值
+//
+// Gte、Lte 上层封装方法
+func (builder *Where) Between(field string, start, end any, options ...Option) *Where {
+	if start != "" {
+		builder.Gte(field, start, options...)
+	}
+
+	if end != "" {
+		builder.Lte(field, end, options...)
+	}
+
+	return builder
+}
+
 // Func
 func (builder *Where) Sub(subFn func(sub *Where), options ...Option) *Where {
 	opt := ApplyOptions(options...)

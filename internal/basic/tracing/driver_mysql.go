@@ -3,6 +3,7 @@ package tracing
 import (
 	"context"
 	"cron/internal/basic/db"
+	"cron/internal/data"
 	"cron/internal/models"
 	"crypto/md5"
 	"fmt"
@@ -41,6 +42,63 @@ func MysqlCollectorListen() {
 				log.Println("[warn] log write queue overstock ", len(mysqlQueue))
 			} else {
 				log.Println("[info] log write queue ok ", len(mysqlQueue))
+			}
+		}
+	}()
+
+	// 增加观测点
+	go func() {
+		for range time.Tick(time.Minute * 30) {
+			if len(mysqlQueue) > 2000 {
+				log.Println("[warn] log write queue overstock ", len(mysqlQueue))
+			} else {
+				log.Println("[info] log write queue ok ", len(mysqlQueue))
+			}
+		}
+	}()
+
+	// 合计指标
+	go func() {
+		getKey := func(row *models.CronLogSpanIndex) string {
+			return fmt.Sprintf("%s|%s|%s|%s", row.Timestamp, row.Env, row.RefId, row.Operation)
+		}
+		for tmp := range time.Tick(time.Minute) {
+			ctx := context.Background()
+			tmp = tmp.Add(-time.Minute)
+			y, m, d := tmp.Date()
+			start := time.Date(y, m, d, tmp.Hour(), tmp.Minute(), 0, 0, tmp.Location())
+			end := start.Add(time.Minute).Add(-time.Microsecond)
+
+			cli := db.New(ctx)
+			// 统计近期指标
+			list := data.NewCronLogSpanIndexData(ctx).
+				SumIndex(db.NewWhere().Gte("timestamp", start.UnixMicro()).Lte("timestamp", end.UnixMicro()))
+			listMap := map[string]*models.CronLogSpanIndex{}
+			if len(list) == 0 {
+				continue
+			}
+			for _, item := range list {
+				listMap[getKey(item)] = item
+			}
+			// 对已经存在的指标进行更新
+			//oldList := []*models.CronLogSpanIndex{}
+			//cli.Where("`timestamp` >= ? AND `timestamp` <= ?", start.Format(time.DateTime), end.Format(time.DateTime)).
+			//	Find(&oldList)
+			//for _, item := range oldList {
+			//	k := getKey(item)
+			//	if row, ok := listMap[k]; ok {
+			//		row.Id = item.Id
+			//		cli.Select("status_empty_number", "status_error_number", "status_success_number", "duration_max", "duration_avg").Updates(row)
+			//		delete(listMap, k)
+			//	}
+			//}
+			// 写入新指标
+			newList := []*models.CronLogSpanIndex{}
+			for _, item := range listMap {
+				newList = append(newList, item)
+			}
+			if len(newList) > 0 {
+				cli.Create(newList)
 			}
 		}
 	}()

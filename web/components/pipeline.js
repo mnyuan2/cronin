@@ -59,10 +59,7 @@ var MyPipeline = Vue.extend({
             </el-table-column>
             <el-table-column prop="" label="状态" width="100">
                 <template slot-scope="scope">
-                    <el-tooltip placement="top-start">
-                        <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
-                        <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'pipeline')">{{scope.row.status_name}}</el-botton>
-                    </el-tooltip>
+                    <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'pipeline')"  :title="scope.row.status_dt+'   '+scope.row.status_remark">{{scope.row.status_name}}</el-botton>
                 </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注"></el-table-column>

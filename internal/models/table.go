@@ -28,12 +28,14 @@ func AutoMigrate(Db *db.MyDB) {
 		}
 		// 迁移表结构
 		err := Db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
+			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronLogSpanIndex{},
+				&CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
 	} else if config.DbConf().Driver == db.DriverSqlite {
-		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
+		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronLogSpanIndex{},
+			&CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
@@ -335,6 +337,20 @@ func historyDataRevise(db *db.MyDB) {
 		}
 
 		set.Content = `{"version":"0.8.1"}`
+		db.Select("content").Updates(set)
+	}
+	if set.Content == `{"version":"0.8.1"}` {
+		list := []*CronSetting{}
+		db.Where("scene in ?", []string{SceneGitSource, SceneHostSource}).Find(&list)
+		for _, item := range list {
+			if !strings.Contains(item.Content, "\"type\"") {
+				continue
+			}
+			item.Content = strings.ReplaceAll(item.Content, "\"type\"", "\"driver\"")
+			db.Select("content").Updates(item)
+		}
+
+		set.Content = `{"version":"0.8.3"}`
 		db.Select("content").Updates(set)
 	}
 

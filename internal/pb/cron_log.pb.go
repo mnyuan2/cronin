@@ -2,6 +2,7 @@ package pb
 
 // 通过配置查询
 type CronLogListRequest struct {
+	Env   string `json:"env" form:"env"`
 	Tags  string `json:"tags" form:"tags"`
 	Limit int    `json:"limit" form:"limit"`
 }

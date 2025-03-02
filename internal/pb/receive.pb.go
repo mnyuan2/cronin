@@ -16,6 +16,7 @@ type ReceiveListReply struct {
 }
 type ReceiveListItem struct {
 	Id             int    `json:"id"`
+	Env            string `json:"env"`
 	Name           string `json:"name"`
 	Remark         string `json:"remark"`
 	Status         int    `json:"status"`

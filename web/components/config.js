@@ -72,10 +72,7 @@ var MyConfig = Vue.extend({
             <el-table-column prop="protocol_name" label="协议" width="80"></el-table-column>
             <el-table-column prop="" label="状态" width="100">
                 <template slot-scope="scope">
-                    <el-tooltip placement="top-start">
-                        <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
-                        <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'config')">{{scope.row.status_name}}</el-botton>
-                    </el-tooltip>
+                   <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'config')" :title="scope.row.status_dt+'   '+scope.row.status_remark">{{scope.row.status_name}}</el-botton>
                 </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注"></el-table-column>
@@ -100,7 +97,7 @@ var MyConfig = Vue.extend({
     </el-dialog>
     <!-- 任务日志弹窗 -->
     <el-drawer :title="config_log_box.title" :visible.sync="config_log_box.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
-        <my-config-log :tags="config_log_box.tags"></my-config-log>
+        <my-config-log :search="config_log_box.search"></my-config-log>
     </el-drawer>
     <my-status-change v-if="status_box.show" :request="status_box" @close="statusShow"></my-status-change>
 
@@ -144,7 +141,7 @@ var MyConfig = Vue.extend({
             config_log_box:{
                 show: false,
                 title:'',
-                tags: {},
+                search: {},
             },
             registerList: [],
             registerListShow: false,
@@ -497,8 +494,10 @@ var MyConfig = Vue.extend({
         //     }
         // },
         configLogBox(item){
-            let tags = {ref_id:item.id, component:"config"}
-            this.config_log_box.tags = tags
+            this.config_log_box.search = {
+                env: item.env,
+                tags: JSON.stringify({ref_id:item.id, component:"config"}),
+            }
             this.config_log_box.title = item.name+' 日志'
             this.config_log_box.show = true
         },
@@ -506,7 +505,7 @@ var MyConfig = Vue.extend({
             this.config_log_box.show = false;
             this.config_log_box.id = 0;
             this.config_log_box.title = ' 日志'
-            this.config_log_box.tags = {}
+            this.config_log_box.search = {}
         },
         // sql设置弹窗
         // sqlSetShow(index, oldData){

@@ -68,7 +68,12 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, "pipeline")
+		w2 := db.NewWhere().
+			Eq("env", dm.user.Env).
+			Eq("operation", "job-pipeline").
+			In("ref_id", ids).
+			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(w2)
 	}
 
 	for _, item := range resp.List {
@@ -127,6 +132,8 @@ func (dm *CronPipelineService) Set(r *pb.CronPipelineSetRequest) (resp *pb.CronP
 		d.Env = dm.user.Env
 		d.CreateUserId = dm.user.UserId
 		d.CreateUserName = dm.user.UserName
+		d.StatusDt = time.Now().Format(time.DateTime)
+		d.StatusRemark = "新增"
 	}
 
 	if r.VarParams != "" {

@@ -26,7 +26,7 @@ type SettingJenkinsSource struct {
 
 // git 源
 type SettingGitSource struct {
-	Type        string `json:"type"`
+	Driver      string `json:"driver"`
 	AccessToken string `json:"access_token"` // 用户授权码
 }
 
@@ -37,7 +37,7 @@ func (m *SettingGitSource) GetAccessToken() string {
 // 主机 源
 type SettingHostSource struct {
 	Id     int    `json:"id"`
-	Type   string `json:"type"`
+	Driver string `json:"driver"`
 	Ip     string `json:"ip"`
 	Port   string `json:"port"`
 	User   string `json:"user"`

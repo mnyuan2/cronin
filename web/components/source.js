@@ -70,19 +70,20 @@ var MySource = Vue.extend({
                         </el-form-item>
                     </el-tab-pane>
                     <el-tab-pane label="git" name="13">
-                        <el-form-item label="类型">
-                            <el-select v-model="form.data.source.git.type">
+                        <el-form-item label="驱动">
+                            <el-select v-model="form.data.source.git.driver">
                                 <el-option label="gitee" value="gitee"></el-option>
-                                <!--<el-option label="github" value="github"></el-option>-->
+                                <el-option label="github" value="github"></el-option>
                             </el-select>
                         </el-form-item>
                         <el-form-item label="授权码">
-                            <el-input v-model="form.data.source.git.access_token" placeholder="gitee.com / 个人设置 / 私密令牌 可进行获取"></el-input>
+                            <el-input type="textarea" :autosize="{2:5}" v-model="form.data.source.git.access_token" placeholder="请输入私人令牌"></el-input>
+                            <p class="info-2">{{git.access_token_placeholder[form.data.source.git.type]}}</p>
                         </el-form-item>
                     </el-tab-pane>
                     <el-tab-pane label="主机" name="14">
-                        <el-form-item label="类型">
-                            <el-select v-model="form.data.source.host.type">
+                        <el-form-item label="驱动">
+                            <el-select v-model="form.data.source.host.driver">
                                 <el-option label="linux" value="linux"></el-option>
                             </el-select>
                         </el-form-item>
@@ -131,6 +132,12 @@ var MySource = Vue.extend({
                 request: false,
             },
             form:{}, // 表单
+            git:{
+                access_token_placeholder: {
+                    "gitee": "gitee.com / 个人设置 / 安全设置 / 私密令牌",
+                    "github": "github.com / Settings / Developer settings / Personal access tokens / Fine-grained tokens"
+                }
+            }
 
         }
     },
@@ -242,11 +249,11 @@ var MySource = Vue.extend({
                             username: ""
                         },
                         git:{
-                            type: 'gitee',
+                            driver: 'gitee',
                             access_token: ''
                         },
                         host:{
-                            type: 'linux',
+                            driver: 'linux',
                             ip: "",
                             port:"22",
                             user:"",

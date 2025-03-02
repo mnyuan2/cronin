@@ -41,28 +41,30 @@ func (m *CronLogData) GetList(where *db.Where, page, size int, list interface{})
 }
 
 // 统计配置置顶的错误数
-func (m *CronLogData) SumConfTopError(env string, confId []int, startTime, endTime time.Time, component string) (list map[int]*SumConfTop, err error) {
-	w, args := db.NewWhere().
-		Eq("a.env", env).
-		In("a.ref_id", confId).
-		Gte("a.timestamp", startTime.UnixMicro()).Lte("a.timestamp", endTime.UnixMicro()).
-		Like("tags_kv", fmt.Sprintf("component=%v", component)).
-		Build()
+func (m *CronLogData) SumConfTopError(w *db.Where) (list map[int]*SumConfTop, err error) {
+	where, args := w.Build()
 	sql := strings.Replace(`SELECT
-	a.ref_id conf_id, count(*) total_number, sum(a.status=1) error_number
-FROM
-	cron_log_span as a
+	ref_id,
+	sum(status_empty_num) status_empty_num,
+	sum(status_error_num) status_error_num,
+	sum(status_success_num) status_success_num
+FROM cron_log_span_index 
 %WHERE
-GROUP BY a.ref_id;`, "%WHERE", "WHERE "+w, 1)
-	temps := []*SumConfTop{}
+GROUP BY ref_id;`, "%WHERE", "WHERE "+where, 1)
+	temps := []*models.CronLogSpanIndex{}
 	list = map[int]*SumConfTop{}
-	err = m.db.Raw(sql, args...).Find(&temps).Error
+	err = m.db.Raw(sql, args...).Scan(&temps).Error
 	if err != nil {
 		return list, err
 	}
 
 	for _, temp := range temps {
-		list[temp.ConfId] = temp
+		id, _ := conv.Ints().Parse(temp.RefId)
+		list[id] = &SumConfTop{
+			ConfId:      id,
+			TotalNumber: temp.StatusEmptyNum + temp.StatusErrorNum + temp.StatusSuccessNum,
+			ErrorNumber: temp.StatusErrorNum,
+		}
 	}
 	return list, nil
 }

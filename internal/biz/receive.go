@@ -71,7 +71,12 @@ func (dm *ReceiveService) List(r *pb.ReceiveListRequest) (resp *pb.ReceiveListRe
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, "receive")
+		w2 := db.NewWhere().
+			Eq("env", dm.user.Env).
+			Eq("operation", "job-receive").
+			In("ref_id", ids).
+			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(w2)
 	}
 
 	for _, item := range resp.List {
@@ -117,6 +122,8 @@ func (dm *ReceiveService) Set(r *pb.ReceiveSetRequest) (resp *pb.ReceiveSetReply
 		d.Env = dm.user.Env
 		d.CreateUserId = dm.user.UserId
 		d.CreateUserName = dm.user.UserName
+		d.StatusDt = time.Now().Format(time.DateTime)
+		d.StatusRemark = "新增"
 	}
 
 	if r.ReceiveTmpl == "" {

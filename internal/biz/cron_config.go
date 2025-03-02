@@ -75,7 +75,12 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		for i, temp := range resp.List {
 			ids[i] = temp.Id
 		}
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(dm.user.Env, ids, startTime, endTime, "config")
+		w2 := db.NewWhere().
+			Eq("env", dm.user.Env).
+			Eq("operation", "job-task").
+			In("ref_id", ids).
+			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
+		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(w2)
 	}
 
 	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicUser)
@@ -225,6 +230,7 @@ func (dm *CronConfigService) MatchList(r *pb.CronMatchListRequest) (resp *pb.Cro
 
 			row := &pb.CronConfigListItem{
 				Id:             item.Id,
+				Env:            item.Env,
 				Name:           item.Name,
 				Spec:           item.Spec,
 				Protocol:       item.Protocol,
@@ -430,6 +436,9 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		d.Env = dm.user.Env
 		d.CreateUserId = dm.user.UserId
 		d.CreateUserName = dm.user.UserName
+		d.Status = models.ConfigStatusDisable
+		d.StatusRemark = "新增"
+		d.StatusDt = time.Now().Format(time.DateTime)
 	}
 
 	if r.Type == models.TypeCycle {

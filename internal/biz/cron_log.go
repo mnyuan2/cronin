@@ -14,6 +14,13 @@ import (
 	"time"
 )
 
+// 组件与操作名称的对应关系
+var componentToOperation = map[string]string{
+	"config":   "job-task",
+	"pipeline": "job-pipeline",
+	"receive":  "job-receive",
+}
+
 type CronLogService struct {
 	ctx  context.Context
 	user *auth.UserToken
@@ -32,20 +39,66 @@ func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListRe
 	if err := jsoniter.UnmarshalFromString(r.Tags, &tags); err != nil {
 		return nil, errs.New(err, "tags传递不规范")
 	}
+	indexWhere := db.NewWhere()
+	where := db.NewWhere()
+	if r.Env != "" {
+		indexWhere.Eq("env", r.Env)
+		where.Eq("env", r.Env)
+	} else {
+		indexWhere.In("env", []string{dm.user.Env, ""})
+		where.In("env", []string{dm.user.Env, ""})
+	}
 
-	w := db.NewWhere().In("env", []string{dm.user.Env, ""})
 	for k, v := range tags {
 		if k == "ref_id" {
 			v, _ = conv.Int64s().ParseAny(v)
-			w.Eq("ref_id", v)
-		} else {
-			//w.JsonIndexEq("tags_key", "tags_val", k, v)
-			w.Like("tags_kv", fmt.Sprintf("%s=%v", k, v))
+			indexWhere.Eq("ref_id", v)
+			where.Eq("ref_id", v)
+			continue
+		} else if k == "component" {
+			if op, ok := componentToOperation[v.(string)]; ok {
+				indexWhere.Eq("operation", op)
+				where.Eq("operation", op)
+				continue
+			}
 		}
+		where.Like("tags_kv", fmt.Sprintf("%s=%v", k, v))
 	}
 
-	list := []*models.CronLogSpan{}
-	_, err = data.NewCronLogSpanData(dm.ctx).ListPage(w, 1, r.Limit, &list)
+	// 如果查询条件仅有 ref_id+component ，则查询索引表
+	if where.Len() == 3 && indexWhere.Len() == 3 {
+		list, err := data.NewCronLogSpanIndexData(dm.ctx).List(indexWhere, r.Limit)
+		if err != nil {
+			return nil, errs.New(err, "查询失败")
+		}
+		if len(list) == 0 {
+			return resp, nil
+		}
+		idAll := []string{}
+		t, _ := time.ParseInLocation(time.DateTime, list[0].Timestamp, time.Local)
+		w, args := where.Build()
+		list2, err := data.NewCronLogSpanData(dm.ctx).List(db.NewWhere().Raw(w, args...).Gt("timestamp", t.Add(time.Second*59).UnixMicro()), r.Limit, "trace_id")
+		if err != nil {
+			return nil, errs.New(err, "查询失败")
+		}
+		for _, item := range list2 {
+			idAll = append(idAll, item.TraceId)
+		}
+		for _, item := range list {
+			ids := []string{}
+			_ = jsoniter.UnmarshalFromString(item.TraceIds, &ids)
+			idAll = append(idAll, ids...)
+			if len(idAll) >= r.Limit {
+				break
+			}
+		}
+		where.In("trace_id", idAll)
+	}
+
+	list, err := data.NewCronLogSpanData(dm.ctx).List(where, r.Limit, "*")
+	if err != nil {
+		return nil, errs.New(err, "查询失败")
+	}
 	resp = &pb.CronLogListResponse{List: make([]*pb.CronLogSpan, len(list))}
 	for i, item := range list {
 		resp.List[i] = dm.toOut(item)
@@ -61,7 +114,7 @@ func (dm *CronLogService) Trace(r *pb.CronLogTraceRequest) (resp *pb.CronLogTrac
 	}
 
 	w := db.NewWhere().In("env", []string{dm.user.Env, ""}).Eq("trace_id", r.TraceId)
-	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 10000)
+	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 10000, "*")
 
 	// 树 或 列表；样例为树，那我也树吧。
 	resp = &pb.CronLogTraceResponse{
@@ -99,6 +152,9 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 	resp = &pb.CronLogDelResponse{}
 	w := db.NewWhere().Lte("timestamp", end.UnixMicro())
 	resp.Count, err = data.NewCronLogSpanData(dm.ctx).Del(w)
+	if resp.Count > 0 {
+		data.NewCronLogSpanIndexData(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.Format(time.DateTime)))
+	}
 
 	return resp, err
 }
