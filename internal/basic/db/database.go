@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 	"os"
-	"strings"
+	"path"
 	"sync"
 	"time"
 )
@@ -70,18 +70,17 @@ func ConnSqlite(conf *config.Sqlite) *gorm.DB {
 	if conf.Path == "" {
 		panic("sqlite dbpath is empty !")
 	}
-	path := strings.TrimSpace(conf.Path)
-	path = strings.TrimSuffix(path, "/")
+	_path := path.Clean(conf.Path)
 
 	// 存储路径不存在，自动创建
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err := os.MkdirAll(path, os.ModePerm)
+	if _, err := os.Stat(_path); os.IsNotExist(err) {
+		err := os.MkdirAll(_path, os.ModePerm)
 		if err != nil {
 			panic("sqlite path mkdir error: " + err.Error())
 		}
 	}
 
-	db, err := gorm.Open(sqlite.Open(path+"/cronin.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(path.Join(_path, "cronin.db")), &gorm.Config{})
 	if err != nil {
 		db.AddError(err)
 	} else {

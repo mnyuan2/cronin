@@ -254,7 +254,6 @@ func (job *JobConfig) Run() {
 		if err == nil {
 			res, err = job.AfterTmpl(res, param)
 		}
-
 		if err != nil {
 			job.ErrorCount++
 			go job.messagePush(ctx, &dtos.MsgPushRequest{
