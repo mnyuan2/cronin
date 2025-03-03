@@ -36,6 +36,15 @@ func MysqlCollectorListen() {
 			exec <- 1
 		}
 	}()
+	go func() { // 增加观测点
+		for range time.Tick(time.Minute * 30) {
+			if len(mysqlQueue) > 2000 {
+				log.Println("[warn] log write queue overstock ", len(mysqlQueue))
+			} else {
+				log.Println("[info] log write queue ok ", len(mysqlQueue))
+			}
+		}
+	}()
 
 	// 增加观测点
 	go func() {

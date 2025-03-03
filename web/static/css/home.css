@@ -258,6 +258,9 @@ i.el-alert__icon{
 .aside-card ol li .el-link{
     display: inline;
 }
+.aside-card ol li .el-link{
+    display: inline;
+}
 
 .form-inline .el-input{
     width: auto;
