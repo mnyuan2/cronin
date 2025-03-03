@@ -96,13 +96,14 @@ var authList = []*Permission{
 	{Id: 83, Path: "/setting/message_run", Title: "执行一下", Group: "消息", Type: AuthTypeGrant},
 
 	//120~139
-	{Id: 120, Path: "/setting/", Title: "设置", Group: "", Type: AuthTypeLogin},
+	{Id: 120, Path: "/setting/", Title: "偏好", Group: "", Type: AuthTypeLogin},
 	{Id: 122, Path: "/setting/preference_get", Title: "查看", Group: "偏好", Type: AuthTypeLogin},
 	{Id: 121, Path: "/setting/preference_set", Title: "设置", Group: "偏好", Type: AuthTypeGrant, Tag: "preference_set"},
 
-	{Id: 123, Path: "/global_variate/list", Title: "查看", Group: "全局变量", Type: AuthTypeLogin},
-	{Id: 124, Path: "/global_variate/set", Title: "新增/编辑", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_set"},
-	{Id: 125, Path: "/global_variate/change_status", Title: "状态变更", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_status"},
+	{Id: 130, Path: "/global_variate/", Title: "全局变量", Group: "", Type: AuthTypeLogin},
+	{Id: 131, Path: "/global_variate/list", Title: "查看", Group: "全局变量", Type: AuthTypeLogin},
+	{Id: 132, Path: "/global_variate/set", Title: "新增/编辑", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_set"},
+	{Id: 133, Path: "/global_variate/change_status", Title: "状态变更", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_status"},
 
 	{Id: 90, Path: "/user/", Title: "用户", Group: "", Type: AuthTypeGrant},
 	{Id: 91, Path: "/user/list", Title: "列表", Group: "用户", Type: AuthTypeGrant, Tag: "user_list"},

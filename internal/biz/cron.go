@@ -23,7 +23,6 @@ var globalVariateList = &cache.Memory{}
 // 全局初始化
 func init() {
 	cronInit()
-	globalVariateInit()
 }
 
 func cronInit() {
@@ -71,7 +70,7 @@ func SkipIfStillRunning(logger cron.Logger) cron.JobWrapper {
 }
 
 // 初始化环境变量
-func globalVariateInit() {
+func GlobalVariateInit() {
 	list, err := data.NewCronSettingData(context.Background()).GetGlobalVariateList()
 	if err != nil {
 		panic(fmt.Sprintf("全局变量初始化失败: %s", err.Error()))
