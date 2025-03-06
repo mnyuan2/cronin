@@ -40,8 +40,10 @@ func ParseCommon(command []byte, params map[string]any) (*pb.CronConfigCommand, 
 	}
 
 	commandParse := &pb.CronConfigCommand{}
-	if err := jsoniter.Unmarshal(cmd, commandParse); err != nil {
-		return nil, errs.New(err, "配置解析错误")
+	if cmd != nil {
+		if err := jsoniter.Unmarshal(cmd, commandParse); err != nil {
+			return nil, errs.New(err, "配置解析错误")
+		}
 	}
 	return commandParse, nil
 

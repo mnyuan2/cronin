@@ -82,7 +82,7 @@ var MyPipeline = Vue.extend({
         </el-drawer>
         <!-- 任务日志弹窗 -->
         <el-drawer :title="config_log_box.title" :visible.sync="config_log_box.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
-            <my-config-log :tags="config_log_box.tags"></my-config-log>
+            <my-config-log :search="config_log_box.search" v-if="config_log_box.show"></my-config-log>
         </el-drawer>
         <!--状态变更弹窗-->
         <my-status-change v-if="status_box.show" :request="status_box" @close="statusShow"></my-status-change>
@@ -132,7 +132,7 @@ var MyPipeline = Vue.extend({
             config_log_box:{
                 show: false,
                 title:'',
-                tags: {},
+                search: {},
             },
         }
     },
@@ -291,16 +291,17 @@ var MyPipeline = Vue.extend({
             }
         },
         configLogBox(item){
-            let tags = {ref_id:item.id, component:"pipeline"}
-            this.config_log_box.tags = tags
+            this.config_log_box.search = {
+                env: item.env,
+                tags: JSON.stringify({ref_id:item.id, component:"pipeline"}),
+            }
             this.config_log_box.title = item.name+' 日志'
             this.config_log_box.show = true
         },
         configLogBoxClose(done){
             this.config_log_box.show = false;
-            this.config_log_box.id = 0;
             this.config_log_box.title = ' 日志'
-            this.config_log_box.tags = {}
+            this.config_log_box.search = {}
         },
     }
 })

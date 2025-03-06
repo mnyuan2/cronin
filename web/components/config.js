@@ -97,7 +97,7 @@ var MyConfig = Vue.extend({
     </el-dialog>
     <!-- 任务日志弹窗 -->
     <el-drawer :title="config_log_box.title" :visible.sync="config_log_box.show" direction="rtl" size="40%" wrapperClosable="false" :before-close="configLogBoxClose">
-        <my-config-log :search="config_log_box.search"></my-config-log>
+        <my-config-log :search="config_log_box.search" v-if="config_log_box.show"></my-config-log>
     </el-drawer>
     <my-status-change v-if="status_box.show" :request="status_box" @close="statusShow"></my-status-change>
 
@@ -506,7 +506,6 @@ var MyConfig = Vue.extend({
         },
         configLogBoxClose(done){
             this.config_log_box.show = false;
-            this.config_log_box.id = 0;
             this.config_log_box.title = ' 日志'
             this.config_log_box.search = {}
         },
