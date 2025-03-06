@@ -996,8 +996,10 @@ var MyConfigForm = Vue.extend({
                     is_batch: "1", // 批量解析：1.是（默认）、2.否
                 }
             }
-            if (oldData.git == null){
-                oldData.git = {
+            // 这里要拷贝，防止影响原对象
+            let data = copyJSON(oldData)
+            if (data.git == null){
+                data.git = {
                     link_id: "",
                     owner: this.preference.git.owner ?? '',
                     project: this.preference.git.repo ?? '',
@@ -1005,8 +1007,8 @@ var MyConfigForm = Vue.extend({
                     ref: this.preference.git.branch ?? '',
                 }
             }
-            oldData.is_batch = oldData.is_batch.toString()
-            this.sqlSet.statement = oldData
+            data.is_batch = data.is_batch.toString()
+            this.sqlSet.statement = data
 
             this.sqlSet.title = this.sqlSet.index < 0? '添加' : '编辑';
         },

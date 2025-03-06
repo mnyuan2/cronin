@@ -50,7 +50,6 @@ func (m *CronLogSpanData) Del(where *db.Where) (count int, err error) {
 	if err != nil {
 		return 0, fmt.Errorf("删除失败，%w", err)
 	}
-	m.db.Where(w, args...).Delete(&models.CronLogSpanIndex{})
 
 	return count, nil
 }
