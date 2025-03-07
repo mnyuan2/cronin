@@ -407,7 +407,7 @@ var MyConfigDetail = Vue.extend({
                     })
                     res.data.handle_user_names = res.data.handle_user_names.substring(0,res.data.handle_user_names.length-1)
                 }
-                res.data.share_url = '【'+res.data.name+'】'+ window.location.href
+                res.data.share_url = '【'+res.data.name+'】 '+ window.location.href
 
                 this.detail = res.data
                 setDocumentTitle(res.data.name)

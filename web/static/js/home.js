@@ -220,10 +220,20 @@ function arrayDelete(index, arr){
     arr.splice(index,1)
 }
 
+// 跳转回上一页
+function backLastPage() {
+    if (document.referrer){ // 上一页为当前域，则返回
+        window.history.back()
+    }else{ // 上一页不是当前域，则跳转到首页
+        window.location.href="/index"
+    }
+}
+
 function getHomePage() {
     window.location.href="/index"
 }
-function getLoginPage() {
+// 跳转登录页
+function backLoginPage() {
     window.location.href="/login"
 }
 
@@ -572,7 +582,7 @@ var api = {
                     res.status = true
                 }else if (res.code == '999909'){
                     // 重定向到登录
-                    return getLoginPage()
+                    return backLoginPage()
                 }else{
                     res.status = false
                 }
