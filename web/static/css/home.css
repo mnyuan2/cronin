@@ -347,7 +347,7 @@ i.el-alert__icon{
     margin: 0 4px 0 4px;
 }
 .sql-show-warp .input-box pre{
-    white-space: nowrap;
+    /*white-space: nowrap;*/
     min-height: 45px;
 }
 

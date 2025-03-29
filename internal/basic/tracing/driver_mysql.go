@@ -58,7 +58,7 @@ func MysqlCollectorListen() {
 	}()
 
 	// 合计指标
-	go sumIndex()
+	//go sumIndex()
 
 	// 延长3秒、或超过1000条写入。
 	for {
@@ -81,6 +81,7 @@ func MysqlCollectorListen() {
 			index++
 		}
 
+		sumIndexV2(list)
 		writeList(list)
 	}
 }
@@ -144,6 +145,31 @@ func sumIndex() {
 		if len(newList) > 0 {
 			cli.Create(newList)
 		}
+	}
+}
+
+// 从写入数据中提取指标
+func sumIndexV2(rows []models.CronLogSpan) {
+	list := []*models.CronLogSpanIndexV2{}
+	for _, row := range rows {
+		if row.RefId == "" {
+			continue
+		}
+		ti := time.UnixMicro(row.Timestamp)
+		item := &models.CronLogSpanIndexV2{
+			Timestamp: ti.Format(time.DateTime),
+			Env:       row.Env,
+			RefId:     row.RefId,
+			Operation: row.Operation,
+			TraceId:   row.TraceId,
+			Status:    row.Status,
+			Duration:  row.Duration,
+		}
+		list = append(list, item)
+	}
+
+	if len(list) > 0 {
+		db.New(context.Background()).Create(list)
 	}
 }
 

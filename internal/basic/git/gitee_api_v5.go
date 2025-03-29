@@ -123,7 +123,10 @@ func (m *GiteeApiV5) FileGet(handler *Handler, r *FileGetRequest) (res *FileGetR
 	if err != nil {
 		return nil, fmt.Errorf("文件内容解码错误，%w", err)
 	}
-	res = &FileGetResponse{Content: string(content)}
+	res = &FileGetResponse{
+		Sha:     out.Sha,
+		Content: string(content),
+	}
 
 	return res, nil
 }

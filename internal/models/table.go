@@ -28,13 +28,15 @@ func AutoMigrate(Db *db.MyDB) {
 		}
 		// 迁移表结构
 		err := Db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronLogSpanIndex{},
+			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{},
+				&CronLogSpan{}, &CronLogSpanIndex{}, &CronLogSpanIndexV2{},
 				&CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
 	} else if config.DbConf().Driver == db.DriverSqlite {
-		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronLogSpanIndex{},
+		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{},
+			&CronLogSpan{}, &CronLogSpanIndex{}, &CronLogSpanIndexV2{},
 			&CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))

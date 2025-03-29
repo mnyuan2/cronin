@@ -22,7 +22,7 @@ type FileGetRequest struct {
 
 // 文件获取 响应
 type FileGetResponse struct {
-	Sha     string `json:"sha"`
+	Sha     string `json:"sha"` // gitee 更新文件使用
 	Content string `json:"content"`
 }
 

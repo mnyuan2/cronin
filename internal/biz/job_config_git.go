@@ -123,9 +123,9 @@ func (job *JobConfig) gitReposContents(ctx context.Context, api git.Api, r *pb.G
 	if er != nil {
 		return nil, errs.New(er, "gite文件获取失败")
 	}
-	span.AddEvent("", trace.WithAttributes(attribute.String("response", string(res.Content))))
+	span.AddEvent("", trace.WithAttributes(attribute.String("response", res.Content)))
 
-	return file, nil
+	return []byte(res.Content), nil
 }
 
 // 记录日志

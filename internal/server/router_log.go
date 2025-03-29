@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 任务状态变更
+// 日志列表
 func routerLogList(ctx *gin.Context) {
 	r := &pb.CronLogListRequest{}
 	if err := ctx.BindQuery(r); err != nil {

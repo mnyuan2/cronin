@@ -66,33 +66,15 @@ func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListRe
 	}
 
 	// 如果查询条件仅有 ref_id+component ，则查询索引表
-	if where.Len() == 3 && indexWhere.Len() == 3 {
-		list, err := data.NewCronLogSpanIndexData(dm.ctx).List(indexWhere, r.Limit)
+	if indexWhere.Len() == 3 {
+		ids, err := data.NewCronLogSpanIndexV2Data(dm.ctx).GetTraceIds(indexWhere, r.Limit)
 		if err != nil {
 			return nil, errs.New(err, "查询失败")
 		}
-		if len(list) == 0 {
+		if len(ids) == 0 {
 			return &pb.CronLogListResponse{List: []*pb.CronLogSpan{}}, nil
 		}
-		idAll := []string{}
-		t, _ := time.ParseInLocation(time.DateTime, list[0].Timestamp, time.Local)
-		w, args := where.Build()
-		list2, err := data.NewCronLogSpanData(dm.ctx).List(db.NewWhere().Raw(w, args...).Gt("timestamp", t.Add(time.Second*59).UnixMicro()), r.Limit, "trace_id")
-		if err != nil {
-			return nil, errs.New(err, "查询失败")
-		}
-		for _, item := range list2 {
-			idAll = append(idAll, item.TraceId)
-		}
-		for _, item := range list {
-			ids := []string{}
-			_ = jsoniter.UnmarshalFromString(item.TraceIds, &ids)
-			idAll = append(idAll, ids...)
-			if len(idAll) >= r.Limit {
-				break
-			}
-		}
-		where.In("trace_id", idAll)
+		where.In("trace_id", ids)
 	}
 
 	list, err := data.NewCronLogSpanData(dm.ctx).List(where, r.Limit, "*")
@@ -114,9 +96,9 @@ func (dm *CronLogService) Trace(r *pb.CronLogTraceRequest) (resp *pb.CronLogTrac
 	}
 
 	w := db.NewWhere().In("env", []string{dm.user.Env, ""}).Eq("trace_id", r.TraceId)
-	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 10000, "*")
+	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 1000, "*")
 
-	// 树 或 列表；样例为树，那我也树吧。
+	// 树
 	resp = &pb.CronLogTraceResponse{
 		List:  []*pb.CronLogTraceItem{},
 		Limit: 1000,
@@ -153,7 +135,7 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 	w := db.NewWhere().Lte("timestamp", end.UnixMicro())
 	resp.Count, err = data.NewCronLogSpanData(dm.ctx).Del(w)
 	if resp.Count > 0 {
-		data.NewCronLogSpanIndexData(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.Format(time.DateTime)))
+		data.NewCronLogSpanIndexV2Data(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.Format(time.DateTime)))
 	}
 
 	return resp, err
