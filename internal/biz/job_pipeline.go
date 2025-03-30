@@ -57,7 +57,9 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 		// ...
 	}
 	param, _ := job.conf.ParseParams(nil)
-	job.conf.Parse(param)
+	if err := job.conf.Parse(param); err != nil {
+		panic(err.Error())
+	}
 
 	// 日志
 	job.tracer = tracing.Tracer(job.pipeline.Env+"-cronin", trace.WithInstrumentationAttributes(

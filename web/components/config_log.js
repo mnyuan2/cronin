@@ -34,12 +34,12 @@ var MyConfigLog = Vue.extend({
 </div>`,
     name: "MyConfigLog",
     props: {
-        tags:Object,
+        // tags:Object,
         search: Object,
     },
     data(){
         return {
-            tags:{},
+            // tags:{},
             search:{},
             list:[],// 日志列表，没有分页；
             trace:{
@@ -53,14 +53,14 @@ var MyConfigLog = Vue.extend({
     // 模块初始化
     mounted(){},
     watch:{
-        tags:{
-            immediate: true, // 解决首次负值不触发的情况
-            handler: function (newVal,oldVal){
-                if (Object.keys(newVal).length){
-                    this.logByConfig({tags: JSON.stringify(newVal)})
-                }
-            },
-        },
+        // tags:{
+        //     immediate: true, // 解决首次负值不触发的情况
+        //     handler: function (newVal,oldVal){
+        //         if (Object.keys(newVal).length){
+        //             this.logByConfig({tags: JSON.stringify(newVal)})
+        //         }
+        //     },
+        // },
         search:{
             immediate: true, // 解决首次负值不触发的情况
             handler: function (newVal,oldVal){

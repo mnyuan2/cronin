@@ -76,7 +76,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 
 	r.GET("/setting/source_list", routerSqlList)
 	r.POST("/setting/source_set", routerSqlSet)
-	r.POST("/setting/sql_source_change_status", routerSqlChangeStatus)
+	r.POST("/setting/source_change_status", routerChangeStatus)
 	r.POST("/setting/source_ping", routerSqlPing)
 	r.GET("/setting/env_list", routerEnvList)
 	r.POST("/setting/env_set", routerEnvSet)
@@ -88,6 +88,9 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.POST("/setting/message_run", routerMessageRun)
 	r.POST("/setting/preference_set", routerPreferenceSet)
 	r.GET("/setting/preference_get", routerPreferenceGet)
+	r.GET("/global_variate/list", routerGlobalVariateList)
+	r.POST("/global_variate/set", routerGlobalVariateSet)
+	r.POST("/global_variate/change_status", routerGlobalVariateChangeStatus)
 
 	r.GET("/user/list", routerUserList)
 	r.POST("/user/set", routerUserSet)

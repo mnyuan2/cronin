@@ -99,13 +99,16 @@ func (job *JobConfig) sql(ctx context.Context, r *pb.CronSql) (err errs.Errs) {
 		}
 		switch item.Type {
 		case enum.SqlStatementSourceGit:
+			if r.GitSourceId != 0 {
+				item.Git.LinkId = r.GitSourceId
+			}
 			files, err := job.getGitFile(ctx, item.Git)
 			if err != nil {
 				return err
 			}
 			for _, file := range files {
 				list := [][]byte{}
-				if item.IsBatch == enum.BoolYes {
+				if item.IsBatch == enum.BoolYes || item.IsBatch == 0 {
 					list = bytes.Split(file.Byte, []byte(";"))
 				} else if item.IsBatch == enum.BoolNot {
 					list = [][]byte{0: file.Byte}

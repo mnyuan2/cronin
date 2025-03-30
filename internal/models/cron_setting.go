@@ -31,6 +31,7 @@ const (
 	SceneEnv           = "env"            // 程序环境
 	SceneMsg           = "msg"            // 消息推送
 	ScenePreference    = "preference"     // 使用偏好
+	SceneGlobalVar     = "global_var"     // 全局变量
 )
 
 const EnvDefault = "public" // 默认环境 是不可以删除的

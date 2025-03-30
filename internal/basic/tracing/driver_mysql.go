@@ -58,50 +58,7 @@ func MysqlCollectorListen() {
 	}()
 
 	// 合计指标
-	go func() {
-		getKey := func(row *models.CronLogSpanIndex) string {
-			return fmt.Sprintf("%s|%s|%s|%s", row.Timestamp, row.Env, row.RefId, row.Operation)
-		}
-		for tmp := range time.Tick(time.Minute) {
-			ctx := context.Background()
-			tmp = tmp.Add(-time.Minute)
-			y, m, d := tmp.Date()
-			start := time.Date(y, m, d, tmp.Hour(), tmp.Minute(), 0, 0, tmp.Location())
-			end := start.Add(time.Minute).Add(-time.Microsecond)
-
-			cli := db.New(ctx)
-			// 统计近期指标
-			list := data.NewCronLogSpanIndexData(ctx).
-				SumIndex(db.NewWhere().Gte("timestamp", start.UnixMicro()).Lte("timestamp", end.UnixMicro()))
-			listMap := map[string]*models.CronLogSpanIndex{}
-			if len(list) == 0 {
-				continue
-			}
-			for _, item := range list {
-				listMap[getKey(item)] = item
-			}
-			// 对已经存在的指标进行更新
-			//oldList := []*models.CronLogSpanIndex{}
-			//cli.Where("`timestamp` >= ? AND `timestamp` <= ?", start.Format(time.DateTime), end.Format(time.DateTime)).
-			//	Find(&oldList)
-			//for _, item := range oldList {
-			//	k := getKey(item)
-			//	if row, ok := listMap[k]; ok {
-			//		row.Id = item.Id
-			//		cli.Select("status_empty_number", "status_error_number", "status_success_number", "duration_max", "duration_avg").Updates(row)
-			//		delete(listMap, k)
-			//	}
-			//}
-			// 写入新指标
-			newList := []*models.CronLogSpanIndex{}
-			for _, item := range listMap {
-				newList = append(newList, item)
-			}
-			if len(newList) > 0 {
-				cli.Create(newList)
-			}
-		}
-	}()
+	go sumIndex()
 
 	// 延长3秒、或超过1000条写入。
 	for {
@@ -124,12 +81,70 @@ func MysqlCollectorListen() {
 			index++
 		}
 
-		// 执行写入
-		if err := db.New(context.Background()).CreateInBatches(list, 100).Error; err != nil {
-			log.Println("MysqlCollector 日志写入失败，", err.Error())
+		writeList(list)
+	}
+}
+
+func writeList(list []models.CronLogSpan) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("log write queue writeList 日志写入异常，", err) // 后续这个要做报警通知
+		}
+	}()
+	// 执行写入
+	if err := db.New(context.Background()).CreateInBatches(list, 100).Error; err != nil {
+		log.Println("log write queue writeList 日志写入失败，", err.Error())
+	}
+}
+
+func sumIndex() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("log write queue sumIndex 日志写异常，", err) // 后续这个要做报警通知
+		}
+	}()
+	getKey := func(row *models.CronLogSpanIndex) string {
+		return fmt.Sprintf("%s|%s|%s|%s", row.Timestamp, row.Env, row.RefId, row.Operation)
+	}
+	for tmp := range time.Tick(time.Minute) {
+		ctx := context.Background()
+		tmp = tmp.Add(-time.Minute)
+		y, m, d := tmp.Date()
+		start := time.Date(y, m, d, tmp.Hour(), tmp.Minute(), 0, 0, tmp.Location())
+		end := start.Add(time.Minute).Add(-time.Microsecond)
+
+		cli := db.New(ctx)
+		// 统计近期指标
+		list := data.NewCronLogSpanIndexData(ctx).
+			SumIndex(db.NewWhere().Gte("timestamp", start.UnixMicro()).Lte("timestamp", end.UnixMicro()))
+		listMap := map[string]*models.CronLogSpanIndex{}
+		if len(list) == 0 {
+			continue
+		}
+		for _, item := range list {
+			listMap[getKey(item)] = item
+		}
+		// 对已经存在的指标进行更新
+		//oldList := []*models.CronLogSpanIndex{}
+		//cli.Where("`timestamp` >= ? AND `timestamp` <= ?", start.Format(time.DateTime), end.Format(time.DateTime)).
+		//	Find(&oldList)
+		//for _, item := range oldList {
+		//	k := getKey(item)
+		//	if row, ok := listMap[k]; ok {
+		//		row.Id = item.Id
+		//		cli.Select("status_empty_number", "status_error_number", "status_success_number", "duration_max", "duration_avg").Updates(row)
+		//		delete(listMap, k)
+		//	}
+		//}
+		// 写入新指标
+		newList := []*models.CronLogSpanIndex{}
+		for _, item := range listMap {
+			newList = append(newList, item)
+		}
+		if len(newList) > 0 {
+			cli.Create(newList)
 		}
 	}
-
 }
 
 type mysqlTracer struct {

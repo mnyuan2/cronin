@@ -268,9 +268,26 @@ func (dm *SettingSqlService) ChangeStatus(r *pb.SettingChangeStatusRequest) (res
 	}
 	// 这里还是要做是否使用的检测；
 	// 如果使用未启用就联动置空（也不能删除，要么删除任务或者改任务），如果使用并启用禁止删除；
-	// 如果没有试用就直接删除。
+	// 如果没有使用就直接删除。
 	list := []string{}
-	err = dm.db.Raw(fmt.Sprintf("SELECT `name` FROM `cron_config` WHERE protocol=%v and JSON_CONTAINS(command, '%v', '$.sql.source.id') = 1", models.ProtocolSql, one.Id)).
+	w := db.NewWhere()
+	if one.Scene == models.SceneSqlSource {
+		w.Eq("protocol", models.ProtocolSql).JsonContains("command", "$.sql.source.id", one.Id)
+	} else if one.Scene == models.SceneJenkinsSource {
+		w.Eq("protocol", models.ProtocolJenkins).JsonContains("command", "$.jenkins.source.id", one.Id)
+	} else if one.Scene == models.SceneGitSource {
+		w.Sub(func(sub *db.Where) {
+			sub.Eq("protocol", models.ProtocolGit).JsonContains("command", "$.git.link_id", one.Id)
+		}).Sub(func(sub *db.Where) {
+			sub.Eq("protocol", models.ProtocolCmd).JsonContains("command", "$.cmd.statement.git.link_id", one.Id)
+		}, db.OrOption()).Sub(func(sub *db.Where) {
+			sub.Eq("protocol", models.ProtocolSql).JsonContains("command", "$.sql.git_source_id", one.Id)
+		}, db.OrOption())
+	} else if one.Scene == models.SceneHostSource {
+		w.Eq("protocol", models.ProtocolCmd).JsonContains("command", "$.host.id", one.Id)
+	}
+	where, args := w.Build()
+	err = dm.db.Raw("SELECT `name` FROM `cron_config` WHERE "+where, args...).
 		Scan(&list).Error
 	if err != nil {
 		return nil, fmt.Errorf("任务检测错误，%w", err)

@@ -39,7 +39,7 @@ func routerSqlSet(ctx *gin.Context) {
 }
 
 // 任务状态变更
-func routerSqlChangeStatus(ctx *gin.Context) {
+func routerChangeStatus(ctx *gin.Context) {
 	r := &pb.SettingChangeStatusRequest{}
 	if err := ctx.BindJSON(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
@@ -87,5 +87,36 @@ func routerPreferenceGet(ctx *gin.Context) {
 	r := &pb.SettingPreferenceGetRequest{}
 
 	rep, err := biz.NewSettingService(ctx.Request.Context()).PreferenceGet(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 全局变量列表
+func routerGlobalVariateList(ctx *gin.Context) {
+	r := &pb.GlobalVariateListRequest{}
+
+	rep, err := biz.NewSettingService(ctx.Request.Context()).GlobalVariateList(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 全局变量设置
+func routerGlobalVariateSet(ctx *gin.Context) {
+	r := &pb.GlobalVariateSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+
+	rep, err := biz.NewSettingService(ctx.Request.Context()).GlobalVariateSet(r)
+	NewReply(ctx).SetReply(rep, err).RenderJson()
+}
+
+// 全局变量状态变更
+func routerGlobalVariateChangeStatus(ctx *gin.Context) {
+	r := &pb.GlobalVariateSetRequest{}
+	if err := ctx.BindJSON(r); err != nil {
+		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
+		return
+	}
+	rep, err := biz.NewSettingService(ctx.Request.Context()).GlobalVariateChangeStatus(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

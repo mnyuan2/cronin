@@ -138,6 +138,11 @@ var MyConfigForm = Vue.extend({
                                 <el-option label="本地" value="local"></el-option>
                                 <el-option label="git" value="git"></el-option>
                             </el-select>
+                            <span v-show="form.command.sql.origin=='git'">&nbsp;链接</span>
+                            <el-select v-model="form.command.sql.git_source_id" placement="链接" style="width:100px" v-show="form.command.sql.origin=='git'">
+                                <el-option v-for="(dic_v,dic_k) in dic.git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
+                            </el-select>
+                            &nbsp;
                             <el-button type="text" @click="sqlSetShow(-1)">添加<i class="el-icon-plus"></i></el-button>
                         </div>
                         <div class="sql-show-warp">
@@ -262,13 +267,13 @@ var MyConfigForm = Vue.extend({
             </div>
         </el-form-item>
         <el-form-item label-width="2px">
-            <div><el-button type="text" @click="msgBoxShow(-1)">推送<i class="el-icon-plus"></i></el-button></div>
+            <div>
+                <el-button type="text" @click="msgBoxShow()">消息<i class="el-icon-plus"></i></el-button>
+                <span v-show="form.empty_not_msg==1" style="float:right">空结果不发消息</span>
+            </div>
             <div class="input-box" v-for="(msg,msg_index) in form.msg_set">
                 <el-row v-html="msg.descrition"></el-row>
-                <span class="input-header">
-                    <i class="el-icon-close" @click="msgSetDel(msg_index)"></i>
-                    <i class="el-icon-edit" @click="msgBoxShow(msg_index,msg)"></i>
-                </span>
+                <span class="input-header"></span>
             </div>
         </el-form-item>
         <div style="text-align: right;padding-bottom: 14px;">
@@ -286,7 +291,7 @@ var MyConfigForm = Vue.extend({
     <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show && !request.disabled" :show-close="false" :modal="false" :close-on-click-modal="false">
         <el-form :model="sqlSet.statement.git" v-if="sqlSet.source=='git'" label-width="70px" size="small">
             <el-form-item label="连接">
-                <el-select v-model="sqlSet.statement.git.link_id" placement="请选择git链接">
+                <el-select v-model="form.command.sql.git_source_id" placement="未选择" disabled>
                     <el-option v-for="(dic_v,dic_k) in dic.git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                 </el-select>
             </el-form-item>
@@ -447,27 +452,40 @@ var MyConfigForm = Vue.extend({
         </span>
     </el-dialog>
     <!-- 推送设置弹窗 -->
-    <el-dialog title="推送设置" :visible.sync="msg_set_box.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
-        <el-form :model="msg_set_box.form" :inline="true" size="small">
-            <el-form-item label="当执行">
-                <el-select v-model="msg_set_box.form.status" multiple style="width: 143px" placeholder="状态">
-                    <el-option v-for="(dic_v,dic_k) in msg_set_box.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
-                </el-select>
-                时
-            </el-form-item>
-            <el-form-item label="发送">
-                <el-select v-model="msg_set_box.form.msg_id" style="width: 180px" placeholder="模板">
-                    <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
-                </el-select>
-                消息
-            </el-form-item>
-            <el-form-item label="并且@">
-                <el-select v-model="msg_set_box.form.notify_user_ids" multiple style="width: 210px" placeholder="人员">
-                    <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
-                </el-select>
-            </el-form-item>
-        </el-form>
+    <el-dialog title="消息设置" :visible.sync="msg_set_box.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
+        <div>
+            <el-checkbox v-model="msg_set_box.form.empty_not_msg">空结果不发消息</el-checkbox>
+        </div>
+        <el-table :data="msg_set_box.form.msg_set" style="width: 100%">
+            <el-table-column label="当任务状态*" width="180">
+                <template slot-scope="{row}">
+                    <el-select v-model="row.status" multiple style="width: 143px" placeholder="状态" size="small" style="width:100%">
+                        <el-option v-for="(dic_v,dic_k) in msg_set_box.statusList" :label="dic_v.name" :value="dic_v.id"></el-option>
+                    </el-select>
+                </template>
+            </el-table-column>
+            <el-table-column label="发送消息模板*">
+                <template slot-scope="{row}">
+                    <el-select v-model="row.msg_id" style="width: 180px" placeholder="模板" size="small" style="width:100%">
+                        <el-option v-for="(dic_v,dic_k) in dic.msg" :label="dic_v.name" :value="dic_v.id"></el-option>
+                    </el-select>
+                </template>
+            </el-table-column>
+            <el-table-column label="@人员">
+                <template slot-scope="{row}">
+                    <el-select v-model="row.notify_user_ids" multiple style="width: 210px" placeholder="人员" size="small" style="width:100%">
+                        <el-option v-for="(dic_v,dic_k) in dic.user" :key="dic_v.id" :label="dic_v.name" :value="dic_v.id"></el-option>
+                    </el-select>
+                </template>
+            </el-table-column>
+            <el-table-column label="" width="40">
+                <template slot-scope="scope">
+                    <i @click="msgSetDel(scope.$index)" class="el-icon-delete"></i>
+                </template>
+            </el-table-column>
+        </el-table>
         <span slot="footer" class="dialog-footer">
+            <el-button type="text" @click="msgSetAdd" size="small" style="float: left;">添加</el-button>
             <el-button @click="msg_set_box.show = false" size="small">取 消</el-button>
             <el-button type="primary" @click="msgSetConfirm()" size="small">确 定</el-button>
         </span>
@@ -561,9 +579,7 @@ var MyConfigForm = Vue.extend({
                 retry_mode: [],
             },
 
-            form:{
-                name: "",
-            },
+            form:{},
             hintSpec: "* * * * * *   秒 分 时 天 月 星期",
             source: {
                 boxShow: false,
@@ -591,8 +607,6 @@ var MyConfigForm = Vue.extend({
             },
             msg_set_box:{
                 show: false, // 是否显示
-                title: '添加',
-                index: -1, // 操作行号
                 form: {}, // 实际内容
                 statusList:[{id:1,name:"错误"}, {id:2, name:"成功"}],
             },
@@ -770,6 +784,7 @@ var MyConfigForm = Vue.extend({
                             // password:""
                         },
                         origin: 'local',
+                        git_source_id: '',
                         statement:[],
                         err_action: "1",
                     },
@@ -792,6 +807,7 @@ var MyConfigForm = Vue.extend({
                 err_retry_mode: 1,
                 err_retry_mode_name: '',
                 msg_set: [],
+                empty_not_msg: 2,
                 tag_ids: [],
                 tag_names: "",
                 status: '1',
@@ -818,6 +834,9 @@ var MyConfigForm = Vue.extend({
             form.command.sql.err_action = form.command.sql.err_action.toString()
             if (form.command.sql.source.id == 0){
                 form.command.sql.source.id = ""
+            }
+            if (form.command.sql.git_source_id == 0){
+                form.command.sql.git_source_id = ""
             }
             for (let i in row.command.sql.statement){
                 form.command.sql.statement[i] = this.sqlGitBuildDesc(row.command.sql.statement[i])
@@ -882,6 +901,7 @@ var MyConfigForm = Vue.extend({
             body.command.sql.err_action = Number(body.command.sql.err_action)
             body.command.sql.interval = Number(body.command.sql.interval)
             body.command.sql.source.id = Number(body.command.sql.source.id)
+            body.command.sql.git_source_id = Number(body.command.sql.git_source_id)
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
             body.command.git.link_id = Number(body.command.git.link_id)
@@ -998,10 +1018,6 @@ var MyConfigForm = Vue.extend({
             }
 
             if (this.sqlSet.source == 'git'){
-                if (this.sqlSet.statement.git.link_id == ""){
-                    return this.$message.error("请选择连接")
-                }
-
                 if (this.sqlSet.statement.git.owner == ""){
                     return this.$message.error("空间为必填")
                 }
@@ -1012,7 +1028,6 @@ var MyConfigForm = Vue.extend({
                     return this.$message.error("请输入文件的路径")
                 }
                 let data = copyJSON(this.sqlSet.statement);
-                data.git.link_id = Number(data.git.link_id)
                 data.is_batch = Number(data.is_batch)
                 data.type = this.sqlSet.source
                 if (data.git.ref == ""){
@@ -1246,25 +1261,22 @@ var MyConfigForm = Vue.extend({
             this.biggerShow(false)
         },
         // 推送弹窗
-        msgBoxShow(index, oldData){
-            if (index === "" || index == null || isNaN(index)){
-                console.log('msgSetShow', index, oldData)
-                return this.$message.error("索引位标志异常");
-            }
-            if (oldData == undefined || index < 0){
-                oldData = {
-                    status: [],
-                    msg_id: "",
-                    notify_user_ids: [],
-                }
-            }else if (typeof oldData != 'object'){
-                console.log('推送信息异常', oldData)
-                return this.$message.error("推送信息异常");
-            }
+        msgBoxShow(){
             this.msg_set_box.show = true
-            this.msg_set_box.index = Number(index)  // -1.新增、>=0.具体行的编辑
-            this.msg_set_box.title = this.msg_set_box.index < 0? '添加' : '编辑';
-            this.msg_set_box.form = oldData
+            this.msg_set_box.form = {
+                empty_not_msg: this.form.empty_not_msg == 1,
+                msg_set: copyJSON(this.form.msg_set),
+            }
+            if (this.msg_set_box.form.msg_set.length == 0){
+                this.msgSetAdd()
+            }
+        },
+        msgSetAdd(){
+            this.msg_set_box.form.msg_set.push({
+                status: [],
+                msg_id: "",
+                notify_user_ids: [],
+            })
         },
         msgSetDel(index){
             if (this.request.disabled){
@@ -1277,23 +1289,21 @@ var MyConfigForm = Vue.extend({
             this.$confirm('确认删除推送配置','提示',{
                 type:'warning',
             }).then(()=>{
-                this.form.msg_set.splice(index, 1);
+                this.msg_set_box.form.msg_set.splice(index, 1);
             })
-
         },
         // 推送确认
         msgSetConfirm(){
-            if (this.msg_set_box.form.msg_id <= 0){
-                return this.$message.warning("请选择消息模板");
-            }
-            let data = this.msgSetBuildDesc(this.msg_set_box.form)
-            if (this.msg_set_box.index < 0){
-                this.form.msg_set.push(data)
-            }else{
-                this.form.msg_set[this.msg_set_box.index] = data
-            }
+            let list =  []
+            this.msg_set_box.form.msg_set.forEach( (item)=> {
+                if (item.status.length == 0 || item.msg_id == "") {
+                    return
+                }
+                list.push(this.msgSetBuildDesc(item))
+            })
+            this.form.msg_set = list
+            this.form.empty_not_msg = this.msg_set_box.form.empty_not_msg ? 1 : 2
             this.msg_set_box.show = false
-            this.msg_set_box.index = -1
             this.msg_set_box.form = {}
         },
         // 构建消息设置描述
@@ -1447,10 +1457,12 @@ var MyConfigForm = Vue.extend({
                     after_tmpl: this.form.after_tmpl,
                     var_fields: this.form.var_fields,
                     msg_set: this.form.msg_set,
+                    empty_not_msg: this.form.empty_not_msg,
                 })
                 body.command.sql.err_action = Number(body.command.sql.err_action)
                 body.command.sql.interval = Number(body.command.sql.interval)
                 body.command.sql.source.id = Number(body.command.sql.source.id)
+                body.command.sql.git_source_id = Number(body.command.sql.git_source_id)
                 body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
                 body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
                 body.command.git.link_id = Number(body.command.git.link_id)
