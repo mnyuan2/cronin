@@ -140,7 +140,7 @@ var MyConfig = Vue.extend({
             listRequest: false, // 请求中标志
             config_log_box:{
                 show: false,
-                title:'',
+                title:'日志',
                 search: {},
             },
             registerList: [],
@@ -499,14 +499,16 @@ var MyConfig = Vue.extend({
         configLogBox(item){
             this.config_log_box.search = {
                 env: item.env,
-                tags: JSON.stringify({ref_id:item.id, component:"config"}),
+                // tags: JSON.stringify({ref_id:item.id, component:"config"}),
+                ref_id: item.id,
+                operation: 'job-task',
             }
-            this.config_log_box.title = item.name+' 日志'
+            // this.config_log_box.title = '日志'
             this.config_log_box.show = true
         },
         configLogBoxClose(done){
             this.config_log_box.show = false;
-            this.config_log_box.title = ' 日志'
+            // this.config_log_box.title = '日志'
             this.config_log_box.search = {}
         },
         // sql设置弹窗

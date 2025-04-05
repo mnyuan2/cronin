@@ -79,7 +79,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			Eq("env", dm.user.Env).
 			Eq("operation", "job-task").
 			In("ref_id", ids).
-			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
+			Between("timestamp", startTime.UnixMicro(), endTime.UnixMicro())
 		topList, _ = data.NewCronLogSpanIndexV2Data(dm.ctx).SumStatus(w2)
 	}
 

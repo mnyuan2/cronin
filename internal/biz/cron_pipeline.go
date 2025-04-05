@@ -72,7 +72,7 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 			Eq("env", dm.user.Env).
 			Eq("operation", "job-pipeline").
 			In("ref_id", ids).
-			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
+			Between("timestamp", startTime.UnixMicro(), endTime.UnixMicro())
 		topList, _ = data.NewCronLogSpanIndexV2Data(dm.ctx).SumStatus(w2)
 	}
 

@@ -31,6 +31,7 @@
 <script src="/components/config_select.js?v=[[.version]]"></script>
 <script src="/components/pipeline.js?v=[[.version]]"></script>
 <script src="/components/pipeline_form.js?v=[[.version]]"></script>
+<script src="/components/logs.js?v=[[.version]]"></script>
 <script src="/components/config_log.js?v=[[.version]]"></script>
 <script src="/components/receive.js?v=[[.version]]"></script>
 <script src="/components/receive_form.js?v=[[.version]]"></script>
@@ -63,7 +64,8 @@
             {path: '/user', component: MyUser},
             {path: '/my/work', component: MyWork},
             {path: '/role', component: MyRole},
-            {path: '/logs', component: MyConfigLog},
+            {path: '/logs', component: MyLogs},
+            {path: '/log', component: MyConfigLog},
             {path: '/trace', component: MyTrace},
             {path: '/var_params', component: MyVarParams},
             {path: '/setting', component: MySetting},
@@ -161,13 +163,13 @@
                     let diff = Math.abs(ser.getTime() - cur.getTime())/1000/60 // 分钟
                     console.log("服务器时间",ser.toISOString(), "\n本地  时间",cur.toISOString())
                     if (diff > 10){
-                        console.log("服务器时间", ser, "|",cur)
-                        this.$notify({
-                            title: '注意',
-                            dangerouslyUseHTMLString: true,
-                            message: '服务器时间与当前系统时间存在较大差异，请核查！<br>服务时间：'+ser.toISOString()+'<br>本地时间：'+cur.toISOString(),
-                            type: 'warning'
-                        })
+                        console.log("时间差异较大")
+                        // this.$notify({
+                        //     title: '注意',
+                        //     dangerouslyUseHTMLString: true,
+                        //     message: '服务器时间与当前系统时间存在较大差异，请核查！<br>服务时间：'+ser.toISOString()+'<br>本地时间：'+cur.toISOString(),
+                        //     type: 'warning'
+                        // })
                     }
                     if (!this.env){
                         let searchParams = new URLSearchParams(window.location.search)

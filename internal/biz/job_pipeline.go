@@ -82,7 +82,7 @@ func (job *JobPipeline) Run() {
 		attribute.Int("ref_id", job.pipeline.Id),
 		attribute.String("env", job.pipeline.Env),
 		attribute.String("component", "pipeline"),
-		attribute.String("name", job.pipeline.Name),
+		attribute.String("ref_name", job.pipeline.Name),
 	))
 	defer func() {
 		job.conf.isRun = false

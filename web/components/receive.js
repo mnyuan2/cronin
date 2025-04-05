@@ -295,7 +295,9 @@ var MyReceive = Vue.extend({
         configLogBox(item){
             this.config_log_box.search = {
                 env: item.env,
-                tags: JSON.stringify({ref_id:item.id, component:"receive"}),
+                // tags: JSON.stringify({ref_id:item.id, component:"receive"}),
+                ref_id: item.id,
+                operation: 'job-receive',
             }
             this.config_log_box.title = item.name+' 日志'
             this.config_log_box.show = true

@@ -118,6 +118,12 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicTag:
 		_sql = "SELECT id, name, concat('{\"remark\":\"',remark,'\"}') extend FROM `cron_tag` %WHERE"
 		w.Eq("status", enum.StatusActive)
+	case enum.DicLogName:
+		fid := "IF(ref_id = '','0',ref_id) id"
+		if config.DbConf().Driver == db.DriverSqlite {
+			fid = "(CASE WHEN ref_id=='' THEN '0' ELSE ref_id END) id"
+		}
+		_sql = fmt.Sprintf("SELECT %s, ref_name name, concat('{\"operation\":\"',operation,'\"}') extend  FROM cron_log_span_index_v2 GROUP BY ref_id,operation", fid)
 	}
 
 	if _sql != "" {

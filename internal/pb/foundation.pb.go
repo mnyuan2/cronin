@@ -22,9 +22,10 @@ type DicGetItem struct {
 }
 
 type DicExtendItem struct {
-	Default int    `json:"default"` // 默认 2.有效
-	Driver  string `json:"driver"`  // 驱动·sql相关
-	Remark  string `json:"remark"`
+	Default   int    `json:"default"` // 默认 2.有效
+	Driver    string `json:"driver"`  // 驱动·sql相关
+	Remark    string `json:"remark"`
+	Operation string `json:"operation,omitempty"`
 }
 
 // 系统信息

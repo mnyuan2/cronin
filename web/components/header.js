@@ -11,6 +11,7 @@ var MyHeader = Vue.extend({
                           <el-menu-item index="/config" v-if="$auth_tag.config_list">任务</el-menu-item>
                           <el-menu-item index="/pipeline" v-if="$auth_tag.pipeline_list">流水线</el-menu-item>
                           <el-menu-item index="/receive" v-if="$auth_tag.receive_list">接收</el-menu-item>
+                          <el-menu-item index="/logs" >日志</el-menu-item> <!-- v-if="$auth_tag.logs_list"   -->
                           <el-menu-item index="/source" v-if="$auth_tag.source_list">连接</el-menu-item>
                           <!--右导航-->
                           <el-menu-item-group class="group-right">

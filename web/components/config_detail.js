@@ -248,7 +248,8 @@ var MyConfigDetail = Vue.extend({
         </el-tabs>
         
         <el-row>
-            <h3>执行日志</h3>
+            <h4>日志</h4>
+            <span><el-button size="mini" round class="el-icon-search button-icon" @click="logSearchBox"></el-button><span class="help">{{logs.form_desc}}</span></span>
             <my-config-log :search="logs.search" v-if="logs.show"></my-config-log>
         </el-row>
         
@@ -265,6 +266,51 @@ var MyConfigDetail = Vue.extend({
             <my-config-form v-if="config_detail.show" :request="{detail:config_detail.detail,disabled:true}" @close="configDetailBox()"></my-config-form>
         </el-dialog>
         <my-status-change v-if="status_box.show" :request="status_box" @close="statusShow"></my-status-change>
+        
+        <el-dialog title="搜索" :visible.sync="logs.form_show" width="320px" class="log_search_box">
+            <el-form :model="logs.form" label-position="top" size="small">
+                <el-form-item label="开始时间">
+                    <el-date-picker style="width:100%"
+                            format="yyyy-MM-dd HH:mm:ss"
+                            value-format="yyyy-MM-dd HH:mm:ss"
+                            v-model="logs.form.timestamp_start"
+                            type="datetime"
+                            placeholder="开始时间">
+                    </el-date-picker>
+                </el-form-item>
+                <el-form-item label="截止时间">
+                    <el-date-picker style="width:100%"
+                            format="yyyy-MM-dd HH:mm:ss"
+                            value-format="yyyy-MM-dd HH:mm:ss"
+                            v-model="logs.form.timestamp_end"
+                            type="datetime"
+                            placeholder="截止时间">
+                    </el-date-picker>
+                </el-form-item>
+                <el-form-item label="">
+                    <el-row type="flex" justify="space-between">
+                        <div class="left" style="margin-right: 5px">
+                            <label class="el-form-item__label">最小耗时</label>
+                            <el-input type="number" placeholder=">= s.秒" v-model="logs.form.duration_start"></el-input>
+                        </div>
+                        <div class="right"  style="margin-left: 5px">
+                            <label class="el-form-item__label">最大耗时</label>
+                            <el-input type="number" placeholder="<= s.秒" v-model="logs.form.duration_end"></el-input>
+                        </div>
+                    </el-row>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="logs.form.status" placeholder="结果状态" style="width:100%" clearable>
+                        <el-option label="成功" value="2"></el-option>
+                        <el-option label="失败" value="1"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="logs.form_show = false" size="small">取 消</el-button>
+                <el-button type="primary" @click="logSearch()" size="small">确 定</el-button>
+            </div>
+        </el-dialog>
     </el-main>
 </el-container>`,
 
@@ -293,7 +339,23 @@ var MyConfigDetail = Vue.extend({
             // 执行日志
             logs:{
                 show: false,
-                search:{}
+                form_show:false,
+                form_desc: '',
+                form:{
+                    timestamp_start:'',
+                    timestamp_end:'',
+                    duration_start:'',
+                    duration_end:'',
+                    status:'',
+                },
+                search:{
+                    timestamp_start:'',
+                    timestamp_end:'',
+                    duration_start:'',
+                    duration_end:'',
+                    status:'',
+                    tags:null,
+                },
             },
             // 变更日志
             change_logs:{
@@ -331,12 +393,18 @@ var MyConfigDetail = Vue.extend({
         if (this.$route.query.entry_id){
             this.req.entry_id = Number(this.$route.query.entry_id)
         }
-        this.logs.search = {
-            tags: JSON.stringify({
-                ref_id: this.req.id,
-                component:this.req.type
-            })
+        // this.logs.search.tags =  JSON.stringify({
+        //     ref_id: this.req.id,
+        //     component:this.req.type
+        // })
+        this.logs.search.ref_id = this.req.id
+        this.logs.search.operation = 'job-task'
+        if (this.req.type == 'pipeline'){
+            this.logs.search.operation = 'job-pipeline'
+        }else if (this.req.type == 'receive'){
+            this.logs.search.operation = 'job-receive'
         }
+
         this.change_logs.search.ref_id= this.req.id
         this.change_logs.search.ref_type= this.req.type
     },
@@ -433,6 +501,33 @@ var MyConfigDetail = Vue.extend({
             if (column.property == "field"){
                 return [1,3]
             }
+        },
+        logSearchBox(){
+            this.logs.form_show = true
+            let search = copyJSON(this.logs.search)
+            Object.assign(this.logs.form, search)
+        },
+        // 日志搜索
+        logSearch(){
+            console.log("日志搜索")
+            // this.logs.show = true
+            this.logs.form_show = false
+            let form = copyJSON(this.logs.form)
+            let desc = ""
+            if (form.timestamp_start || form.timestamp_end){
+                desc += '时间：'+form.timestamp_start +' ~ '+ form.timestamp_end +'; '
+            }
+            if (form.duration_start || form.duration_end){
+                desc += '耗时：'+form.duration_start+' ~ ' + form.duration_end +'秒; '
+            }
+            if (form.status){
+                desc += '状态：'+(form.status==1? '失败' : '成功')
+            }
+
+            let search = copyJSON(this.logs.search)
+            Object.assign(search, form)
+            this.logs.search = search
+            this.logs.form_desc = desc
         },
         // 枚举
         getDicList(){

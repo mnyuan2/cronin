@@ -293,7 +293,9 @@ var MyPipeline = Vue.extend({
         configLogBox(item){
             this.config_log_box.search = {
                 env: item.env,
-                tags: JSON.stringify({ref_id:item.id, component:"pipeline"}),
+                // tags: JSON.stringify({ref_id:item.id, component:"pipeline"}),
+                ref_id: item.id,
+                operation: 'job-pipeline',
             }
             this.config_log_box.title = item.name+' 日志'
             this.config_log_box.show = true

@@ -342,6 +342,7 @@ const Enum ={
     dicJenkinsSource: 12,
     dicGitSource: 13,
     dicHostSource: 14,
+    dicLogName: 25,   // 日志名称
     dicCmdType: 1001,
     // 1002 git事件
     dicGitEvent: 1002,

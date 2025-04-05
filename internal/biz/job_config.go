@@ -214,7 +214,7 @@ func (job *JobConfig) Run() {
 	job.runTime = time.Now()
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
-		attribute.String("config_name", job.conf.Name),
+		attribute.String("ref_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
 		attribute.String("component", "config"),
 	)
@@ -292,7 +292,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	log.Println("任务执行 开始", job.conf.Name)
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
-		attribute.String("config_name", job.conf.Name),
+		attribute.String("ref_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
 		attribute.String("component", "config"),
 		attribute.String("remark", remark),

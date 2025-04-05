@@ -152,18 +152,24 @@ func sumIndex() {
 func sumIndexV2(rows []models.CronLogSpan) {
 	list := []*models.CronLogSpanIndexV2{}
 	for _, row := range rows {
-		if row.RefId == "" {
-			continue
-		}
-		ti := time.UnixMicro(row.Timestamp)
 		item := &models.CronLogSpanIndexV2{
-			Timestamp: ti.Format(time.DateTime),
+			Timestamp: row.Timestamp,
 			Env:       row.Env,
 			RefId:     row.RefId,
 			Operation: row.Operation,
 			TraceId:   row.TraceId,
 			Status:    row.Status,
 			Duration:  row.Duration,
+		}
+		if item.RefId != "" {
+			tags := []string{}
+			jsoniter.Unmarshal(row.TagsKV, &tags)
+			for _, tag := range tags {
+				if strings.HasPrefix(tag, "ref_name=") {
+					item.RefName = strings.TrimPrefix(tag, "ref_name=")
+					break
+				}
+			}
 		}
 		list = append(list, item)
 	}
