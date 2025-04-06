@@ -228,7 +228,7 @@ func TestCronJob_Http(t *testing.T) {
 	resp, err := job.httpRequest(ctx, "POST",
 		"http://127.0.0.1:9003/log/del",
 		[]byte(fmt.Sprintf(`{"retention":"%s"}`, config.MainConf().Task.LogRetention)),
-		hader)
+		hader, job.commandParse.Http)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -215,10 +215,11 @@ type CronCmd struct {
 }
 
 type CronHttp struct {
-	Method string    `json:"method"`
-	Url    string    `json:"url"`
-	Body   string    `json:"body"`
-	Header []*KvItem `json:"header"`
+	Method  string    `json:"method"`
+	Url     string    `json:"url"`
+	Body    string    `json:"body"`
+	Header  []*KvItem `json:"header"`
+	Timeout int       `json:"timeout"`
 }
 type CronRpc struct {
 	Proto   string   `json:"proto"`   // proto定义文件类容

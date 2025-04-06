@@ -424,7 +424,7 @@ func (job *JobConfig) httpFunc(ctx context.Context, http *pb.CronHttp) (res []by
 	if method == "" {
 		return nil, errs.New(nil, "http method is empty", errs.SysError)
 	}
-	return job.httpRequest(ctx, method, http.Url, []byte(http.Body), header)
+	return job.httpRequest(ctx, method, http.Url, []byte(http.Body), header, http)
 }
 
 // rpc 执行函数
@@ -531,7 +531,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 }
 
 // http请求
-func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string) (resp []byte, err errs.Errs) {
+func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string, conf *pb.CronHttp) (resp []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "http-request")
 	defer func() {
 		if err != nil {
@@ -572,6 +572,9 @@ func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body 
 			},
 		},
 		//Timeout:   15 * time.Second,
+	}
+	if conf.Timeout > 0 {
+		client.Timeout = time.Second * time.Duration(conf.Timeout)
 	}
 
 	res, er := client.Do(req)
