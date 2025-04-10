@@ -83,7 +83,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		topList, _ = data.NewCronLogSpanIndexV2Data(dm.ctx).SumStatus(w2)
 	}
 
-	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicUser)
+	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(&dtos.DicGetRequest{Type: enum.DicUser})
 	if err != nil {
 		return nil, err
 	}

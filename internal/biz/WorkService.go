@@ -5,6 +5,7 @@ import (
 	"cron/internal/basic/auth"
 	"cron/internal/basic/db"
 	"cron/internal/basic/enum"
+	"cron/internal/biz/dtos"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
@@ -64,7 +65,7 @@ SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GRO
 	if len(list) == 0 {
 		return resp, nil
 	}
-	envs, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicEnv)
+	envs, err := NewDicService(dm.ctx, dm.user).getDb(&dtos.DicGetRequest{Type: enum.DicEnv})
 	if err != nil {
 		return nil, err
 	}

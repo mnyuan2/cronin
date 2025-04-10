@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"regexp"
@@ -101,4 +102,60 @@ func (m *Str) Slice(val string, out interface{}) (err error) {
 
 	reflect.ValueOf(out).Elem().Set(v)
 	return nil
+}
+
+// 将任意类型转换为字符串, 如果是普通类型, 直接转换, 复杂类型序列化
+func (m *Str) ToString(value interface{}) string {
+	var out string
+	if value == nil {
+		return out
+	}
+
+	switch value.(type) {
+	case uint:
+		it := value.(uint)
+		out = strconv.Itoa(int(it))
+	case int8:
+		it := value.(int8)
+		out = strconv.Itoa(int(it))
+	case uint8:
+		it := value.(uint8)
+		out = strconv.Itoa(int(it))
+	case int16:
+		it := value.(int16)
+		out = strconv.Itoa(int(it))
+	case uint16:
+		it := value.(uint16)
+		out = strconv.Itoa(int(it))
+	case int32:
+		it := value.(int32)
+		out = strconv.Itoa(int(it))
+	case uint32:
+		it := value.(uint32)
+		out = strconv.Itoa(int(it))
+	case int64:
+		it := value.(int64)
+		out = strconv.FormatInt(it, 10)
+	case uint64:
+		it := value.(uint64)
+		out = strconv.FormatUint(it, 10)
+	case int:
+		it := value.(int)
+		out = strconv.Itoa(it)
+	case float32:
+		ft := value.(float32)
+		out = strconv.FormatFloat(float64(ft), 'f', -1, 64)
+	case float64:
+		ft := value.(float64)
+		out = strconv.FormatFloat(ft, 'f', -1, 64)
+	case string:
+		out = value.(string)
+	case []byte:
+		out = string(value.([]byte))
+	default:
+		newValue, _ := json.Marshal(value)
+		out = string(newValue)
+	}
+
+	return out
 }

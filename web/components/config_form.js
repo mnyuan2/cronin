@@ -918,7 +918,7 @@ var MyConfigForm = Vue.extend({
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
             body.command.git.link_id = Number(body.command.git.link_id)
-            body.command.http.timeout = Number(body.command.http.timeout)
+            body.command.http.timeout = parseInt(body.command.http.timeout)
             body.command.http.header = body.command.http.header.filter(function (item) {
                 return item['key'] !== undefined &&  item.key !== ''
             })
@@ -1482,6 +1482,10 @@ var MyConfigForm = Vue.extend({
                 body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
                 body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
                 body.command.git.link_id = Number(body.command.git.link_id)
+                body.command.http.timeout = parseInt(body.command.http.timeout)
+                body.command.http.header = body.command.http.header.filter(function (item) {
+                    return item['key'] !== undefined &&  item.key !== ''
+                })
 
                 api.innerPost("/config/run", body, (res)=>{
                     if (!res.status){

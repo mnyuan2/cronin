@@ -2,6 +2,7 @@ package pb
 
 type DicGetsRequest struct {
 	Types string `json:"types" form:"types"`
+	Env   string `json:"env" form:"env"`
 }
 
 type DicGetsReply struct {

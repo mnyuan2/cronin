@@ -9,3 +9,8 @@ func DicToMap(in []*pb.DicGetItem) map[int]string {
 	}
 	return out
 }
+
+type DicGetRequest struct {
+	Type int
+	Env  string
+}

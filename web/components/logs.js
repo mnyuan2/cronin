@@ -78,6 +78,7 @@ var MyLogs = Vue.extend({
                 duration_start:'',
                 duration_end:'',
                 status:'',
+                env: '',
             },
             search:{},
         }
@@ -85,11 +86,11 @@ var MyLogs = Vue.extend({
     // 模块初始化
     created(){
         setDocumentTitle('日志')
-        this.getDic()
         // api.systemInfo((res)=>{
         //     this.sys_info = res;
         // })
         this.loadParams(getHashParams(window.location.hash))
+        this.getDic()
     },
     // 模块初始化
     mounted(){},
@@ -97,7 +98,9 @@ var MyLogs = Vue.extend({
     // 具体方法
     methods:{
         loadParams(param){
-            // if (typeof param !== 'object'){return}
+            if (typeof param === 'object'){
+                console.log("参数", param)
+            }
             // if (param.type){this.listParam.type = param.type.toString()}
             // if (param.page){this.listParam.page = Number(param.page)}
             // if (param.size){this.listParam.size = Number(param.size)}
@@ -113,6 +116,7 @@ var MyLogs = Vue.extend({
             start.setDate(start.getDate() - 7);
             this.form.timestamp_start = getDateString(start)+' 00:00:00'
             this.form.timestamp_end = getDateString(end) + ' 23:59:59'
+            this.form.env = api.getEnv().env
         },
         // 日志搜索
         logSearch(){
@@ -124,7 +128,7 @@ var MyLogs = Vue.extend({
         },
         // 枚举
         getDic(){
-            api.dicList([Enum.dicLogName],(res) =>{
+            api.dicList({"types":[Enum.dicLogName], "env":this.form.env},(res) =>{
                 this.dic.log_name = res[Enum.dicLogName]
             })
         },

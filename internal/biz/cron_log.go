@@ -99,9 +99,7 @@ func (dm *CronLogService) listParseRequest(r *pb.CronLogListRequest) (resp *db.W
 
 	for k, v := range tags {
 		if k == "ref_id" {
-			v, _ = conv.Int64s().ParseAny(v)
-			indexWhere.Eq("ref_id", v)
-			//where.Eq("ref_id", v)
+			indexWhere.Eq("ref_id", conv.NewStr().ToString(v))
 			continue
 		} else if k == "component" {
 			if op, ok := componentToOperation[v.(string)]; ok {
@@ -153,7 +151,7 @@ func (dm *CronLogService) listParseRequest(r *pb.CronLogListRequest) (resp *db.W
 		}
 	}
 	if r.RefId != 0 {
-		indexWhere.Eq("ref_id", r.RefId)
+		indexWhere.Eq("ref_id", conv.NewStr().ToString(r.RefId))
 	}
 	return indexWhere, nil
 }
@@ -204,7 +202,7 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 	w := db.NewWhere().Lte("timestamp", end.UnixMicro())
 	resp.Count, err = data.NewCronLogSpanData(dm.ctx).Del(w)
 	if resp.Count > 0 {
-		data.NewCronLogSpanIndexV2Data(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.Format(time.DateTime)))
+		data.NewCronLogSpanIndexV2Data(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.UnixMicro()))
 	}
 
 	return resp, err
