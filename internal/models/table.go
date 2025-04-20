@@ -34,6 +34,8 @@ func AutoMigrate(Db *db.MyDB) {
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
+		// 业务存在 group by 语句，当前链接移除 ONLY_FULL_GROUP_BY 模式
+		Db.Exec("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));")
 	} else if config.DbConf().Driver == db.DriverSqlite {
 		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{},
 			&CronLogSpan{}, &CronLogSpanIndex{}, &CronLogSpanIndexV2{},
