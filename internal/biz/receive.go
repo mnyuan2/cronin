@@ -63,7 +63,7 @@ func (dm *ReceiveService) List(r *pb.ReceiveListRequest) (resp *pb.ReceiveListRe
 		},
 	}
 	resp.Page.Total, err = data.NewCronReceiveData(dm.ctx).ListPage(w, r.Page, r.Size, &resp.List)
-	topList := map[int]*data.SumConfTop{}
+	topList := map[int]*data.SumStatus{}
 	if len(resp.List) > 0 {
 		endTime := time.Now()
 		startTime := time.Now().Add(-time.Hour * 24 * 7) // 取七天前
@@ -75,8 +75,8 @@ func (dm *ReceiveService) List(r *pb.ReceiveListRequest) (resp *pb.ReceiveListRe
 			Eq("env", dm.user.Env).
 			Eq("operation", "job-receive").
 			In("ref_id", ids).
-			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(w2)
+			Between("timestamp", startTime.UnixMicro(), endTime.UnixMicro())
+		topList, _ = data.NewCronLogSpanIndexV2Data(dm.ctx).SumStatus(w2)
 	}
 
 	for _, item := range resp.List {

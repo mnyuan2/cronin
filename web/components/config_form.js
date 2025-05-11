@@ -57,6 +57,15 @@ var MyConfigForm = Vue.extend({
                     <el-form-item label="请求Body参数">
                         <el-input type="textarea" v-model="form.command.http.body" :autosize="{minRows:5}" placeholder="POST请求时body参数，将通过json进行请求发起"></el-input>
                     </el-form-item>
+                    <el-form-item label="超时" label-width="44px">
+                        <el-col :span="5">
+                            <el-input type="number" v-model="form.command.http.timeout" placeholder="无" class="input-input">
+                                <span slot="append">秒</span>
+                            </el-input>
+                        </el-col>
+                        <el-col :span="8" style="text-align: center;"></el-col>
+                        <el-col :span="11"></el-col>
+                    </el-form-item>
                 </el-tab-pane>
 
                 <el-tab-pane label="rpc" name="2">
@@ -746,6 +755,7 @@ var MyConfigForm = Vue.extend({
                         header: [{}],
                         url:'',
                         body:'',
+                        timeout: '',
                     },
                     rpc:{
                         proto: '',
@@ -848,6 +858,9 @@ var MyConfigForm = Vue.extend({
             }else if (form.command.http.header[hl-1].key != ""){
                 form.command.http.header.push({})
             }
+            if (form.command.http.timeout == 0){
+                form.command.http.timeout = ""
+            }
             if (form.command.jenkins.source.id == 0){
                 form.command.jenkins.source.id = ""
             }
@@ -905,6 +918,7 @@ var MyConfigForm = Vue.extend({
             body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
             body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
             body.command.git.link_id = Number(body.command.git.link_id)
+            body.command.http.timeout = parseInt(body.command.http.timeout)
             body.command.http.header = body.command.http.header.filter(function (item) {
                 return item['key'] !== undefined &&  item.key !== ''
             })
@@ -996,8 +1010,10 @@ var MyConfigForm = Vue.extend({
                     is_batch: "1", // 批量解析：1.是（默认）、2.否
                 }
             }
-            if (oldData.git == null){
-                oldData.git = {
+            // 这里要拷贝，防止影响原对象
+            let data = copyJSON(oldData)
+            if (data.git == null){
+                data.git = {
                     link_id: "",
                     owner: this.preference.git.owner ?? '',
                     project: this.preference.git.repo ?? '',
@@ -1005,8 +1021,8 @@ var MyConfigForm = Vue.extend({
                     ref: this.preference.git.branch ?? '',
                 }
             }
-            oldData.is_batch = oldData.is_batch.toString()
-            this.sqlSet.statement = oldData
+            data.is_batch = data.is_batch.toString()
+            this.sqlSet.statement = data
 
             this.sqlSet.title = this.sqlSet.index < 0? '添加' : '编辑';
         },
@@ -1466,6 +1482,10 @@ var MyConfigForm = Vue.extend({
                 body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
                 body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
                 body.command.git.link_id = Number(body.command.git.link_id)
+                body.command.http.timeout = parseInt(body.command.http.timeout)
+                body.command.http.header = body.command.http.header.filter(function (item) {
+                    return item['key'] !== undefined &&  item.key !== ''
+                })
 
                 api.innerPost("/config/run", body, (res)=>{
                     if (!res.status){

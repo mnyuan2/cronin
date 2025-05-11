@@ -2,16 +2,39 @@ package pb
 
 // 通过配置查询
 type CronLogListRequest struct {
-	Env   string `json:"env" form:"env"`
-	Tags  string `json:"tags" form:"tags"`
-	Limit int    `json:"limit" form:"limit"`
+	Env            string `json:"env" form:"env"`
+	Tags           string `json:"tags" form:"tags"`
+	Page           int    `json:"page" form:"page"`
+	Limit          int    `json:"limit" form:"limit"`
+	TimestampStart string `json:"timestamp_start" form:"timestamp_start"`
+	TimestampEnd   string `json:"timestamp_end" form:"timestamp_end"`
+	Status         string `json:"status" form:"status"`
+	Operation      string `json:"operation" form:"operation"`
+	DurationStart  string `json:"duration_start" form:"duration_start"`
+	DurationEnd    string `json:"duration_end" form:"duration_end"`
+	RefId          int    `json:"ref_id" form:"ref_id"`
 }
 
 // 通过配置查询
 type CronLogListResponse struct {
-	List []*CronLogSpan `json:"list"`
-	// 后期可能会做分页
+	List []*CronLogListItem `json:"list"`
+	Page *Page              `json:"page"`
 }
+type CronLogListItem struct {
+	Timestamp  string    `json:"timestamp"`   // 开始时间
+	Duration   int64     `json:"duration"`    // 耗时/秒
+	Status     int       `json:"status"`      // 状态：0.无、1.错误、2.正常
+	StatusName string    `json:"status_name"` //
+	StatusDesc string    `json:"status_desc"` //
+	TraceId    string    `json:"trace_id"`    // 踪迹id
+	Service    string    `json:"service"`     // 服务名称
+	Operation  string    `json:"operation"`   // 操作名称
+	RefName    string    `json:"ref_name"`    // 引用名称
+	RefId      string    `json:"ref_id"`      // 引用id
+	SpanTotal  int64     `json:"span_total"`  // 节点总数
+	SpanGroup  []*KvItem `json:"span_group"`  // 节点分组
+}
+
 type CronLogSpan struct {
 	Timestamp    int64             `json:"timestamp"`      // 开始时间
 	Duration     int64             `json:"duration"`       // 耗时/秒

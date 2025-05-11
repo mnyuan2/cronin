@@ -10,6 +10,7 @@ const (
 	DicJenkinsSource    = 12   // jenkins 资源连接
 	DicGitSource        = 13   // git 连接
 	DicHostSource       = 14   // 主机 连接
+	DicLogName          = 25   // 日志名称
 	DicCmdType          = 1001 // 命令行类型
 	DicGitEvent         = 1002 // git 事件
 	DicSqlDriver        = 1003 // sql 驱动

@@ -29,6 +29,9 @@ func CheckHttp(http *pb.CronHttp) error {
 	//		return fmt.Errorf("http body 输入不规范，请确认json字符串是否规范")
 	//	}
 	//}
+	if http.Timeout < 0 {
+		http.Timeout = 0
+	}
 	return nil
 }
 

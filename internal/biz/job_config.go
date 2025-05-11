@@ -214,7 +214,7 @@ func (job *JobConfig) Run() {
 	job.runTime = time.Now()
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
-		attribute.String("config_name", job.conf.Name),
+		attribute.String("ref_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
 		attribute.String("component", "config"),
 	)
@@ -292,7 +292,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	log.Println("任务执行 开始", job.conf.Name)
 	span.SetAttributes(
 		attribute.String("env", job.conf.Env),
-		attribute.String("config_name", job.conf.Name),
+		attribute.String("ref_name", job.conf.Name),
 		attribute.String("protocol_name", job.conf.GetProtocolName()),
 		attribute.String("component", "config"),
 		attribute.String("remark", remark),
@@ -393,6 +393,8 @@ func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) (out []byte
 			return nil, errs.New(er, "结果 模板错误")
 		}
 		out = str
+	} else {
+		out = result
 	}
 	return out, nil
 }
@@ -424,7 +426,7 @@ func (job *JobConfig) httpFunc(ctx context.Context, http *pb.CronHttp) (res []by
 	if method == "" {
 		return nil, errs.New(nil, "http method is empty", errs.SysError)
 	}
-	return job.httpRequest(ctx, method, http.Url, []byte(http.Body), header)
+	return job.httpRequest(ctx, method, http.Url, []byte(http.Body), header, http)
 }
 
 // rpc 执行函数
@@ -498,12 +500,8 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 	// 本地执行
 	switch r.Type {
 	case "cmd":
-		args := strings.Split(statement, " ")
-		if len(args) < 2 {
-			return nil, errs.New(nil, "命令参数不合法，已跳过")
-		}
-		cmd := exec.Command(args[0], args[1:]...) // 合并 winds 命令
-		if re, er := cmd.Output(); err != nil {
+		cmd := exec.Command("cmd", "/C", statement) // 合并 winds 命令
+		if re, er := cmd.Output(); er != nil {
 			return re, errs.New(er, "执行错误")
 		} else {
 			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(re))
@@ -531,7 +529,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 }
 
 // http请求
-func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string) (resp []byte, err errs.Errs) {
+func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body []byte, header map[string]string, conf *pb.CronHttp) (resp []byte, err errs.Errs) {
 	ctx, span := job.tracer.Start(ctx, "http-request")
 	defer func() {
 		if err != nil {
@@ -572,6 +570,9 @@ func (job *JobConfig) httpRequest(ctx context.Context, method, url string, body 
 			},
 		},
 		//Timeout:   15 * time.Second,
+	}
+	if conf.Timeout > 0 {
+		client.Timeout = time.Second * time.Duration(conf.Timeout)
 	}
 
 	res, er := client.Do(req)

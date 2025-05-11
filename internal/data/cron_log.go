@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-type SumConfTop struct {
-	ConfId      int `json:"conf_id"`
+type SumStatus struct {
+	RefId       int `json:"ref_id"`
 	TotalNumber int `json:"total_number"`
 	ErrorNumber int `json:"error_number"`
 }
@@ -41,7 +41,9 @@ func (m *CronLogData) GetList(where *db.Where, page, size int, list interface{})
 }
 
 // 统计配置置顶的错误数
-func (m *CronLogData) SumConfTopError(w *db.Where) (list map[int]*SumConfTop, err error) {
+//
+//	Deprecated: 弃用，请使用 CronLogSpanIndexV2Data.SumStatus()
+func (m *CronLogData) SumConfTopError(w *db.Where) (list map[int]*SumStatus, err error) {
 	where, args := w.Build()
 	sql := strings.Replace(`SELECT
 	ref_id,
@@ -52,7 +54,7 @@ FROM cron_log_span_index
 %WHERE
 GROUP BY ref_id;`, "%WHERE", "WHERE "+where, 1)
 	temps := []*models.CronLogSpanIndex{}
-	list = map[int]*SumConfTop{}
+	list = map[int]*SumStatus{}
 	err = m.db.Raw(sql, args...).Scan(&temps).Error
 	if err != nil {
 		return list, err
@@ -60,8 +62,8 @@ GROUP BY ref_id;`, "%WHERE", "WHERE "+where, 1)
 
 	for _, temp := range temps {
 		id, _ := conv.Ints().Parse(temp.RefId)
-		list[id] = &SumConfTop{
-			ConfId:      id,
+		list[id] = &SumStatus{
+			RefId:       id,
 			TotalNumber: temp.StatusEmptyNum + temp.StatusErrorNum + temp.StatusSuccessNum,
 			ErrorNumber: temp.StatusErrorNum,
 		}

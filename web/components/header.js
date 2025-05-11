@@ -11,6 +11,7 @@ var MyHeader = Vue.extend({
                           <el-menu-item index="/config" v-if="$auth_tag.config_list">任务</el-menu-item>
                           <el-menu-item index="/pipeline" v-if="$auth_tag.pipeline_list">流水线</el-menu-item>
                           <el-menu-item index="/receive" v-if="$auth_tag.receive_list">接收</el-menu-item>
+                          <el-menu-item index="/logs" >日志</el-menu-item> <!-- v-if="$auth_tag.logs_list"   -->
                           <el-menu-item index="/source" v-if="$auth_tag.source_list">连接</el-menu-item>
                           <!--右导航-->
                           <el-menu-item-group class="group-right">
@@ -34,7 +35,7 @@ var MyHeader = Vue.extend({
                               </el-submenu>
                               <el-submenu popper-class="submenu" index="setting" class="icon">
                                 <template slot="title"><i class="el-icon-more" title="设置及其他"></template>
-                                <el-menu-item index="/message_template" v-if="$auth_tag.message_list">通知</el-menu-item>
+                                <el-menu-item index="/message_template" v-if="$auth_tag.message_list">通知模板</el-menu-item>
                                 <el-menu-item index="/tag" v-if="$auth_tag.tag_list">标签</el-menu-item>
                                 <el-menu-item index="/users" v-if="$auth_tag.user_list">人员</el-menu-item>
                                 <el-menu-item index="/role" v-if="$auth_tag.role_list">权限</el-menu-item>
@@ -106,7 +107,7 @@ var MyHeader = Vue.extend({
     mounted(){
         this.user = cache.getUser()
         if (!this.user.id){ // 未登录
-            getLoginPage()
+            backLoginPage()
         }
     },
 
@@ -153,7 +154,7 @@ var MyHeader = Vue.extend({
         },
         logout(){
             cache.empty()
-            getLoginPage()
+            backLoginPage()
         }
     }
 })

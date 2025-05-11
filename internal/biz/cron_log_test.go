@@ -16,8 +16,8 @@ func TestCronLogTop(t *testing.T) {
 		Eq("env", "public").
 		Eq("operation", "job-task").
 		In("ref_id", []int{1, 4}).
-		Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
-	list, err := data.NewCronLogData(context.Background()).SumConfTopError(w2)
+		Between("timestamp", startTime.UnixMicro(), endTime.UnixMicro())
+	list, err := data.NewCronLogSpanIndexV2Data(context.Background()).SumStatus(w2)
 	fmt.Println(list, err)
 }
 

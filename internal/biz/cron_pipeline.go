@@ -60,7 +60,7 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 		},
 	}
 	resp.Page.Total, err = data.NewCronPipelineData(dm.ctx).ListPage(w, r.Page, r.Size, &resp.List)
-	topList := map[int]*data.SumConfTop{}
+	topList := map[int]*data.SumStatus{}
 	if len(resp.List) > 0 {
 		endTime := time.Now()
 		startTime := time.Now().Add(-time.Hour * 24 * 7) // 取七天前
@@ -72,8 +72,8 @@ func (dm *CronPipelineService) List(r *pb.CronPipelineListRequest) (resp *pb.Cro
 			Eq("env", dm.user.Env).
 			Eq("operation", "job-pipeline").
 			In("ref_id", ids).
-			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(w2)
+			Between("timestamp", startTime.UnixMicro(), endTime.UnixMicro())
+		topList, _ = data.NewCronLogSpanIndexV2Data(dm.ctx).SumStatus(w2)
 	}
 
 	for _, item := range resp.List {

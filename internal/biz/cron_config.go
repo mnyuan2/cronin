@@ -67,7 +67,7 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 		},
 	}
 	resp.Page.Total, err = data.NewCronConfigData(dm.ctx).ListPage(w, r.Page, r.Size, &resp.List)
-	topList := map[int]*data.SumConfTop{}
+	topList := map[int]*data.SumStatus{}
 	if len(resp.List) > 0 && (r.IsExecRatio == 0 || r.IsExecRatio == enum.BoolYes) {
 		endTime := time.Now()
 		startTime := time.Now().Add(-time.Hour * 24 * 7) // 取七天前
@@ -79,11 +79,11 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 			Eq("env", dm.user.Env).
 			Eq("operation", "job-task").
 			In("ref_id", ids).
-			Between("timestamp", startTime.Format(time.DateTime), endTime.Format(time.DateTime))
-		topList, _ = data.NewCronLogData(dm.ctx).SumConfTopError(w2)
+			Between("timestamp", startTime.UnixMicro(), endTime.UnixMicro())
+		topList, _ = data.NewCronLogSpanIndexV2Data(dm.ctx).SumStatus(w2)
 	}
 
-	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(enum.DicUser)
+	dicUser, err := NewDicService(dm.ctx, dm.user).getDb(&dtos.DicGetRequest{Type: enum.DicUser})
 	if err != nil {
 		return nil, err
 	}

@@ -6,11 +6,14 @@ import (
 	"cron/internal/basic/conv"
 	"cron/internal/basic/db"
 	"cron/internal/basic/errs"
+	"cron/internal/basic/tracing"
 	"cron/internal/data"
 	"cron/internal/models"
 	"cron/internal/pb"
+	"errors"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"strconv"
 	"time"
 )
 
@@ -35,76 +38,122 @@ func NewCronLogService(ctx context.Context, user *auth.UserToken) *CronLogServic
 
 // List 列表
 func (dm *CronLogService) List(r *pb.CronLogListRequest) (resp *pb.CronLogListResponse, err error) {
-	tags := map[string]any{}
-	if err := jsoniter.UnmarshalFromString(r.Tags, &tags); err != nil {
-		return nil, errs.New(err, "tags传递不规范")
+	w, err := dm.listParseRequest(r)
+	if err != nil {
+		return nil, err
 	}
+
+	mod := data.NewCronLogSpanIndexV2Data(dm.ctx)
+
+	total, list, err := mod.List(w, r.Page, r.Limit)
+	if err != nil {
+		return nil, errs.New(err, "查询失败")
+	}
+	if len(list) == 0 {
+		return &pb.CronLogListResponse{List: []*pb.CronLogListItem{}, Page: &pb.Page{Page: r.Page, Size: r.Limit}}, nil
+	}
+	ids := make([]string, len(list))
+	for i, item := range list {
+		ids[i] = item.TraceId
+	}
+
+	traGro, err := mod.TraceIdGroup(db.NewWhere().Eq("env", r.Env).In("trace_id", ids))
+	if err != nil {
+		return nil, errs.New(err, "聚合失败")
+	}
+	resp = &pb.CronLogListResponse{
+		List: make([]*pb.CronLogListItem, len(list)),
+		Page: &pb.Page{Total: total, Page: r.Page, Size: r.Limit},
+	}
+	for i, item := range list {
+		resp.List[i] = dm.listToOut(item, traGro[item.TraceId])
+	}
+
+	return resp, err
+}
+
+// 解析列表查询
+func (dm *CronLogService) listParseRequest(r *pb.CronLogListRequest) (resp *db.Where, err error) {
+	tags := map[string]any{}
+	if r.Tags != "" {
+		if err := jsoniter.UnmarshalFromString(r.Tags, &tags); err != nil {
+			return nil, errs.New(err, "tags传递不规范")
+		}
+	}
+
 	indexWhere := db.NewWhere()
-	where := db.NewWhere()
-	if r.Env != "" {
-		indexWhere.Eq("env", r.Env)
-		where.Eq("env", r.Env)
-	} else {
-		indexWhere.In("env", []string{dm.user.Env, ""})
-		where.In("env", []string{dm.user.Env, ""})
+	//where := db.NewWhere()
+	//if r.Env != "" {
+	indexWhere.Eq("env", r.Env)
+	//where.Eq("env", r.Env)
+	//} else {
+	//	indexWhere.In("env", []string{dm.user.Env, ""})
+	//where.In("env", []string{dm.user.Env, ""})
+	//}
+	if r.Page <= 0 {
+		r.Page = 1
+	}
+	if r.Limit <= 15 {
+		r.Limit = 15
 	}
 
 	for k, v := range tags {
 		if k == "ref_id" {
-			v, _ = conv.Int64s().ParseAny(v)
-			indexWhere.Eq("ref_id", v)
-			where.Eq("ref_id", v)
+			indexWhere.Eq("ref_id", conv.NewStr().ToString(v))
 			continue
 		} else if k == "component" {
 			if op, ok := componentToOperation[v.(string)]; ok {
 				indexWhere.Eq("operation", op)
-				where.Eq("operation", op)
+				//where.Eq("operation", op)
 				continue
 			}
 		}
-		where.Like("tags_kv", fmt.Sprintf("%s=%v", k, v))
+		//where.Like("tags_kv", fmt.Sprintf("%s=%v", k, v))
 	}
-
-	// 如果查询条件仅有 ref_id+component ，则查询索引表
-	if where.Len() == 3 && indexWhere.Len() == 3 {
-		list, err := data.NewCronLogSpanIndexData(dm.ctx).List(indexWhere, r.Limit)
+	indexWhere.Eq("operation", r.Operation)
+	if r.TimestampStart != "" {
+		startTime, err := time.ParseInLocation(time.DateTime, r.TimestampStart, time.Local)
 		if err != nil {
-			return nil, errs.New(err, "查询失败")
+			return nil, errors.New("开始时间不规范，请输入 yyyy-MM-dd hh:mm:ss 格式")
 		}
-		if len(list) == 0 {
-			return &pb.CronLogListResponse{List: []*pb.CronLogSpan{}}, nil
-		}
-		idAll := []string{}
-		t, _ := time.ParseInLocation(time.DateTime, list[0].Timestamp, time.Local)
-		w, args := where.Build()
-		list2, err := data.NewCronLogSpanData(dm.ctx).List(db.NewWhere().Raw(w, args...).Gt("timestamp", t.Add(time.Second*59).UnixMicro()), r.Limit, "trace_id")
+		indexWhere.Gte("timestamp", startTime.UnixMicro())
+	}
+	if r.TimestampEnd != "" {
+		endTime, err := time.ParseInLocation(time.DateTime, r.TimestampEnd, time.Local)
 		if err != nil {
-			return nil, errs.New(err, "查询失败")
+			return nil, errors.New("开始时间不规范，请输入 yyyy-MM-dd hh:mm:ss 格式")
 		}
-		for _, item := range list2 {
-			idAll = append(idAll, item.TraceId)
+		indexWhere.Lte("timestamp", endTime.UnixMicro())
+	}
+	if r.DurationStart != "" {
+		durationStart, err := strconv.ParseFloat(r.DurationStart, 64)
+		if err != nil {
+			return nil, errors.New("最小耗时错误，" + err.Error())
 		}
-		for _, item := range list {
-			ids := []string{}
-			_ = jsoniter.UnmarshalFromString(item.TraceIds, &ids)
-			idAll = append(idAll, ids...)
-			if len(idAll) >= r.Limit {
-				break
-			}
+		indexWhere.Gte("duration", (time.Duration(durationStart) * time.Second).Microseconds())
+	}
+	if r.DurationEnd != "" {
+		durationEnd, err := strconv.ParseFloat(r.DurationEnd, 64)
+		if err != nil {
+			return nil, errors.New("最大耗时错误，" + err.Error())
 		}
-		where.In("trace_id", idAll)
+		indexWhere.Lte("duration", (time.Duration(durationEnd) * time.Second).Microseconds())
 	}
-
-	list, err := data.NewCronLogSpanData(dm.ctx).List(where, r.Limit, "*")
-	if err != nil {
-		return nil, errs.New(err, "查询失败")
+	if r.Status != "" {
+		status, err := strconv.Atoi(r.Status)
+		if err != nil {
+			return nil, errors.New("状态输入不规范，" + err.Error())
+		}
+		if status == int(tracing.StatusOk) {
+			indexWhere.In("status", []int{int(tracing.StatusOk), int(tracing.StatusUnset)})
+		} else if status == int(tracing.StatusError) {
+			indexWhere.Eq("status", tracing.StatusError)
+		}
 	}
-	resp = &pb.CronLogListResponse{List: make([]*pb.CronLogSpan, len(list))}
-	for i, item := range list {
-		resp.List[i] = dm.toOut(item)
+	if r.RefId != 0 {
+		indexWhere.Eq("ref_id", conv.NewStr().ToString(r.RefId))
 	}
-
-	return resp, err
+	return indexWhere, nil
 }
 
 // Trace 踪迹
@@ -114,9 +163,9 @@ func (dm *CronLogService) Trace(r *pb.CronLogTraceRequest) (resp *pb.CronLogTrac
 	}
 
 	w := db.NewWhere().In("env", []string{dm.user.Env, ""}).Eq("trace_id", r.TraceId)
-	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 10000, "*")
+	list, err := data.NewCronLogSpanData(dm.ctx).List(w, 1000, "*")
 
-	// 树 或 列表；样例为树，那我也树吧。
+	// 树
 	resp = &pb.CronLogTraceResponse{
 		List:  []*pb.CronLogTraceItem{},
 		Limit: 1000,
@@ -153,7 +202,7 @@ func (dm *CronLogService) Del(r *pb.CronLogDelRequest) (resp *pb.CronLogDelRespo
 	w := db.NewWhere().Lte("timestamp", end.UnixMicro())
 	resp.Count, err = data.NewCronLogSpanData(dm.ctx).Del(w)
 	if resp.Count > 0 {
-		data.NewCronLogSpanIndexData(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.Format(time.DateTime)))
+		data.NewCronLogSpanIndexV2Data(dm.ctx).Del(db.NewWhere().Lte("timestamp", end.UnixMicro()))
 	}
 
 	return resp, err
@@ -178,6 +227,38 @@ func (dm *CronLogService) toOut(in *models.CronLogSpan) *pb.CronLogSpan {
 
 	jsoniter.Unmarshal(in.Tags, &out.Tags)
 	jsoniter.Unmarshal(in.Logs, &out.Logs)
+
+	return out
+}
+
+// 转输出
+func (dm *CronLogService) listToOut(in *models.CronLogSpanIndexV2, gro []*data.TraceIdGroupItem) *pb.CronLogListItem {
+	ti := time.UnixMicro(in.Timestamp)
+	out := &pb.CronLogListItem{
+		Timestamp:  ti.Format(time.DateTime),
+		Duration:   in.Duration,
+		Status:     in.Status,
+		StatusName: models.LogSpanStatusMap[in.Status],
+		//StatusDesc:   in.StatusDesc,
+		TraceId: in.TraceId,
+		//Service:      in.Service,
+		Operation: in.Operation,
+		RefName:   in.RefName,
+		RefId:     in.RefId,
+	}
+	if len(gro) > 0 {
+		out.SpanTotal = 0
+		out.RefId = gro[0].RefId
+		out.RefName = gro[0].RefName
+		out.Operation = gro[0].Operation
+		for _, item := range gro {
+			out.SpanGroup = append(out.SpanGroup, &pb.KvItem{
+				Key:   item.Operation,
+				Value: strconv.Itoa(item.TotalNum),
+			})
+			out.SpanTotal += int64(item.TotalNum)
+		}
+	}
 
 	return out
 }

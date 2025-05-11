@@ -72,7 +72,7 @@ func (job *JobReceive) Run() {
 		attribute.Int("ref_id", job.set.Id),
 		attribute.String("env", job.set.Env),
 		attribute.String("component", "receive"),
-		attribute.String("name", job.set.Name),
+		attribute.String("ref_name", job.set.Name),
 	), tracing.Extract(job.params.TraceId))
 	defer func() {
 		job.conf.isRun = false

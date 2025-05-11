@@ -82,7 +82,7 @@ func (job *JobPipeline) Run() {
 		attribute.Int("ref_id", job.pipeline.Id),
 		attribute.String("env", job.pipeline.Env),
 		attribute.String("component", "pipeline"),
-		attribute.String("name", job.pipeline.Name),
+		attribute.String("ref_name", job.pipeline.Name),
 	))
 	defer func() {
 		job.conf.isRun = false
@@ -191,11 +191,12 @@ func (job *JobPipeline) Run() {
 			job.conf.messagePush(ctx, &dtos.MsgPushRequest{
 				Status:     enum.StatusDisable,
 				StatusDesc: er.Desc() + " 流水线" + job.pipeline.ConfigErrActionName(),
-				Body:       []byte(err.Error()),
+				Body:       []byte(er.Error()),
 				Duration:   time.Since(job.conf.runTime).Seconds(),
 			})
 			// 这里要确认一下是否继续执行下去。
 			if job.pipeline.ConfigErrAction == models.ErrActionStop {
+				err = er
 				return
 			}
 		}

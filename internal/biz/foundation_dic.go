@@ -9,6 +9,7 @@ import (
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/basic/grpcurl"
+	"cron/internal/biz/dtos"
 	"cron/internal/models"
 	"cron/internal/pb"
 	"errors"
@@ -64,7 +65,10 @@ func (dm *FoundationService) DicGets(r *pb.DicGetsRequest) (resp *pb.DicGetsRepl
 	for _, t := range types {
 		list := &pb.DicGetsList{}
 		if t <= 1000 {
-			list.List, err = dm.getDb(t)
+			list.List, err = dm.getDb(&dtos.DicGetRequest{
+				Type: t,
+				Env:  r.Env,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -82,11 +86,12 @@ func (dm *FoundationService) DicGets(r *pb.DicGetsRequest) (resp *pb.DicGetsRepl
 }
 
 // 通过数据库获取
-func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
+func (dm *FoundationService) getDb(t *dtos.DicGetRequest) ([]*pb.DicGetItem, error) {
 	_sql := ""
+	replaceNum := 1
 	w := db.NewWhere()
 	items := []*pb.DicGetItem{}
-	switch t {
+	switch t.Type {
 	case enum.DicSqlSource:
 		_sql = "SELECT id,title as name, concat('{\"driver\":',content->'$.sql.driver','}') extend  FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
 		w.Eq("scene", models.SceneSqlSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
@@ -118,12 +123,35 @@ func (dm *FoundationService) getDb(t int) ([]*pb.DicGetItem, error) {
 	case enum.DicTag:
 		_sql = "SELECT id, name, concat('{\"remark\":\"',remark,'\"}') extend FROM `cron_tag` %WHERE"
 		w.Eq("status", enum.StatusActive)
+	case enum.DicLogName:
+		replaceNum = 3
+		_sql = fmt.Sprintf(`SELECT id, name, '{"operation":"job-task"}' extend FROM cron_config %%WHERE UNION
+SELECT id, name, '{"operation":"job-pipeline"}' extend FROM cron_pipeline %%WHERE UNION
+SELECT id, name, '{"operation":"job-receive"}' extend FROM cron_receive %%WHERE `)
+		w.Eq("env", t.Env).Sub(func(sub *db.Where) {
+			sub.Eq("status", models.ConfigStatusActive).Sub(func(sub2 *db.Where) {
+				ti := time.Now()
+				if dura, err := time.ParseDuration(config.MainConf().Task.LogRetention); err == nil {
+					sub2.Gte("status_dt", ti.Add(-dura).Format(time.DateTime))
+				} else {
+					sub2.Gte("status_dt", ti.AddDate(0, 0, -7).Format(time.DateTime))
+				}
+				sub2.Lte("status_dt", ti.Format(time.DateTime))
+			}, db.OrOption())
+		})
 	}
 
 	if _sql != "" {
 		temp := []*DicGetItem{}
 		where, args := w.Build()
-		_sql = strings.Replace(_sql, "%WHERE", "WHERE "+where, 1)
+		_sql = strings.Replace(_sql, "%WHERE", "WHERE "+where, replaceNum)
+		if replaceNum > 1 {
+			tmp := args
+			for i := 1; i < replaceNum; i++ {
+				tmp = append(tmp, args...)
+			}
+			args = tmp
+		}
 
 		err := db.New(dm.ctx).Raw(_sql, args...).Scan(&temp).Error
 		if err != nil {

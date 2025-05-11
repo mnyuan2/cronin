@@ -16,16 +16,21 @@ h3,h2,h4,.h3{
     color: #1f2f3d;
 }
 .h3{
-    font-size: 22px;
+    font-size: 20px;
 }
-.h4{
-    font-size: 18px;
+h4,.h4{
+    font-size: 16px;
+    display: inline-block;
 }
-p{
+p,.p{
     font-size: 14px;
     color: #444950;
     line-height: 1.5em;
     margin-top: 0;
+}
+.help{
+    font-size: 12px;
+    color: #606266;
 }
 code {
     font-size: 87.5%;
@@ -172,6 +177,10 @@ i.hover:hover{
 
 .icon{
     font-size: 24px;
+}
+.el-icon-empty{
+    width: 1em;
+    display: inline-block;
 }
 .primary{
     color: #409EFF;
@@ -347,12 +356,66 @@ i.el-alert__icon{
     margin: 0 4px 0 4px;
 }
 .sql-show-warp .input-box pre{
-    white-space: nowrap;
+    /*white-space: nowrap;*/
     min-height: 45px;
 }
 
+/* 日志搜索 */
+.el-button.button-icon{
+    border: none;
+    font-weight: bold;
+    padding: 10px;
+}
+.log_search_box{}
+.log_search_box .el-dialog__body{
+    padding: 0 15px;
+}
+.log_search_box .el-form-item__label{
+    padding: 0;
+    height: 36px;
+}
+.my-aside-2{
+    overflow: auto;
+    background: #f5f5f5;
+    padding: 10px;
+}
 /* 日志 */
 .config-log {}
+.config-log .list{
+    list-style: none;
+    margin: 0;
+    padding: 0 5px;
+}
+.config-log .list>li{
+    margin-bottom: 14px;
+    font-size: 14px;
+
+}
+.config-log .list .el-card__header{
+    padding: 6px 10px;
+    cursor: pointer;
+}
+.config-log .list .el-card__header:hover{
+    background-color: #f9fafc;
+}
+.config-log .list .el-card__header:hover .panel{
+    display: inline-block;
+}
+.panel{
+    display: none;
+    margin-left: 4px;
+    white-space: nowrap;
+}
+/*.config-log .list .el-card__body{*/
+/*    display: flex;*/
+/*    justify-content: space-between;*/
+/*}*/
+.config-log .list .el-card__body{
+    padding: 10px;
+}
+.config-log .list .el-card__body span{
+    margin: 0 8px;
+}
 /* 日志 踪迹 */
 .trace-page{
     position: relative;

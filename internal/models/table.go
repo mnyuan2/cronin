@@ -28,13 +28,17 @@ func AutoMigrate(Db *db.MyDB) {
 		}
 		// 迁移表结构
 		err := Db.Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4").
-			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronLogSpanIndex{},
+			AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{},
+				&CronLogSpan{}, &CronLogSpanIndex{}, &CronLogSpanIndexV2{},
 				&CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
 		}
+		// 业务存在 group by 语句，当前链接移除 ONLY_FULL_GROUP_BY 模式
+		Db.Exec("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));")
 	} else if config.DbConf().Driver == db.DriverSqlite {
-		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{}, &CronLogSpan{}, &CronLogSpanIndex{},
+		err := Db.AutoMigrate(&CronSetting{}, &CronConfig{}, &CronPipeline{}, &CronReceive{},
+			&CronLogSpan{}, &CronLogSpanIndex{}, &CronLogSpanIndexV2{},
 			&CronUser{}, &CronAuthRole{}, &CronChangeLog{}, &CronTag{})
 		if err != nil {
 			panic(fmt.Sprintf("mysql 表初始化失败，%s", err.Error()))
@@ -95,7 +99,7 @@ func AutoMigrate(Db *db.MyDB) {
 				Id:      1,
 				Name:    "管理员",
 				Remark:  "所有权限",
-				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121,132,133,150,151,152,153,154,155,160,161,162,163",
+				AuthIds: "20,21,22,23,24,25,30,31,32,33,34,35,60,61,62,63,70,71,72,74,75,80,81,82,83,90,91,92,95,100,101,102,104,105,120,121,130,132,133,150,151,152,153,154,155,160,161,162,163",
 				Status:  enum.StatusActive,
 			},
 			{

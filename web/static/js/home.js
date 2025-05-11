@@ -220,10 +220,20 @@ function arrayDelete(index, arr){
     arr.splice(index,1)
 }
 
+// 跳转回上一页
+function backLastPage() {
+    if (document.referrer){ // 上一页为当前域，则返回
+        window.history.back()
+    }else{ // 上一页不是当前域，则跳转到首页
+        window.location.href="/index"
+    }
+}
+
 function getHomePage() {
     window.location.href="/index"
 }
-function getLoginPage() {
+// 跳转登录页
+function backLoginPage() {
     window.location.href="/login"
 }
 
@@ -332,6 +342,7 @@ const Enum ={
     dicJenkinsSource: 12,
     dicGitSource: 13,
     dicHostSource: 14,
+    dicLogName: 25,   // 日志名称
     dicCmdType: 1001,
     // 1002 git事件
     dicGitEvent: 1002,
@@ -447,16 +458,23 @@ var api = {
 
     /**
      * 枚举列表
-     * @param types array 枚举key列表
+     * @param request array|object 枚举key列表
      * @param callback function() 回调函数
      * @param reload bool 是否强制重载
      * @returns {Promise<void>}
      */
-    dicList: function (types, callback, reload= false) {
-
+    dicList: function (request, callback, reload= false) {
+        console.log("--》",typeof request)
         let list = JSON.parse(localStorage.getItem(Enum.dicKey)) ?? {}
         let reply = {}
         let queryInfo = []
+        let types = []
+        if (Array.isArray(request)){
+            types = copyJSON(request)
+            request = {}
+        }else if (typeof request === 'object'){
+            types = request.types
+        }
         // 从存储查看要请求的枚举是否存在 存在从存储取出
         types.forEach((element, index) => {
             if (list[element] && !reload) {
@@ -468,8 +486,11 @@ var api = {
 
         // 不存在存储的枚举继续查询
         if (queryInfo.length > 0) {
+            let r = copyJSON(request)
+            r.types = queryInfo.join(',')
+
             // 查询不存在缓存的部分调取一次请求，并缓存；如果都存在缓存中就无需再次发起请求。
-            this.innerGet("/foundation/dic_gets", {"types":queryInfo.join(',')}, res =>{
+            this.innerGet("/foundation/dic_gets", r, res =>{
                 if (res.status) {
                     queryInfo.forEach(element => {
                         if (res.data.maps[element]){
@@ -572,7 +593,7 @@ var api = {
                     res.status = true
                 }else if (res.code == '999909'){
                     // 重定向到登录
-                    return getLoginPage()
+                    return backLoginPage()
                 }else{
                     res.status = false
                 }
