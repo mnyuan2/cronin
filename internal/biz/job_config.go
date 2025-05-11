@@ -393,6 +393,8 @@ func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) (out []byte
 			return nil, errs.New(er, "结果 模板错误")
 		}
 		out = str
+	} else {
+		out = result
 	}
 	return out, nil
 }
@@ -498,12 +500,8 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 	// 本地执行
 	switch r.Type {
 	case "cmd":
-		args := strings.Split(statement, " ")
-		if len(args) < 2 {
-			return nil, errs.New(nil, "命令参数不合法，已跳过")
-		}
-		cmd := exec.Command(args[0], args[1:]...) // 合并 winds 命令
-		if re, er := cmd.Output(); err != nil {
+		cmd := exec.Command("cmd", "/C", statement) // 合并 winds 命令
+		if re, er := cmd.Output(); er != nil {
 			return re, errs.New(er, "执行错误")
 		} else {
 			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(re))

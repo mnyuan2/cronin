@@ -63,7 +63,7 @@ cronin 是企业内部任务管理平台，支持linux、windows服务器；具�
 - - main.isBuildResource 参数为是否打包静态资源文件，建议true。
 ~~~
 # 编译命令
-GOOS=linux go build -ldflags "-X main.version=v0.xx -X main.isBuildResource=true" -o cronin.xx ./main.go
+go build -ldflags "-X main.version=v0.xx -X main.isBuildResource=true" -o cronin.xx ./main.go
 ~~~
 
 #### 二、 完善配置
