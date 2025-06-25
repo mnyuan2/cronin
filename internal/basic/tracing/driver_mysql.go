@@ -27,25 +27,7 @@ var gen = &mysqlIDGenerator{}
 // 链路日志收集写入程序
 func MysqlCollectorListen() {
 	mysqlQueue = make(chan models.CronLogSpan, 10000)
-	exec := make(chan byte, 100)
 	defer close(mysqlQueue)
-	defer close(exec)
-	go func() {
-		for {
-			time.Sleep(3 * time.Second)
-			exec <- 1
-		}
-	}()
-	go func() { // 增加观测点
-		for range time.Tick(time.Minute * 30) {
-			if len(mysqlQueue) > 2000 {
-				log.Println("[warn] log write queue overstock ", len(mysqlQueue))
-			} else {
-				log.Println("[info] log write queue ok ", len(mysqlQueue))
-			}
-		}
-	}()
-
 	// 增加观测点
 	go func() {
 		for range time.Tick(time.Minute * 30) {
@@ -60,29 +42,29 @@ func MysqlCollectorListen() {
 	// 合计指标
 	//go sumIndex()
 
-	// 延长3秒、或超过1000条写入。
+	// 延长3秒、或超过100条写入。
+	maxLen := 200
 	for {
-		<-exec
 		l := len(mysqlQueue)
-		index := 1
-		if l == 0 {
-			continue
-		} else if l > 100 {
-			l = 100
-			exec <- 1
-		}
-
-		list := []models.CronLogSpan{}
-		for item := range mysqlQueue {
-			list = append(list, item)
-			if index >= l {
-				break
+		if l > 0 {
+			if l > maxLen {
+				l = maxLen
 			}
-			index++
+			list := make([]models.CronLogSpan, l)
+			for i := 0; i < l; i++ {
+				select {
+				case item := <-mysqlQueue:
+					list[i] = item
+				default:
+				}
+			}
+			sumIndexV2(list)
+			writeList(list)
 		}
 
-		sumIndexV2(list)
-		writeList(list)
+		if l < maxLen {
+			time.Sleep(3 * time.Second)
+		}
 	}
 }
 
@@ -92,8 +74,10 @@ func writeList(list []models.CronLogSpan) {
 			log.Println("log write queue writeList 日志写入异常，", err) // 后续这个要做报警通知
 		}
 	}()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
+	defer cancel()
 	// 执行写入
-	if err := db.New(context.Background()).CreateInBatches(list, 100).Error; err != nil {
+	if err := db.New(ctx).CreateInBatches(list, 100).Error; err != nil {
 		log.Println("log write queue writeList 日志写入失败，", err.Error())
 	}
 }

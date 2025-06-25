@@ -1014,7 +1014,7 @@ var MyConfigForm = Vue.extend({
             let data = copyJSON(oldData)
             if (data.git == null){
                 data.git = {
-                    link_id: "",
+                    // link_id: "",
                     owner: this.preference.git.owner ?? '',
                     project: this.preference.git.repo ?? '',
                     path: [""],
