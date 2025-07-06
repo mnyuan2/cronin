@@ -397,6 +397,10 @@ var MyConfigDetail = Vue.extend({
         //     ref_id: this.req.id,
         //     component:this.req.type
         // })
+        let time = new Date()
+        time.setDate(time.getDate()-7)
+        this.logs.form.timestamp_start = getDatetimeString(time)
+        this.logSearch()
         this.logs.search.ref_id = this.req.id
         this.logs.search.operation = 'job-task'
         if (this.req.type == 'pipeline'){

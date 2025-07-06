@@ -25,7 +25,7 @@ function getDateString(d) {
 
 // 通过 date 对象 获取datetime 时间字符串
 function getDatetimeString(d) {
-    return d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(), 2)+ ' '+ pad(d.getHours())+':'+d.getMinutes()+':'+d.getSeconds()
+    return d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(), 2)+ ' '+ pad(d.getHours(), 2)+':'+pad(d.getMinutes(), 2)+':'+pad(d.getSeconds(), 2)
 }
 
 /**

@@ -293,11 +293,14 @@ var MyReceive = Vue.extend({
             }
         },
         configLogBox(item){
+            let time = new Date()
+            time.setDate(time.getDate()-7)
             this.config_log_box.search = {
                 env: item.env,
                 // tags: JSON.stringify({ref_id:item.id, component:"receive"}),
                 ref_id: item.id,
                 operation: 'job-receive',
+                timestamp_start: getDatetimeString(time),
             }
             this.config_log_box.title = item.name+' 日志'
             this.config_log_box.show = true
