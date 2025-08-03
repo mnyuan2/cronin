@@ -201,14 +201,39 @@ var MyConfigForm = Vue.extend({
                             <el-option v-for="(dic_v,dic_k) in dic.jenkins_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                         </el-select>
                     </el-form-item>
-                    <el-form-item label="项目">
+                    <el-form-item label="项目" label-width="40px">
                         <el-input v-model="form.command.jenkins.name" placeholder="jenkins job name"></el-input>
                     </el-form-item>
-                    <el-form-item label="参数" class="http_header_box">
-                        <el-input class="input-input" v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">
-                            <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput"></el-input>
-                            <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i)"></el-button>
-                        </el-input>
+                    
+                    <el-form-item class="http_header_box form_sub_tabs" size="small">
+                        <el-tabs v-model="form.command.jenkins.params_mode" type="card"  size="small">
+                            <el-tab-pane label="参数" name="1">
+                                <el-input class="input-input" v-for="(header_v,header_i) in form.command.jenkins.params" v-model="header_v.value" placeholder="参数值">
+                                    <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput"></el-input>
+                                    <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i)"></el-button>
+                                </el-input>
+                            </el-tab-pane>
+                            <el-tab-pane label="参数组" name="2">
+                                <el-card class="box-card" shadow="hover" v-for="(group_item,group_index) in form.command.jenkins.params_group">
+                                    <div slot="header" class="clearfix">
+                                        <span>
+                                            <i v-show="!group_item.enable_rule" class="el-badge__content is-dot el-badge__content--info" title="未激活"></i>
+                                            <i v-show="group_item.enable_rule" class="el-badge__content is-dot el-badge__content--success" title="已设置"></i>
+                                            <el-link type="info"  @click="jenkinsParamGroupRuleBox(group_item)">{{!group_item.enable_rule? '未激活': group_item.enable_rule}}</el-link>
+                                        </span>
+                                        <i class="el-icon-close" @click="jenkinsParamGroupDel(group_index)"></i>
+                                    </div>
+                                    <div class="text item">
+                                        <el-input class="input-input" v-for="(header_v,header_i) in group_item.params" v-model="header_v.value" placeholder="参数值">
+                                            <el-input v-model="header_v.key" slot="prepend" placeholder="参数名" @input="jenkinsParamInput($event, group_item.params)"></el-input>
+                                            <el-button slot="append" icon="el-icon-delete" @click="jenkinsParamDel(header_i, group_item.params)"></el-button>
+                                        </el-input>
+                                    </div>
+                                </el-card>
+                                
+                                
+                            </el-tab-pane>
+                        </el-tabs>
                     </el-form-item>
                 </el-tab-pane>
                 
@@ -803,7 +828,9 @@ var MyConfigForm = Vue.extend({
                             id: "",
                         },
                         name: "",
-                        params: [{}]
+                        params_mode: 1, // 参数模式: 1.参数、2.参数组
+                        params: [{}],
+                        params_group: [{enable_rule:'',params:[{}]}],
                     },
                     git:{
                         link_id: "",
@@ -864,12 +891,19 @@ var MyConfigForm = Vue.extend({
             if (form.command.jenkins.source.id == 0){
                 form.command.jenkins.source.id = ""
             }
+            if (!form.command.jenkins.params_mode){
+                form.command.jenkins.params_mode = '1'
+            }else{
+                form.command.jenkins.params_mode = form.command.jenkins.params_mode.toString()
+            }
             let pl = form.command.jenkins.params.length
             if (pl == 0){
                 form.command.jenkins.params = this.initFormData().command.jenkins.params
             }else if (form.command.jenkins.params[pl-1].key != ""){
                 form.command.jenkins.params.push({})
             }
+            form.command.jenkins.params_group.push({enable_rule:'',params:[{}]})
+
             if (form.command.cmd.host.id == 0){
                 form.command.cmd.host.id = this.initFormData().command.cmd.host.id
             }
@@ -893,20 +927,7 @@ var MyConfigForm = Vue.extend({
             console.log("编辑：",form)
             return form
         },
-        // 添加/编辑 任务
-        setCron(afterCall){
-            if (this.request.disabled){
-                return
-            }else if (this.form.name == ''){
-                return this.$message.error('请输入任务名称')
-            }else if (this.form.spec == '' && this.form.type != 5){
-                return this.$message.error('请输入任务执行时间')
-            }else if (!this.form.protocol){
-                return this.$message.error('请选择任务协议')
-            }
-            // else if (this.form.command == ''){
-            //     return this.$message.error('请输入命令类容')
-            // }
+        toSubmitForm(){
             let body = copyJSON(this.form)
             body.type = Number(body.type)
             body.status = Number(body.status)
@@ -922,10 +943,30 @@ var MyConfigForm = Vue.extend({
             body.command.http.header = body.command.http.header.filter(function (item) {
                 return item['key'] !== undefined &&  item.key !== ''
             })
+            body.command.jenkins.params_mode = Number(body.command.jenkins.params_mode)
             body.command.jenkins.params = body.command.jenkins.params.filter(function (item) {
                 return item['key'] !== undefined &&  item.key !== ''
             })
-
+            body.command.jenkins.params_group = body.command.jenkins.params_group.filter(function (item) {
+                return item["enable_rule"] !== undefined && item.enable_rule !== ''
+            })
+            return body
+        },
+        // 添加/编辑 任务
+        setCron(afterCall){
+            if (this.request.disabled){
+                return
+            }else if (this.form.name == ''){
+                return this.$message.error('请输入任务名称')
+            }else if (this.form.spec == '' && this.form.type != 5){
+                return this.$message.error('请输入任务执行时间')
+            }else if (!this.form.protocol){
+                return this.$message.error('请选择任务协议')
+            }
+            // else if (this.form.command == ''){
+            //     return this.$message.error('请输入命令类容')
+            // }
+            const body = this.toSubmitForm()
             api.innerPost("/config/set", body, (res)=>{
                 if (!res.status){
                     return this.$message.error(res.message)
@@ -933,6 +974,22 @@ var MyConfigForm = Vue.extend({
                 afterCall && afterCall(res.data.id)
                 this.form = this.initFormData()
                 this.close(true)
+            })
+        },
+        // 执行一下
+        configRun(){
+            this.$confirm('确认现在就执行任务吗？','提示').then(()=>{
+                const body = this.toSubmitForm()
+                api.innerPost("/config/run", body, (res)=>{
+                    if (!res.status){
+                        return this.$message({
+                            message: res.message,
+                            type: 'error',
+                            duration: 6000
+                        })
+                    }
+                    return this.$message.success("ok."+res.data.result)
+                })
             })
         },
         // http header 输入值变化时
@@ -953,9 +1010,16 @@ var MyConfigForm = Vue.extend({
             this.form.command.http.header.splice(index,1)
         },
         // jenkinsParam 输入值变化时
-        jenkinsParamInput(val){
+        jenkinsParamInput(val,params){
             if (val == ""){
                 return
+            }
+            if (params != undefined){
+                let item = params.slice(-1)[0]
+                if (item == undefined || item.key != ""){
+                    params.push({"key":"","value":""})
+                }
+                return;
             }
             let item = this.form.command.jenkins.params.slice(-1)[0]
             if (item == undefined || item.key != ""){
@@ -963,11 +1027,39 @@ var MyConfigForm = Vue.extend({
             }
         },
         // jenkinsParam 输入值删除
-        jenkinsParamDel(index){
+        jenkinsParamDel(index, params){
+            if (params != undefined){
+                if ((index+1) >= params.length){
+                    return
+                }
+                params.splice(index,1)
+                return;
+            }
             if ((index+1) >= this.form.command.jenkins.params.length){
                 return
             }
             this.form.command.jenkins.params.splice(index,1)
+        },
+        jenkinsParamGroupDel(index){
+            if ((index+1) >= this.form.command.jenkins.params_group.length){
+                return
+            }
+            this.form.command.jenkins.params_group.splice(index,1)
+        },
+        jenkinsParamGroupRuleBox(groupItem){
+            this.$prompt('结果输出非空字符串有效', '设置启用规则', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                inputValue: groupItem.enable_rule,
+                inputPlaceholder: '启用规则，输出非空结果组内容才生效',
+            }).then(({ value }) => {
+                groupItem.enable_rule = value;
+                console.log("设置启用规则", this.form.command.jenkins.params_group.slice(-1)[0])
+                if (this.form.command.jenkins.params_group.slice(-1)[0].enable_rule){
+                    this.form.command.jenkins.params_group.push({enable_rule:'',params:[{}]})
+                }
+
+            }).catch(() => {});
         },
         // sqlGitPath 输入值变化时
         sqlGitPathInput(val){
@@ -1456,47 +1548,6 @@ var MyConfigForm = Vue.extend({
                     confirmButtonText: '确定',
                     dangerouslyUseHTMLString: true
                 });
-            })
-        },
-        // 执行一下
-        configRun(){
-            this.$confirm('确认现在就执行任务吗？','提示').then(()=>{
-                // 主要是强制类型
-                let body = copyJSON({
-                    id: this.form.id,
-                    name: this.form.name,
-                    type: Number(this.form.type),
-                    spec: this.form.spec,
-                    protocol: Number(this.form.protocol),
-                    command: this.form.command,
-                    remark: this.form.remark,
-                    after_tmpl: this.form.after_tmpl,
-                    var_fields: this.form.var_fields,
-                    msg_set: this.form.msg_set,
-                    empty_not_msg: this.form.empty_not_msg,
-                })
-                body.command.sql.err_action = Number(body.command.sql.err_action)
-                body.command.sql.interval = Number(body.command.sql.interval)
-                body.command.sql.source.id = Number(body.command.sql.source.id)
-                body.command.sql.git_source_id = Number(body.command.sql.git_source_id)
-                body.command.jenkins.source.id = Number(body.command.jenkins.source.id)
-                body.command.cmd.statement.git.link_id = Number(body.command.cmd.statement.git.link_id)
-                body.command.git.link_id = Number(body.command.git.link_id)
-                body.command.http.timeout = parseInt(body.command.http.timeout)
-                body.command.http.header = body.command.http.header.filter(function (item) {
-                    return item['key'] !== undefined &&  item.key !== ''
-                })
-
-                api.innerPost("/config/run", body, (res)=>{
-                    if (!res.status){
-                        return this.$message({
-                            message: res.message,
-                            type: 'error',
-                            duration: 6000
-                        })
-                    }
-                    return this.$message.success("ok."+res.data.result)
-                })
             })
         },
         close(is_change=false){

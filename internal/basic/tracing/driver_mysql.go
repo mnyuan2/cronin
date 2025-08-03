@@ -142,6 +142,7 @@ func sumIndexV2(rows []models.CronLogSpan) {
 			RefId:     row.RefId,
 			Operation: row.Operation,
 			TraceId:   row.TraceId,
+			SpanId:    row.SpanId,
 			Status:    row.Status,
 			Duration:  row.Duration,
 		}

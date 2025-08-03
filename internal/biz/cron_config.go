@@ -298,7 +298,7 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 			Rpc:     &pb.CronRpc{Actions: []string{}},
 			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{Path: []string{}}}, Host: &pb.SettingHostSource{}},
 			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
-			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
+			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}, ParamsGroup: []*pb.CronJenkinsParamsGroup{}},
 			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
 		},
 		MsgSet:           []*pb.CronMsgSet{},

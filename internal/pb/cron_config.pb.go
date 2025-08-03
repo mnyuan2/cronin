@@ -257,11 +257,17 @@ type CronSqlSource struct {
 type CronJenkinsSource struct {
 	Id int `json:"id"`
 }
+type CronJenkinsParamsGroup struct {
+	EnableRule string    `json:"enable_rule"`
+	Params     []*KvItem `json:"params"`
+}
 
 type CronJenkins struct {
-	Source *CronJenkinsSource `json:"source"` // 具体链接配置
-	Name   string             `json:"name"`   // 项目名称
-	Params []*KvItem          `json:"params"` // 参数
+	Source      *CronJenkinsSource        `json:"source"`       // 具体链接配置
+	Name        string                    `json:"name"`         // 项目名称
+	ParamsMode  int                       `json:"params_mode"`  // 参数模式: 1.参数、2.参数组
+	Params      []*KvItem                 `json:"params"`       // 参数
+	ParamsGroup []*CronJenkinsParamsGroup `json:"params_group"` // 参数组
 }
 
 type CronGit struct {

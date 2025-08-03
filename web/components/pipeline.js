@@ -47,9 +47,10 @@ var MyPipeline = Vue.extend({
             </el-table-column>
             <el-table-column prop="spec" label="执行时间" width="160"></el-table-column>
             <el-table-column prop="name" label="任务名称">
-                <div slot-scope="{row}" style="display: flex;">
+                <div slot-scope="{row}" class="name" style="display: flex;">
                     <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
                         <router-link :to="{path:'/config_detail',query:{id:row.id, type:'pipeline'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                        <div class="info-2">{{row.remark}}</div>
                     </span>
                     <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
                         <i  class="el-icon-edit hover" @click="setShow(row)" title="编辑"></i>
@@ -62,7 +63,6 @@ var MyPipeline = Vue.extend({
                     <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'pipeline')"  :title="scope.row.status_dt+'   '+scope.row.status_remark">{{scope.row.status_name}}</el-botton>
                 </template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注"></el-table-column>
             <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
             <el-table-column prop="create_user_name" label="创建人" width="80"></el-table-column>
         </el-table>

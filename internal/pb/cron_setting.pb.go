@@ -68,6 +68,7 @@ type SettingSqlSetRequest struct {
 	Id     int            `json:"id"`
 	Title  string         `json:"title"`
 	Type   int            `json:"type"`
+	Env    []string       `json:"env"` // 应用环境；空.全部
 	Source *SettingSource `json:"source"`
 }
 type SettingSqlSetReply struct {

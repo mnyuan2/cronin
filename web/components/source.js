@@ -30,6 +30,11 @@ var MySource = Vue.extend({
         <!--设置弹窗-->
         <el-dialog :title="form.box.title" :visible.sync="form.box.show" :close-on-click-modal="false" append-to-body="true" width="600px">
             <el-form :model="form.data" label-position="left" label-width="80px" size="small">
+                <el-form-item label="环境">
+                    <el-select v-model="form.data.env" multiple style="width: 100%;" placeholder="全部">
+                        <el-option v-for="dic_v in dic_env" :label="dic_v.name" :value="dic_v.key"></el-option>
+                    </el-select>
+                </el-form-item>
                 <el-form-item label="链接名*">
                     <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
@@ -116,6 +121,7 @@ var MySource = Vue.extend({
         return {
             dic_sql_type:[],
             dic_sql_driver:[],
+            dic_env:[],
             list:{
                 labelIndex: '11',
                 items: [],
@@ -217,10 +223,12 @@ var MySource = Vue.extend({
         // 枚举
         getDicList(){
             let types = [
-                Enum.dicSqlDriver
+                Enum.dicSqlDriver,
+                Enum.dicEnv
             ]
             api.dicList(types,(res) =>{
                 this.dic_sql_driver = res[Enum.dicSqlDriver]
+                this.dic_env = res[Enum.dicEnv]
             })
         },
         // 初始化表单数据
@@ -228,12 +236,13 @@ var MySource = Vue.extend({
             this.form = {
                 box:{
                     show: show == true,
-                    title: "添加sql链接",
+                    title: "添加链接",
                 },
                 data: {
                     id: 0,
                     title:"",
                     type: this.list.param.type,
+                    env: [],
                     source:{
                         sql:{
                             driver: "mysql",

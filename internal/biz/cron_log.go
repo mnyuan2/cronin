@@ -241,6 +241,7 @@ func (dm *CronLogService) listToOut(in *models.CronLogSpanIndexV2, gro []*data.T
 		StatusName: models.LogSpanStatusMap[in.Status],
 		//StatusDesc:   in.StatusDesc,
 		TraceId: in.TraceId,
+		SpanId:  in.SpanId,
 		//Service:      in.Service,
 		Operation: in.Operation,
 		RefName:   in.RefName,

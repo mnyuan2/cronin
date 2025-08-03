@@ -10,6 +10,7 @@ type CronLogSpanIndexV2 struct {
 	Status    int    `json:"status" gorm:"column:status;type:tinyint(2);default:0;comment:状态：0.无、1.错误、2.正常;"`
 	Duration  int64  `json:"duration" gorm:"column:duration;type:bigint(20);default:0;comment:耗时us/微秒;"`
 	TraceId   string `json:"trace_id" gorm:"column:trace_id;type:varchar(32);default:'';index:span_index_trace,priority:11;comment:踪迹id;"`
+	SpanId    string `json:"span_id" gorm:"column:span_id;type:varchar(32);default:'';comment:节点id;"`
 	RefName   string `json:"ref_name" gorm:"column:ref_name;type:varchar(255);default:'';comment:引用名称;"`
 }
 

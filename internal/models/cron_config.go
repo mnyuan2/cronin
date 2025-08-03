@@ -87,6 +87,12 @@ var RetryModeMap = map[int]string{
 	RetryModeIncr:  "递增间隔",
 }
 
+// 参数模式
+const (
+	ParamModeDefault = 1 // 参数
+	ParamModeGroup   = 2 // 参数组
+)
+
 type CronConfig struct {
 	Id              int    `json:"id" gorm:"column:id;type:INTEGER;primary_key;comment:主键;"`
 	Env             string `json:"env" gorm:"column:env;type:varchar(32);index:config_env;comment:环境;"`

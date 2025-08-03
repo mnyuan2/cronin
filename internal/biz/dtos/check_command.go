@@ -161,10 +161,26 @@ func CheckJenkins(jks *pb.CronJenkins) error {
 		return fmt.Errorf("项目名称不得为空")
 	}
 	pl := len(jks.Params)
-	for i, param := range jks.Params {
-		if param.Key == "" && i < (pl-1) {
-			return fmt.Errorf("参数 %v 名称不得为空", i+1)
+	if jks.ParamsMode == models.ParamModeDefault {
+		for i, param := range jks.Params {
+			if param.Key == "" && i < (pl-1) {
+				return fmt.Errorf("参数 %v 名称不得为空", i+1)
+			}
 		}
+	} else if jks.ParamsMode == models.ParamModeGroup {
+		if len(jks.ParamsGroup) == 0 {
+			return fmt.Errorf("至少添加一个参数组")
+		}
+		for i, group := range jks.ParamsGroup {
+			pl := len(group.Params)
+			for j, param := range group.Params {
+				if param.Key == "" && j < (pl-1) {
+					return fmt.Errorf("参数组 %v 第 %v 个参数 名称不得为空", i+1, j+1)
+				}
+			}
+		}
+	} else {
+		return fmt.Errorf("参数模式有误")
 	}
 	return nil
 }

@@ -107,7 +107,6 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 		jsoniter.UnmarshalFromString(one.Content, oldSource)
 	} else {
 		one.Scene = source
-		one.Env = dm.user.Env
 		one.Status = enum.StatusActive
 		one.CreateDt = ti.String()
 	}
@@ -142,7 +141,7 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 	default:
 		return nil, errs.New(nil, "type参数错误")
 	}
-
+	one.Env = strings.Join(r.Env, ",")
 	one.UpdateDt = ti.String()
 	one.Title = r.Title
 	one.Content, err = jsoniter.MarshalToString(r.Source)

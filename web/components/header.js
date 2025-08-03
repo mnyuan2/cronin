@@ -12,7 +12,6 @@ var MyHeader = Vue.extend({
                           <el-menu-item index="/pipeline" v-if="$auth_tag.pipeline_list">流水线</el-menu-item>
                           <el-menu-item index="/receive" v-if="$auth_tag.receive_list">接收</el-menu-item>
                           <el-menu-item index="/logs" >日志</el-menu-item> <!-- v-if="$auth_tag.logs_list"   -->
-                          <el-menu-item index="/source" v-if="$auth_tag.source_list">连接</el-menu-item>
                           <!--右导航-->
                           <el-menu-item-group class="group-right">
                               <el-menu-item>
@@ -39,6 +38,7 @@ var MyHeader = Vue.extend({
                                 <el-menu-item index="/tag" v-if="$auth_tag.tag_list">标签</el-menu-item>
                                 <el-menu-item index="/users" v-if="$auth_tag.user_list">人员</el-menu-item>
                                 <el-menu-item index="/role" v-if="$auth_tag.role_list">权限</el-menu-item>
+                                <el-menu-item index="/source" v-if="$auth_tag.source_list">连接</el-menu-item>
                                 <el-menu-item index="/setting">设置</el-menu-item>
                                 <el-divider></el-divider>
                                 <el-menu-item><a href="https://cron.qqe2.com/" target="_blank">时间格式生成器</a></el-menu-item>
