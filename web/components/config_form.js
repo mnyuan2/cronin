@@ -138,7 +138,7 @@ var MyConfigForm = Vue.extend({
                         <el-select v-model="form.command.sql.source.id" placement="请选择sql链接">
                             <el-option v-for="(dic_v,dic_k) in dic.sql_source" v-show="dic_v.extend.driver == form.command.sql.driver" :label="dic_v.name" :value="dic_v.id"></el-option>
                         </el-select>
-                        <el-button type="text" style="margin-left: 20px" @click="sqlSourceBox(true)">设置链接</el-button>
+                        <el-button type="text" plain style="margin-left: 20px" @click="sourceBox(true, 11)">管理</el-button>
                     </el-form-item>
                     <el-form-item label="执行语句">
                         <div>
@@ -200,6 +200,7 @@ var MyConfigForm = Vue.extend({
                         <el-select v-model="form.command.jenkins.source.id" placement="请选择链接">
                             <el-option v-for="(dic_v,dic_k) in dic.jenkins_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                         </el-select>
+                        <el-button type="text" plain style="margin-left: 20px" @click="sourceBox(true, 12)">管理</el-button>
                     </el-form-item>
                     <el-form-item label="项目" label-width="40px">
                         <el-input v-model="form.command.jenkins.name" placeholder="jenkins job name"></el-input>
@@ -242,6 +243,7 @@ var MyConfigForm = Vue.extend({
                         <el-select v-model="form.command.git.link_id" placement="请选择链接">
                             <el-option v-for="(dic_v,dic_k) in dic.git_source" :label="dic_v.name" :value="dic_v.id"></el-option>
                         </el-select>
+                        <el-button type="text" plain style="margin-left: 20px" @click="sourceBox(true, 13)">管理</el-button>
                     </el-form-item>
                     <el-form-item label="事件">
                         <div>
@@ -318,8 +320,8 @@ var MyConfigForm = Vue.extend({
     </el-form>
     
     <!-- sql链接源管理弹窗 -->
-    <el-drawer title="链接管理" :visible.sync="source.boxShow && !request.disabled" size="40%" wrapperClosable="false" :before-close="sqlSourceBox">
-        <my-sql-source></my-sql-source>
+    <el-drawer title="链接管理" :visible.sync="source.boxShow && !request.disabled" size="55%" wrapperClosable="false" :append-to-body="true" :before-close="sourceBox">
+        <my-source :dic_type="source.dic_type" v-if="source.boxShow"></my-source>
     </el-drawer>
     <!-- sql 设置弹窗 -->
     <el-dialog :title="'sql设置-'+sqlSet.title" :visible.sync="sqlSet.show && !request.disabled" :show-close="false" :modal="false" :close-on-click-modal="false">
@@ -828,7 +830,7 @@ var MyConfigForm = Vue.extend({
                             id: "",
                         },
                         name: "",
-                        params_mode: 1, // 参数模式: 1.参数、2.参数组
+                        params_mode: '1', // 参数模式: 1.参数、2.参数组
                         params: [{}],
                         params_group: [{enable_rule:'',params:[{}]}],
                     },
@@ -1079,10 +1081,11 @@ var MyConfigForm = Vue.extend({
             this.sqlSet.statement.git.path.splice(index,1)
         },
         // sql source box
-        sqlSourceBox(show){
-            this.sqlSourceBoxShow = show == true;
-            if (!this.sqlSourceBoxShow){
-                this.getDicSqlSource() // 关闭弹窗要重载枚举
+        sourceBox(show, type){
+            this.source.boxShow = show == true;
+            this.source.dic_type = type;
+            if (!this.source.boxShow){
+                this.getDicSqlSource()
             }
         },
         // sql设置弹窗

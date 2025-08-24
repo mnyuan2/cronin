@@ -78,7 +78,9 @@ type CronConfigListRequest struct {
 	HandleUserIds        []int  `form:"handle_user_ids[]"`
 	CreateOrHandleUserId int    `form:"create_or_handle_user_id"`
 	Name                 string `form:"name"`
-	TagIds               []int  `json:"tag_ids"`
+	TagIds               []int  `json:"tag_ids" form:"tag_ids[]"`
+	SourceIds            []int  `json:"source_ids" form:"source_ids[]"`
+	Env                  string `form:"env"`
 }
 type CronConfigListReply struct {
 	List []*CronConfigListItem `json:"list"`

@@ -127,6 +127,7 @@ type CronConfig struct {
 	HandleUserNames string `json:"handle_user_names" gorm:"column:handle_user_names;type:varchar(500);default:'';comment:处理人名称,多选id逗号分隔;"`
 	TagIds          string `json:"tag_ids" gorm:"column:tag_ids;type:varchar(255);default:'';comment:标签id,多选逗号分隔;"`
 	TagNames        string `json:"tag_names" gorm:"column:tag_names;type:varchar(500);default:'';comment:标签名称,多选逗号分隔;"`
+	SourceIds       string `json:"source_ids" gorm:"column:source_ids;type:varchar(255);default:'';comment:使用资源id,多选逗号分隔;"`
 }
 
 func (m *CronConfig) TableName() string {

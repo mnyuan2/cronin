@@ -159,3 +159,11 @@ func (m *Str) ToString(value interface{}) string {
 
 	return out
 }
+
+func (m *Str) ToAny(value []string) []any {
+	out := make([]any, len(value))
+	for i, v := range value {
+		out[i] = v
+	}
+	return out
+}

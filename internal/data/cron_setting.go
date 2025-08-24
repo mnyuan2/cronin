@@ -51,7 +51,7 @@ func (m *CronSettingData) GetOne(where *db.Where) (one *models.CronSetting, err 
 // 设置
 func (m *CronSettingData) Set(one *models.CronSetting) error {
 	if one.Id > 0 {
-		return m.db.Where("id=?", one.Id).Omit("create_dt", "scene", "env", "status").Updates(one).Error
+		return m.db.Where("id=?", one.Id).Omit("create_dt", "scene", "status").Updates(one).Error
 	} else {
 		return m.db.Create(one).Error
 	}
@@ -71,15 +71,20 @@ func (m *CronSettingData) Del(scene, env string, id int) error {
 // 获得连接源
 func (m *CronSettingData) GetSourceOne(env string, id int) (one *models.CronSetting, err error) {
 	w := db.NewWhere().
-		Eq("env", env, db.RequiredOption()).
+		FindInSet("env", env).
 		Eq("id", id, db.RequiredOption()).
 		Eq("status", enum.StatusActive)
 	return m.GetOne(w)
 }
 
+// 获得资源列表
+func (m *CronSettingData) GetSourceList(scene string) (list []*models.CronSetting, err error) {
+	return list, m.db.Where("scene=?", scene).Find(&list).Error
+}
+
 // 获得环境列表
 func (m *CronSettingData) GetEnvList() (list []*models.CronSetting, err error) {
-	w := db.NewWhere().Eq("scene", models.SceneEnv).Eq("status", enum.StatusActive)
+	w := db.NewWhere().Eq("scene", models.SceneEnv)
 	list = []*models.CronSetting{}
 	where, args := w.Build()
 

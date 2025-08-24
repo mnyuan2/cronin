@@ -43,7 +43,7 @@ func (m *CronConfigData) Set(data *models.CronConfig) error {
 		return m.db.Where("id=?", data.Id).
 			Select("name", "spec", "protocol", "command", "remark", "update_dt", "type", "msg_set", "empty_not_msg", "var_fields",
 				"after_tmpl", "command_hash", "msg_set_hash", "var_fields_hash", "after_sleep", "err_retry_num", "err_retry_sleep", "err_retry_mode",
-				"audit_user_id", "audit_user_name", "tag_ids", "tag_names", "status", "status_remark", "status_dt").
+				"audit_user_id", "audit_user_name", "tag_ids", "tag_names", "status", "status_remark", "status_dt", "source_ids").
 			Updates(data).Error
 	} else {
 		data.CreateDt = time.Now().Format(conv.FORMAT_DATETIME)

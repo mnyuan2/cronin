@@ -60,6 +60,8 @@ type SettingListItem struct {
 	CreateDt string         `json:"create_dt"`
 	UpdateDt string         `json:"update_dt"`
 	Type     int            `json:"type"`
+	Env      []string       `json:"env"`
+	EnvName  []string       `json:"env_name"`
 	Source   *SettingSource `json:"source"`
 }
 

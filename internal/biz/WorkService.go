@@ -10,6 +10,7 @@ import (
 	"cron/internal/models"
 	"cron/internal/pb"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -36,32 +37,56 @@ func (dm *WorkService) Table(r *pb.WorkTableRequest) (resp *pb.WorkTableReply, e
 	resp = &pb.WorkTableReply{
 		List: []*pb.WorkTableItem{},
 	}
-	//if _, ok := models.ConfigStatusMap[r.Status]; !ok {
-	//	return nil, errors.New("不支持的状态请求")
-	//}
+	sql := ``
 	w := db.NewWhere()
+	repeat := 0
 	switch r.Tab {
 	case "todo":
-		w.FindInSet("handle_user_ids", dm.user.UserId).
-			In("status", []int{models.ConfigStatusAudited})
+		sql = `SELECT COUNT(*) total, 'config' type, env FROM cron_config where %s GROUP BY env
+UNION ALL
+SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GROUP BY env
+UNION ALL
+SELECT COUNT(*) total, 'receive' join_type, env FROM cron_receive where %s GROUP BY env`
+		w.FindInSet("handle_user_ids", dm.user.UserId).In("status", []int{models.ConfigStatusAudited})
+		repeat = 3
 	case "created":
+		sql = `SELECT COUNT(*) total, 'config' type, env FROM cron_config where %s GROUP BY env
+UNION ALL
+SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GROUP BY env
+UNION ALL
+SELECT COUNT(*) total, 'receive' join_type, env FROM cron_receive where %s GROUP BY env`
 		w.Eq("create_user_id", dm.user.UserId)
+		repeat = 3
 	case "draft":
+		sql = `SELECT COUNT(*) total, 'config' type, env FROM cron_config where %s GROUP BY env
+UNION ALL
+SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GROUP BY env
+UNION ALL
+SELECT COUNT(*) total, 'receive' join_type, env FROM cron_receive where %s GROUP BY env`
 		w.Sub(func(sub *db.Where) {
 			sub.Eq("create_user_id", dm.user.UserId).
 				FindInSet("handle_user_ids", dm.user.UserId, db.OrOption())
 		}).Eq("status", models.ConfigStatusDisable)
+		repeat = 3
+	case "custom":
+		sql = `SELECT COUNT(*) total, 'config' type, env FROM cron_config where %s GROUP BY env`
+		if len(r.SourceIds) == 0 {
+			return nil, fmt.Errorf("未指定查询条件")
+		}
+		w.FindInSet("source_ids", r.SourceIds)
+		repeat = 1
 	default:
 		return resp, nil
 	}
 	where, args := w.Build()
+	sql = strings.Replace(sql, "%s", where, -1)
+	values := []any{}
+	for ; repeat > 0; repeat-- {
+		values = append(values, args...)
+	}
 
-	sql := fmt.Sprintf(`SELECT COUNT(*) total, 'config' type, env FROM cron_config where %s GROUP BY env
-UNION ALL
-SELECT COUNT(*) total, 'pipeline' join_type, env FROM cron_pipeline where %s GROUP BY env`, where, where)
-	args = append(args, args...)
 	list := []*pb.WorkTableItem{}
-	dm.db.Raw(sql, args...).Scan(&list)
+	dm.db.Raw(sql, values...).Scan(&list)
 	if len(list) == 0 {
 		return resp, nil
 	}

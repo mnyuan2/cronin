@@ -78,7 +78,7 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 			where := " ("
 			for i := 0; i < length; i++ {
 				item := valueOf.Index(i)
-				where += fmt.Sprintf("FIND_IN_SET(%v,%v)", item, field)
+				where += fmt.Sprintf("FIND_IN_SET('%v',%v)", item, field)
 				// 表示不是最后一个, 添加 or
 				if i < length-1 {
 					where += " OR "
@@ -100,7 +100,7 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 					where := " ("
 					for i := 0; i < length; i++ {
 						item := items[i]
-						where += fmt.Sprintf("FIND_IN_SET(%v,%v)", item, field)
+						where += fmt.Sprintf("FIND_IN_SET('%v',%v)", item, field)
 						// 表示不是最后一个, 添加 or
 						if i < length-1 {
 							where += " OR "
@@ -116,7 +116,7 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 			} else {
 				// 单个值的情况
 				builder.wheres = append(builder.wheres, WhereExpr{
-					sql:  fmt.Sprintf("FIND_IN_SET(%v,%v)", value, field),
+					sql:  fmt.Sprintf("FIND_IN_SET('%v',%v)", value, field),
 					with: opt.withSpace,
 				})
 			}
@@ -155,8 +155,8 @@ func (builder *Where) findInSetSqlite(field string, value any, opt *whereOptions
 	} else {
 		if opt.required || !opt.isZero(value) {
 			builder.wheres = append(builder.wheres, WhereExpr{
-				sql:  fmt.Sprintf("INSTR(',' || %s || ',', ',?,')>0", field),
-				vars: []any{value},
+				sql: fmt.Sprintf("INSTR(',' || %s || ',', ',%v,')>0", field, value),
+				//vars: []any{value},
 				with: opt.withSpace,
 			})
 		}

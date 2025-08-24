@@ -7,10 +7,11 @@ var MyWork = Vue.extend({
                 点击跳转到详情页（新的标签页）
 -->
         <el-card shadow="never" body-style="padding:12px">
-            <el-button size="mini" round plain @click="tabChangeName('todo')" :class="options.tab=='todo'?'active': ''">待办</el-button>
-            <el-button size="mini" round plain @click="tabChangeName('created')" :class="options.tab=='created'?'active': ''">创建</el-button>
-            <el-button size="mini" round plain @click="tabChangeName('draft')" :class="options.tab=='draft'?'active': ''">草稿</el-button>
+            <el-button size="mini" round plain @click="tabChangeName(tab_v.name)" :class="options.tab==tab_v.name?'active': ''" v-for="(tab_v,tab_i) in tabs">{{tab_v.title}}</el-button>
+           
+          
             
+         
         </el-card>
         
         <el-row v-for="(group_v,group_k) in group_list">
@@ -24,11 +25,13 @@ var MyWork = Vue.extend({
             </el-row>
             <el-row class="body" v-if="group_v.show">
                 <el-table :data="group_v.list" v-loading="group_v.loading" @cell-mouse-enter="listTableCellMouse" @cell-mouse-leave="listTableCellMouse">
-                    <el-table-column prop="spec" label="执行时间"></el-table-column>
+                    <el-table-column prop="spec" label="执行时间" width="160"></el-table-column>
+                    <el-table-column prop="type_name" label="类型" width="80"></el-table-column>
                     <el-table-column prop="name" label="任务名称">
-                        <div slot-scope="{row}" class="abc" style="display: flex;">
+                        <div slot-scope="{row}" class="name" style="display: flex;">
                             <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
                                 <router-link target="_blank" :to="{path:'/config_detail',query:{id:row.id, type:group_v.type}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                                <div class="info-2">{{row.remark}}</div>
                             </span>
                             <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
                                 <i  class="el-icon-edit hover" @click="setShow(row, group_v.type)" title="编辑"></i>
@@ -36,8 +39,8 @@ var MyWork = Vue.extend({
                             </span>
                         </div>
                     </el-table-column>
-                    <el-table-column prop="protocol_name" label="协议"></el-table-column>
-                    <el-table-column prop="" label="状态">
+                    <el-table-column prop="protocol_name" label="协议" width="80"></el-table-column>
+                    <el-table-column prop="" label="状态" width="100">
                         <template slot-scope="scope">
                             <el-tooltip placement="top-start">
                                 <div slot="content">{{scope.row.status_dt}}  {{scope.row.status_remark}}</div>
@@ -45,9 +48,9 @@ var MyWork = Vue.extend({
                             </el-tooltip>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="remark" label="备注"></el-table-column>
-                    <el-table-column prop="handle_user_names" label="处理人"></el-table-column>
-                    <el-table-column prop="create_user_name" label="创建人"></el-table-column>
+                    <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
+                    <el-table-column prop="create_user_name" label="创建人" width="80"></el-table-column>
+                    <el-table-column prop="tag_names" label="标签" width="180"></el-table-column>
                 </el-table>
             </el-row>
         </el-row>
@@ -74,8 +77,14 @@ var MyWork = Vue.extend({
             dic:{user:[]},
             user: {},
             group_list: [],
+            tabs: [
+                {name: 'todo', title: '待办'},
+                {name: 'created', title: '创建'},
+                {name: 'draft', title: '草稿'},
+            ],
             options:{
                 tab: 'todo', // 默认待办
+                source_ids: [],
             },
             detail_form_box: {
                 show: false,
@@ -97,7 +106,25 @@ var MyWork = Vue.extend({
         }
     },
     // 模块初始化
-    created(){},
+    created(){
+        const tab_custom = this.$route.query.tab_custom
+        if (tab_custom){
+            let index = 0
+            if (this.$route.query.source_ids){
+                this.$route.query.source_ids.split(',').forEach((item)=> {
+                    const id = Number(item)
+                    if ( id> 0){
+                        this.options.source_ids.push(id)
+                    }
+                })
+                index++
+            }
+            if (index){
+                this.tabs.push({name: 'custom', title: tab_custom})
+                this.options.tab = 'custom'
+            }
+        }
+    },
     // 模块初始化
     mounted(){
         setDocumentTitle('我的工作')
@@ -108,7 +135,7 @@ var MyWork = Vue.extend({
     // 具体方法
     methods:{
         getTables(){
-            api.innerGet('/work/table',{tab:this.options.tab}, res =>{
+            api.innerGet('/work/table',this.options, res =>{
                 if (!res.status){
                     return this.$message.error(res.message)
                 }
@@ -152,6 +179,9 @@ var MyWork = Vue.extend({
                 case "draft": // 创建人或处理人
                     param['status'] = [Enum.StatusDisable]
                     param['create_or_handle_user_id'] = this.user.id
+                    break
+                case "custom":
+                    param['source_ids'] = this.options.source_ids
                     break
                 default:
                     return this.$message.warning('未选择工作类型')
