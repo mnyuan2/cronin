@@ -43,6 +43,13 @@ button{
 .el-button--mini, .el-button--mini.is-round {
     padding: 4px 15px;
 }
+.el-button--text.is-plain{
+    color: #606266;
+    border: none;
+}
+.el-button--text.is-plain:hover{
+    border: none;
+}
 .b{
     display: inline-flex;
     justify-content: center;
@@ -274,6 +281,15 @@ i.el-alert__icon{
 .form-inline .el-input{
     width: auto;
 }
+.name .info-2{
+    position: absolute;
+    font-size: 12px;
+    bottom: -5px;
+    overflow: hidden;
+    right: 0;
+    left: 0;
+    padding: 0 10px;
+}
 /*任务表单弹窗*/
 .pipeline-form{
     padding: 0 10px 10px 10px;
@@ -346,6 +362,45 @@ i.el-alert__icon{
 .el-autocomplete{
     width: 100%;
 }
+.form_sub_tabs{}
+.form_sub_tabs .el-tabs{
+    margin-top: 4px;
+}
+.form_sub_tabs .el-tabs .box-card{
+    margin-bottom: 12px;
+}
+.form_sub_tabs .el-tabs .el-tabs__item{
+    height: 34px;
+    line-height: 34px;
+}
+.form_sub_tabs .el-tabs .el-card__header{
+    padding: 0 8px;
+}
+.form_sub_tabs .el-tabs .el-card__header .el-icon-close{
+    float: right;
+    padding: 9px 3px;
+    cursor: pointer;
+    color: #92959b;
+}
+.form_sub_tabs .el-tabs .el-card__header .el-icon-close:hover{
+    color: #409EFF;
+}
+.form_sub_tabs .el-tabs .el-card__header .el-link{
+    max-width: 90%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.form_sub_tabs .el-tabs .el-card__header .el-input{
+    width: 86%;
+}
+.form_sub_tabs .el-tabs .el-card__header .el-input input{
+    border: none;
+}
+.form_sub_tabs .el-tabs .el-card__body{
+    padding: 10px;
+}
+
 /* 任务表单 sql 展示 */
 .sql-show-warp{
     overflow-y: auto;

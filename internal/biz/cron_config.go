@@ -37,14 +37,19 @@ func NewCronConfigService(ctx context.Context, user *auth.UserToken) *CronConfig
 
 // 任务配置列表
 func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronConfigListReply, err error) {
+	if r.Env == "" {
+		r.Env = dm.user.Env
+	}
+
 	w := db.NewWhere().
 		Eq("type", r.Type).
-		Eq("env", dm.user.Env, db.RequiredOption()).
+		Eq("env", r.Env, db.RequiredOption()).
 		In("id", r.Ids).
 		In("protocol", r.Protocol).
 		In("status", r.Status).
 		In("create_user_id", r.CreateUserIds).
 		FindInSet("handle_user_ids", r.HandleUserIds).
+		FindInSet("source_ids", r.SourceIds).
 		Like("name", r.Name)
 	if r.CreateOrHandleUserId > 0 {
 		w.Raw("(create_user_id IN (?) OR FIND_IN_SET(?,handle_user_ids))", r.CreateOrHandleUserId, r.CreateOrHandleUserId)
@@ -298,7 +303,7 @@ func (dm *CronConfigService) Detail(r *pb.CronConfigDetailRequest) (resp *pb.Cro
 			Rpc:     &pb.CronRpc{Actions: []string{}},
 			Cmd:     &pb.CronCmd{Statement: &pb.CronStatement{Git: &pb.Git{Path: []string{}}}, Host: &pb.SettingHostSource{}},
 			Sql:     &pb.CronSql{Statement: []*pb.CronStatement{}, Source: &pb.CronSqlSource{}},
-			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}},
+			Jenkins: &pb.CronJenkins{Source: &pb.CronJenkinsSource{}, Params: []*pb.KvItem{}, ParamsGroup: []*pb.CronJenkinsParamsGroup{}},
 			Git:     &pb.CronGit{Events: []*pb.GitEvent{}},
 		},
 		MsgSet:           []*pb.CronMsgSet{},
@@ -485,6 +490,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	if err != nil {
 		return nil, err
 	}
+	sourceIds := []int{}
 	// 任务校验
 	if r.Protocol == models.ProtocolHttp {
 		if err := dtos.CheckHttp(cmd.Http); err != nil {
@@ -502,6 +508,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 			if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Cmd.Host.Id); one.Id == 0 || one.Scene != models.SceneHostSource {
 				return nil, errors.New("sql 连接 配置有误，请确认")
 			}
+			sourceIds = append(sourceIds, r.Command.Cmd.Host.Id)
 		}
 	} else if r.Protocol == models.ProtocolSql {
 		if err := dtos.CheckSql(cmd.Sql); err != nil {
@@ -512,6 +519,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		} else if set, err := dtos.ParseSource(one); err != nil || set.Sql.Driver != r.Command.Sql.Driver {
 			return nil, errors.New("sql 连接 驱动有误，请确认")
 		}
+		sourceIds = append(sourceIds, r.Command.Sql.Source.Id)
 	} else if r.Protocol == models.ProtocolJenkins {
 		if err := dtos.CheckJenkins(cmd.Jenkins); err != nil {
 			return nil, err
@@ -519,6 +527,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Jenkins.Source.Id); one.Id == 0 || one.Scene != models.SceneJenkinsSource {
 			return nil, errors.New("jenkins 连接 配置有误，请确认")
 		}
+		sourceIds = append(sourceIds, r.Command.Jenkins.Source.Id)
 	} else if r.Protocol == models.ProtocolGit {
 		if err := dtos.CheckGit(r.Command.Git, cmd.Git); err != nil {
 			return nil, err
@@ -526,6 +535,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 		if one, _ := data.NewCronSettingData(dm.ctx).GetSourceOne(dm.user.Env, r.Command.Git.LinkId); one.Id == 0 || one.Scene != models.SceneGitSource {
 			return nil, errors.New("git 连接 配置有误，请确认")
 		}
+		sourceIds = append(sourceIds, r.Command.Git.LinkId)
 	}
 	if r.ErrRetryNum > 30 {
 		return nil, errors.New("最大重试次数不得超过30")
@@ -586,6 +596,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.ErrRetryNum = r.ErrRetryNum
 	d.ErrRetryMode = r.ErrRetryMode
 	d.ErrRetrySleep = r.ErrRetrySleep
+	d.SourceIds, _ = conv.Int64s().Join(sourceIds)
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.EmptyNotMsg = r.EmptyNotMsg

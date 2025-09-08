@@ -101,7 +101,7 @@ func (m *CronLogSpanIndexV2Data) TraceIdGroup(where *db.Where) (list map[string]
 			"operation",
 			"count(1) total_num",
 			"sum(status=1) error_num",
-		).Group("trace_id, operation").Order("timestamp asc").Scan(&rows).Error
+		).Group("trace_id, operation").Order("timestamp,span_id asc").Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (m *CronLogSpanIndexV2Data) List(where *db.Where, page, limit int) (total i
 	err = m.db.Model(&models.CronLogSpanIndexV2{}).
 		Where(w, args...).Limit(limit).Offset((page - 1) * limit).
 		Group("trace_id").
-		Order("timestamp desc").
+		Order("timestamp desc,span_id asc").
 		Find(&list).Error
 	if err != nil {
 		return 0, nil, err

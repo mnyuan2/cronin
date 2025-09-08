@@ -22,43 +22,52 @@ import (
 	"strings"
 )
 
-type SettingSqlService struct {
+type SourceService struct {
 	db   *db.MyDB
 	ctx  context.Context
 	user *auth.UserToken
 }
 
-func NewSettingSqlService(ctx context.Context, user *auth.UserToken) *SettingSqlService {
-	return &SettingSqlService{
+func NewSourceService(ctx context.Context, user *auth.UserToken) *SourceService {
+	return &SourceService{
 		ctx:  ctx,
 		user: user,
 	}
 }
 
 // 任务配置列表
-func (dm *SettingSqlService) List(r *pb.SettingListRequest) (resp *pb.SettingListReply, err error) {
+func (dm *SourceService) List(r *pb.SettingListRequest) (resp *pb.SettingListReply, err error) {
 	// 构建查询条件
-	if r.Page <= 1 {
-		r.Page = 1
-	}
-	if r.Size <= 10 {
-		r.Size = 20
-	}
+	//if r.Page <= 1 {
+	//	r.Page = 1
+	//}
+	//if r.Size <= 10 {
+	//	r.Size = 20
+	//}
 	resp = &pb.SettingListReply{
-		Page: &pb.Page{
-			Page: r.Page,
-			Size: r.Size,
-		},
+		//Page: &pb.Page{
+		//	Page: r.Page,
+		//	Size: r.Size,
+		//},
 	}
 	source, ok := models.DicToSource[r.Type]
 	if !ok {
 		return nil, errs.New(nil, "type参数错误")
 	}
 
-	list := []*models.CronSetting{}
-	resp.Page.Total, err = data.NewCronSettingData(dm.ctx).GetList(source, dm.user.Env, r.Page, r.Size, &list)
+	//list := []*models.CronSetting{}
+	list, err := data.NewCronSettingData(dm.ctx).GetSourceList(source)
 	if err != nil {
 		return nil, err
+	}
+	// 获取环境字典
+	envs, err := data.NewCronSettingData(dm.ctx).GetEnvList()
+	if err != nil {
+		return nil, errs.New(err, "获取环境列表失败")
+	}
+	envMap := map[string]string{}
+	for _, item := range envs {
+		envMap[item.Name] = item.Title
 	}
 
 	// 格式化
@@ -70,6 +79,7 @@ func (dm *SettingSqlService) List(r *pb.SettingListRequest) (resp *pb.SettingLis
 			CreateDt: item.CreateDt,
 			UpdateDt: item.UpdateDt,
 			Type:     models.SourceToDic[item.Scene],
+			Env:      strings.Split(item.Env, ","),
 			Source: &pb.SettingSource{
 				Sql:     &pb.SettingSqlSource{},
 				Jenkins: &pb.SettingJenkinsSource{},
@@ -77,6 +87,15 @@ func (dm *SettingSqlService) List(r *pb.SettingListRequest) (resp *pb.SettingLis
 				Host:    &pb.SettingHostSource{},
 			},
 		}
+		data.EnvName = make([]string, len(data.Env))
+		for i2, k := range data.Env {
+			if v, ok := envMap[k]; ok {
+				data.EnvName[i2] = v
+			} else {
+				data.EnvName[i2] = k
+			}
+		}
+
 		jsoniter.UnmarshalFromString(item.Content, data.Source)
 		resp.List[i] = data
 	}
@@ -85,7 +104,7 @@ func (dm *SettingSqlService) List(r *pb.SettingListRequest) (resp *pb.SettingLis
 }
 
 // 设置源
-func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
+func (dm *SourceService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
 	source, ok := models.DicToSource[r.Type]
 	if !ok {
 		return nil, errs.New(nil, "type参数错误")
@@ -97,12 +116,12 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 	oldSource := &pb.SettingSqlSource{}
 	// 分为新增和编辑
 	if r.Id > 0 {
-		one, err = _data.GetSourceOne(dm.user.Env, r.Id)
+		one, err = _data.GetSourceOne("", r.Id)
 		if err != nil {
 			return nil, err
 		}
 		if one.Scene != source {
-			return nil, errs.New(nil, "数据场景不一致")
+			return nil, errs.New(nil, "资源类型不可更改")
 		}
 		jsoniter.UnmarshalFromString(one.Content, oldSource)
 	} else {
@@ -158,7 +177,7 @@ func (dm *SettingSqlService) Set(r *pb.SettingSqlSetRequest) (resp *pb.SettingSq
 	}, err
 }
 
-func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
+func (dm *SourceService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingSqlSetReply, err error) {
 
 	switch r.Type {
 	case enum.DicSqlSource:
@@ -249,12 +268,12 @@ func (dm *SettingSqlService) Ping(r *pb.SettingSqlSetRequest) (resp *pb.SettingS
 }
 
 // 删除源
-func (dm *SettingSqlService) ChangeStatus(r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
+func (dm *SourceService) ChangeStatus(r *pb.SettingChangeStatusRequest) (resp *pb.SettingChangeStatusReply, err error) {
 	dm.db = db.New(dm.ctx)
 
 	// 同一个任务，这里要加请求锁
 	_data := data.NewCronSettingData(dm.ctx)
-	one, err := _data.GetSourceOne(dm.user.Env, r.Id)
+	one, err := _data.GetSourceOne("", r.Id)
 	if err != nil {
 		return nil, err
 	}

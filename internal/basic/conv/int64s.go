@@ -2,6 +2,7 @@ package conv
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -65,7 +66,7 @@ func (i *int64s) Join(list any) (string, error) {
 		}
 	case []int64:
 		for _, v := range list.([]int64) {
-			s1 = append(s1, strconv.Itoa(int(v)))
+			s1 = append(s1, fmt.Sprintf("%v", v))
 		}
 	case []int32:
 		for _, v := range list.([]int32) {

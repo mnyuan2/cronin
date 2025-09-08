@@ -1,7 +1,8 @@
 package pb
 
 type WorkTableRequest struct {
-	Tab string `json:"tab" form:"tab"`
+	Tab       string `json:"tab" form:"tab"`
+	SourceIds []int  `json:"source_ids" form:"source_ids[]"`
 }
 type WorkTableReply struct {
 	List []*WorkTableItem `json:"list"`

@@ -1,5 +1,5 @@
 var MyConfig = Vue.extend({
-    template: `<el-container>
+    template: `<el-container class="config-list">
     <!--边栏-->
     <my-sidebar></my-sidebar>
     <!--主内容-->
@@ -57,11 +57,12 @@ var MyConfig = Vue.extend({
                     </el-tooltip>
                 </template>
             </el-table-column>
-            <el-table-column prop="spec" label="执行时间" v-show="listParam.type!=5" width="160"></el-table-column>
+            <el-table-column prop="spec" label="执行时间" v-if="listParam.type!=5" width="160"></el-table-column>
             <el-table-column prop="name" label="任务名称">
-                <div slot-scope="{row}" class="abc" style="display: flex;">
+                <div slot-scope="{row}" class="name" style="display: flex;">
                     <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
                         <router-link :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                        <div class="info-2">{{row.remark}}</div>
                     </span>
                     <span v-show="row.option.name.mouse" style="margin-left: 4px;white-space: nowrap;">
                         <i  class="el-icon-edit hover" @click="setShow(row)" title="编辑"></i>
@@ -75,10 +76,9 @@ var MyConfig = Vue.extend({
                    <el-button :type="statusTypeName(scope.row.status)" plain size="mini" round @click="statusShow(scope.row, 'config')" :title="scope.row.status_dt+'   '+scope.row.status_remark">{{scope.row.status_name}}</el-botton>
                 </template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注"></el-table-column>
             <el-table-column prop="handle_user_names" label="处理人" width="120"></el-table-column>
             <el-table-column prop="create_user_name" label="创建人" width="80"></el-table-column>
-            <el-table-column prop="tag_names" label="标签"></el-table-column>
+            <el-table-column prop="tag_names" label="标签" width="180"></el-table-column>
         </el-table>
         <el-pagination
                 @size-change="handleSizeChange"
@@ -293,6 +293,7 @@ var MyConfig = Vue.extend({
             this.listParam.type = tab
             this.listParam.page = 1
             this.listParam.total = 0
+            console.log('listParam',this.listParam.type);
             this.getList()
         },
 
@@ -497,11 +498,14 @@ var MyConfig = Vue.extend({
         //     }
         // },
         configLogBox(item){
+            let time = new Date()
+            time.setDate(time.getDate()-7)
             this.config_log_box.search = {
                 env: item.env,
                 // tags: JSON.stringify({ref_id:item.id, component:"config"}),
                 ref_id: item.id,
                 operation: 'job-task',
+                timestamp_start: getDatetimeString(time),
             }
             // this.config_log_box.title = '日志'
             this.config_log_box.show = true

@@ -94,16 +94,16 @@ func (dm *FoundationService) getDb(t *dtos.DicGetRequest) ([]*pb.DicGetItem, err
 	switch t.Type {
 	case enum.DicSqlSource:
 		_sql = "SELECT id,title as name, concat('{\"driver\":',content->'$.sql.driver','}') extend  FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
-		w.Eq("scene", models.SceneSqlSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+		w.Eq("scene", models.SceneSqlSource).Eq("status", enum.StatusActive).FindInSet("env", dm.user.Env, db.RequiredOption())
 	case enum.DicJenkinsSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
-		w.Eq("scene", models.SceneJenkinsSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+		w.Eq("scene", models.SceneJenkinsSource).Eq("status", enum.StatusActive).FindInSet("env", dm.user.Env, db.RequiredOption())
 	case enum.DicGitSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
-		w.Eq("scene", models.SceneGitSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+		w.Eq("scene", models.SceneGitSource).Eq("status", enum.StatusActive).FindInSet("env", dm.user.Env, db.RequiredOption())
 	case enum.DicHostSource:
 		_sql = "SELECT id,title as name FROM `cron_setting` %WHERE ORDER BY update_dt,id desc"
-		w.Eq("scene", models.SceneHostSource).Eq("status", enum.StatusActive).Eq("env", dm.user.Env, db.RequiredOption())
+		w.Eq("scene", models.SceneHostSource).Eq("status", enum.StatusActive).FindInSet("env", dm.user.Env, db.RequiredOption())
 		items = append(items, &pb.DicGetItem{
 			Id:     -1,
 			Name:   "本机",

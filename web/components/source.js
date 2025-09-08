@@ -11,18 +11,24 @@ var MySource = Vue.extend({
         </el-menu>
         
         <el-table :data="list.items">
+            <el-table-column property="env_name" label="环境">
+                <template slot-scope="{row}">
+                    {{row.env_name.join(",")}}
+                </template>
+            </el-table-column>
             <el-table-column property="title" label="链接名称"></el-table-column>
             <el-table-column label="驱动" v-if="list.param.type==11">
                 <template slot-scope="scope">
                     {{scope.row.source.sql.driver}}
                 </template>
             </el-table-column>
-            <el-table-column property="create_dt" label="创建时间"></el-table-column>
-            <el-table-column property="update_dt" label="更新时间"></el-table-column>
-            <el-table-column label="操作">
+            <el-table-column property="create_dt" label="创建时间" width="170"></el-table-column>
+            <el-table-column property="update_dt" label="更新时间" width="170"></el-table-column>
+            <el-table-column label="操作" width="240">
                 <template slot-scope="scope">
-                    <el-button plain @click="initForm(true, scope.row)">编辑</el-button>
-                    <el-button plain @click="deleteSource(scope.row.id)" v-if="$auth_tag.source_status">删除</el-button>
+                    <el-button size="mini" type="text" @click="viewUsage(scope.row)">查看任务</el-button>
+                    <el-button size="mini" plain @click="initForm(true, scope.row)">编辑</el-button>
+                    <el-button size="mini" plain @click="deleteSource(scope.row.id)" v-if="$auth_tag.source_status">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
@@ -30,12 +36,17 @@ var MySource = Vue.extend({
         <!--设置弹窗-->
         <el-dialog :title="form.box.title" :visible.sync="form.box.show" :close-on-click-modal="false" append-to-body="true" width="600px">
             <el-form :model="form.data" label-position="left" label-width="80px" size="small">
+                <el-form-item label="环境">
+                    <el-select v-model="form.data.env" multiple style="width: 100%;" placeholder="未选择生效环境">
+                        <el-option v-for="dic_v in dic_env" :label="dic_v.name" :value="dic_v.key"></el-option>
+                    </el-select>
+                </el-form-item>
                 <el-form-item label="链接名*">
                     <el-input v-model="form.data.title"></el-input>
                 </el-form-item>
                 
                 <el-tabs type="border-card" v-model="form.data.type">
-                    <el-tab-pane label="sql" name="11">
+                    <el-tab-pane label="sql" name="11" :disabled="form.data.id && form.data.type != 11">
                         <el-form-item label="驱动*">
                             <el-select v-model="form.data.source.sql.driver">
                                 <el-option v-for="dic_v in dic_sql_driver" :label="dic_v.name" :value="dic_v.key"></el-option>
@@ -58,18 +69,18 @@ var MySource = Vue.extend({
                         </el-form-item>
                     </el-tab-pane>
                     
-                    <el-tab-pane label="jenkins" name="12">
+                    <el-tab-pane label="jenkins" name="12" :disabled="form.data.id && form.data.type != 12">
                         <el-form-item label="地址*">
                             <el-input v-model="form.data.source.jenkins.hostname" placeholder="http://ip:prod 或 https://hostname"></el-input>
                         </el-form-item>
                         <el-form-item label="用户名">
                             <el-input v-model="form.data.source.jenkins.username" placeholder="登录账户"></el-input>
                         </el-form-item>
-                        <el-form-item label="密码">
-                            <el-input v-model="form.data.source.jenkins.password" show-password="true" placeholder="api token"></el-input>
+                        <el-form-item label="API Token">
+                            <el-input v-model="form.data.source.jenkins.password" show-password="true" placeholder="来源: user / security / api token"></el-input>
                         </el-form-item>
                     </el-tab-pane>
-                    <el-tab-pane label="git" name="13">
+                    <el-tab-pane label="git" name="13" :disabled="form.data.id && form.data.type != 13">
                         <el-form-item label="驱动">
                             <el-select v-model="form.data.source.git.driver">
                                 <el-option label="gitee" value="gitee"></el-option>
@@ -81,7 +92,7 @@ var MySource = Vue.extend({
                             <p class="info-2">{{git.access_token_placeholder[form.data.source.git.type]}}</p>
                         </el-form-item>
                     </el-tab-pane>
-                    <el-tab-pane label="主机" name="14">
+                    <el-tab-pane label="主机" name="14" :disabled="form.data.id && form.data.type != 14">
                         <el-form-item label="驱动">
                             <el-select v-model="form.data.source.host.driver">
                                 <el-option label="linux" value="linux"></el-option>
@@ -104,18 +115,22 @@ var MySource = Vue.extend({
                 
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button @click="pingForm()" style="float: left;">连接测试</el-button>
-                <el-button @click="initForm(false,'-')">取 消</el-button>
-                <el-button type="primary" @click="submitForm()" v-if="$auth_tag.source_set">确 定</el-button>
+                <el-button size="small" @click="pingForm()" style="float: left;">连接测试</el-button>
+                <el-button size="small" @click="initForm(false,'-')">取 消</el-button>
+                <el-button size="small" type="primary" @click="submitForm()" v-if="$auth_tag.source_set">确 定</el-button>
             </div>
         </el-dialog>
     </el-main>`,
 
     name: "MySource",
+    props: {
+        dic_type:Number
+    },
     data(){
         return {
             dic_sql_type:[],
             dic_sql_driver:[],
+            dic_env:[],
             list:{
                 labelIndex: '11',
                 items: [],
@@ -143,6 +158,10 @@ var MySource = Vue.extend({
     },
     // 模块初始化
     created(){
+        if (this.dic_type){
+            this.list.param.type = this.dic_type
+            this.list.labelIndex = this.dic_type.toString()
+        }
         setDocumentTitle('链接管理')
         this.initForm(false,"-")
     },
@@ -217,10 +236,12 @@ var MySource = Vue.extend({
         // 枚举
         getDicList(){
             let types = [
-                Enum.dicSqlDriver
+                Enum.dicSqlDriver,
+                Enum.dicEnv
             ]
             api.dicList(types,(res) =>{
                 this.dic_sql_driver = res[Enum.dicSqlDriver]
+                this.dic_env = res[Enum.dicEnv]
             })
         },
         // 初始化表单数据
@@ -228,12 +249,13 @@ var MySource = Vue.extend({
             this.form = {
                 box:{
                     show: show == true,
-                    title: "添加sql链接",
+                    title: "添加链接",
                 },
                 data: {
                     id: 0,
                     title:"",
                     type: this.list.param.type,
+                    env: [],
                     source:{
                         sql:{
                             driver: "mysql",
@@ -269,6 +291,11 @@ var MySource = Vue.extend({
                 console.log("编辑源",data)
             }
             this.form.data.type = this.form.data.type.toString()
+        },
+
+        // 查看使用
+        viewUsage(data){
+            window.open(`#/my/work?source_ids=${data.id}&tab_custom=资源:${data.title}`, "_blank")
         },
         close(){
             this.$emit('update:visible', false) // 向外传递关闭表示

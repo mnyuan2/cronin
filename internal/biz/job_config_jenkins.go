@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/tracing"
 	"cron/internal/basic/util"
 	"cron/internal/data"
+	"cron/internal/models"
 	"cron/internal/pb"
 	"crypto/tls"
 	"errors"
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -76,18 +78,37 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		return errs.New(er, "连接配置解析异常")
 	}
 
-	/*
-		1.执行构建
-		2.循环查询结果，直到成功或失败
-		3.完成进行下一步
-	*/
+	// 如果为参数组模式，解析header，输出非空就循环执行
+	if r.ParamsMode == models.ParamModeGroup {
+		for _, group := range r.ParamsGroup {
+			if group.EnableRule == "" { // 跳过空规则
+				continue
+			}
+			if err = job.jenkinsItem(ctx, s.Jenkins, r, group.Params); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return job.jenkinsItem(ctx, s.Jenkins, r, r.Params)
+}
+
+func (job *JobConfig) jenkinsItem(ctx context.Context, source *pb.SettingJenkinsSource, r *pb.CronJenkins, params []*pb.KvItem) (err errs.Errs) {
+	ctx, span := job.tracer.Start(ctx, "jenkins-item")
+	defer func() {
+		if err != nil {
+			span.SetStatus(tracing.StatusError, err.Desc())
+			span.AddEvent("执行错误", trace.WithAttributes(attribute.String("error.object", err.Error())))
+		}
+		span.End()
+	}()
 
 	// 确定构建方式
 	buildPath := "build"
-	if len(r.Params) > 0 && r.Params[0].Key != "" {
+	if len(params) > 0 && params[0].Key != "" {
 		buildPath = "buildWithParameters"
 	} else {
-		b, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/api/json?tree=property", r.Name), nil, "get-project")
+		b, er := job.httpJenkins(ctx, source, http.MethodPost, fmt.Sprintf("/job/%s/api/json?tree=property", r.Name), nil, "get-project")
 		if er != nil {
 			return errs.New(er, "项目信息有误")
 		}
@@ -103,7 +124,7 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 	}
 
 	// 请求构建
-	queueId, er := job.httpJenkins(ctx, s.Jenkins, http.MethodPost, fmt.Sprintf("/job/%s/%s", r.Name, buildPath), r.Params, "exec-build")
+	queueId, er := job.httpJenkins(ctx, source, http.MethodPost, fmt.Sprintf("/job/%s/%s", r.Name, buildPath), params, "exec-build")
 	if er != nil {
 		return errs.New(er, "构建失败")
 	}
@@ -112,7 +133,7 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 	queueData := &JenkinsQueueResponse{Executable: &JenkinsQueueExecutable{}}
 	for index := 0; index < 10; index++ {
 		time.Sleep(time.Second * 10)
-		queueRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/queue/item/%v/api/json", string(queueId)), nil, "get-queue")
+		queueRes, er := job.httpJenkins(ctx, source, http.MethodGet, fmt.Sprintf("/queue/item/%v/api/json", string(queueId)), nil, "get-queue")
 		if er != nil {
 			return errs.New(er, "队列信息请求错误")
 		}
@@ -131,7 +152,7 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 
 	// 循环轮询任务，直到成功或失败；这里是真的可能很久。
 	for range time.Tick(time.Second * 5) {
-		workflowRes, er := job.httpJenkins(ctx, s.Jenkins, http.MethodGet, fmt.Sprintf("/job/%s/%v/api/json", r.Name, queueData.Executable.Number), nil, "find-workflow")
+		workflowRes, er := job.httpJenkins(ctx, source, http.MethodGet, fmt.Sprintf("/job/%s/%v/api/json", r.Name, queueData.Executable.Number), nil, "find-workflow")
 		if er != nil {
 			return errs.New(er, "工作流程 请求错误")
 		}
@@ -147,7 +168,6 @@ func (job *JobConfig) jenkins(ctx context.Context, r *pb.CronJenkins) (err errs.
 		}
 		// 进行中就延迟后 再次查询检测
 	}
-
 	return nil
 }
 
@@ -169,15 +189,15 @@ func (job *JobConfig) httpJenkins(ctx context.Context, source *pb.SettingJenkins
 	// url参数
 	paramStr := ""
 	if len(params) > 0 {
-		ps := []string{}
+		ps := url.Values{}
 		for _, pram := range params {
 			if pram.Key == "" {
 				continue
 			}
-			ps = append(ps, pram.Key+"="+pram.Value)
+			ps.Add(pram.Key, pram.Value)
 		}
 		if len(ps) > 0 {
-			paramStr = "?" + strings.Join(ps, "&")
+			paramStr = "?" + ps.Encode()
 		}
 	}
 
@@ -218,6 +238,9 @@ func (job *JobConfig) httpJenkins(ctx context.Context, source *pb.SettingJenkins
 
 	if operateName == "exec-build" {
 		resp, er = job.jenkinsBuildParse(span, res)
+		if er != nil {
+			err = errs.New(er, "响应错误")
+		}
 	} else {
 		resp, er = io.ReadAll(res.Body)
 		if er != nil {

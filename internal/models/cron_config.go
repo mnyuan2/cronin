@@ -87,6 +87,12 @@ var RetryModeMap = map[int]string{
 	RetryModeIncr:  "递增间隔",
 }
 
+// 参数模式
+const (
+	ParamModeDefault = 1 // 参数
+	ParamModeGroup   = 2 // 参数组
+)
+
 type CronConfig struct {
 	Id              int    `json:"id" gorm:"column:id;type:INTEGER;primary_key;comment:主键;"`
 	Env             string `json:"env" gorm:"column:env;type:varchar(32);index:config_env;comment:环境;"`
@@ -121,6 +127,7 @@ type CronConfig struct {
 	HandleUserNames string `json:"handle_user_names" gorm:"column:handle_user_names;type:varchar(500);default:'';comment:处理人名称,多选id逗号分隔;"`
 	TagIds          string `json:"tag_ids" gorm:"column:tag_ids;type:varchar(255);default:'';comment:标签id,多选逗号分隔;"`
 	TagNames        string `json:"tag_names" gorm:"column:tag_names;type:varchar(500);default:'';comment:标签名称,多选逗号分隔;"`
+	SourceIds       string `json:"source_ids" gorm:"column:source_ids;type:varchar(255);default:'';comment:使用资源id,多选逗号分隔;"`
 }
 
 func (m *CronConfig) TableName() string {

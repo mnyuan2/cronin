@@ -27,6 +27,7 @@ type CronLogListItem struct {
 	StatusName string    `json:"status_name"` //
 	StatusDesc string    `json:"status_desc"` //
 	TraceId    string    `json:"trace_id"`    // 踪迹id
+	SpanId     string    `json:"span_id"`     // 节点id
 	Service    string    `json:"service"`     // 服务名称
 	Operation  string    `json:"operation"`   // 操作名称
 	RefName    string    `json:"ref_name"`    // 引用名称
