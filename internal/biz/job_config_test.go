@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/rpc"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -300,15 +301,32 @@ func TestCronJob_Cmd2(t *testing.T) {
 	//	fmt.Println(ph)
 
 	if runtime.GOOS == "windows" {
-		ph := `dir;
-echo 258;` // 这里目前的问题是，没有执行第二行
-		e := exec.Command("cmd", "/C", ph)
-		cmd, err := e.Output()
+		// 延迟脚本
+		ph := `@echo off
+echo start - current date: %date% %time%
+ping -n 5 127.0.0.1 >nul
+echo end - current date: %date% %time%`
+		tmpfile, err := ioutil.TempFile("", "tmp_*.bat")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.Remove(tmpfile.Name()) // 执行后删除临时文件
+
+		if _, err := tmpfile.Write([]byte(ph)); err != nil {
+			log.Fatal(err)
+		}
+		if err := tmpfile.Close(); err != nil {
+			log.Fatal(err)
+		}
+
+		e := exec.Command("cmd", "/C", tmpfile.Name())
+		cmd, err := e.CombinedOutput()
+		srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(cmd))
+		fmt.Println("执行结果：", string(srcCoder))
 		if err != nil {
 			t.Fatal("命令执行错误：", err.Error())
 		}
-		srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(cmd))
-		fmt.Println("执行结果：", string(srcCoder))
+
 	} else {
 		// 对于linux 脚本文件 是支持的
 		ph := `#!/bin/bash

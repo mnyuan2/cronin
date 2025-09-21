@@ -95,5 +95,5 @@ func (e *Error) Error() string {
 	if e.err != nil {
 		return e.err.Error()
 	}
-	return ""
+	return e.desc
 }

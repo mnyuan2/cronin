@@ -33,10 +33,10 @@ func httpJobStop(ctx *gin.Context) {
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }
 
-// 任务钩子
-func httpJobWebhook(ctx *gin.Context) {
-	r := &pb.JobStopRequest{}
-	if err := ctx.BindJSON(r); err != nil {
+// 执行任务踪迹
+func httpJobTraces(ctx *gin.Context) {
+	r := &pb.JobTracesRequest{}
+	if err := ctx.BindQuery(r); err != nil {
 		NewReply(ctx).SetError(pb.ParamError, err.Error()).RenderJson()
 		return
 	}
@@ -45,6 +45,6 @@ func httpJobWebhook(ctx *gin.Context) {
 		NewReply(ctx).SetError(pb.UserNotExist, err.Error()).RenderJson()
 		return
 	}
-	rep, err := biz.NewJobService(ctx.Request.Context(), user).Stop(r)
+	rep, err := biz.NewJobService(ctx.Request.Context(), user).Traces(r)
 	NewReply(ctx).SetReply(rep, err).RenderJson()
 }

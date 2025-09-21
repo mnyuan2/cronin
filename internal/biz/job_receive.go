@@ -25,7 +25,7 @@ type JobReceive struct {
 	confs       []*pb.CronConfigListItem // 配置任务集合
 	conf        *JobConfig               // 流水线解析后的本身配置
 	msgSetParse *dtos.MsgSetParse
-	tracer      trace.Tracer
+	//tracer      *tracing.MysqlTracer
 }
 
 // 任务执行器
@@ -52,10 +52,9 @@ func NewJobReceive(conf *models.CronReceive, param *dtos.ReceiveWebHook) *JobRec
 	job.conf.Parse(nil)
 
 	// 日志
-	job.tracer = tracing.Tracer(job.set.Env+"-cronin", trace.WithInstrumentationAttributes(
-		attribute.String("driver", "mysql"),
-		attribute.String("env", job.set.Env),
-	))
+	//job.tracer = tracing.SqlTracer(job.set.Env+"-cronin", trace.WithInstrumentationAttributes(
+	//	attribute.String("env", job.set.Env),
+	//))
 
 	return job
 }
@@ -68,14 +67,16 @@ func NewJobReceive(conf *models.CronReceive, param *dtos.ReceiveWebHook) *JobRec
 // 执行任务
 func (job *JobReceive) Run() {
 	var err errs.Errs
-	ctx1, span := job.tracer.Start(context.Background(), "job-receive", trace.WithAttributes(
+	ctx1, span := job.conf.tracer.Start(context.Background(), "job-receive", trace.WithAttributes(
 		attribute.Int("ref_id", job.set.Id),
 		attribute.String("env", job.set.Env),
 		attribute.String("component", "receive"),
 		attribute.String("ref_name", job.set.Name),
 	), tracing.Extract(job.params.TraceId))
+	job.conf.runTraceId = span.SpanContext().TraceID().String()
 	defer func() {
 		job.conf.isRun = false
+		job.conf.runTraceId = ""
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Desc())
 			span.AddEvent("error", trace.WithAttributes(attribute.String("error.object", err.Error())))
@@ -93,6 +94,7 @@ func (job *JobReceive) Run() {
 		job.conf.conf.EntryId = 0
 
 		span.End()
+		job.conf.tracer.LogsExpire()
 	}()
 	if job.conf.isRun {
 		err = errs.New(nil, "任务正在进行中，跳过")
@@ -172,7 +174,7 @@ func (job *JobReceive) Run() {
 			}
 		}
 
-		j := NewJobConfig(conf)
+		j := NewJobConfig(conf, job.conf.tracer)
 
 		_, er := j.Running(ctx, "接收任务", p)
 		if er != nil {

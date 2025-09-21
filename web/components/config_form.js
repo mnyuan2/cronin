@@ -1053,7 +1053,7 @@ var MyConfigForm = Vue.extend({
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 inputValue: groupItem.enable_rule,
-                inputPlaceholder: '启用规则，输出非空结果组内容才生效',
+                inputPlaceholder: '启用规则，输出非空字符串生效',
             }).then(({ value }) => {
                 groupItem.enable_rule = value;
                 console.log("设置启用规则", this.form.command.jenkins.params_group.slice(-1)[0])

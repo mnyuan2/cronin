@@ -64,6 +64,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	})
 	r.GET("/job/list", httpRegister)
 	r.POST("/job/stop", httpJobStop)
+	r.GET("/job/traces", httpJobTraces)
 
 	r.GET("/work/table", routerWorkTable)
 	r.POST("/work/task_del", routerWorkTaskDel)

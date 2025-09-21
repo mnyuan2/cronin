@@ -27,7 +27,7 @@ func Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	set := conf.InstrumentationAttributes()
 	if val, ok := set.Value("driver"); ok {
 		if val.AsString() == "mysql" {
-			tra := &mysqlTracer{
+			tra := &MysqlTracer{
 				service: name,
 			}
 			if env, ok := set.Value("env"); ok {
@@ -42,4 +42,23 @@ func Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	}
 
 	return otel.Tracer(name, opts...)
+}
+
+// 非全局性日志
+func SqlTracer(name string, opts ...trace.TracerOption) *MysqlTracer {
+	conf := trace.NewTracerConfig(opts...)
+	set := conf.InstrumentationAttributes()
+
+	tra := &MysqlTracer{
+		service: name,
+		spans:   map[string][]*MysqlSpan{},
+	}
+	if env, ok := set.Value("env"); ok {
+		tra.env = env.AsString()
+	}
+	if env, ok := set.Value("nonce"); ok {
+		tra.nonce = env.AsInt64()
+	}
+
+	return tra
 }

@@ -222,11 +222,22 @@ function arrayDelete(index, arr){
 
 // 跳转回上一页
 function backLastPage() {
-    if (document.referrer){ // 上一页为当前域，则返回
-        window.history.back()
-    }else{ // 上一页不是当前域，则跳转到首页
-        window.location.href="/index"
+    const url_params = new URLSearchParams(window.location.search);
+    const redirect_url = url_params.get('redirect');
+
+    if (redirect_url) { // 指定了跳转页
+        window.location.href = decodeURIComponent(redirect_url);
+        return
+    }else if (document.referrer){ // 上一页为当前域，则返回
+        const referrerHost = new URL(document.referrer).host;
+        const currentHost = document.location.host;
+        if (referrerHost === currentHost && document.referrer !== document.location.href){
+            window.history.back()
+            return
+        }
     }
+    // 上一页不是当前域，则跳转到首页
+    window.location.href="/index"
 }
 
 function getHomePage() {
@@ -234,7 +245,8 @@ function getHomePage() {
 }
 // 跳转登录页
 function backLoginPage() {
-    window.location.href="/login"
+    const current_url = encodeURIComponent(window.location.href);
+    window.location.href=`/login?redirect=${current_url}`
 }
 
 /**
@@ -399,6 +411,17 @@ function statusTypeName(status){
 function getEnumName(enumList, id){
     let data = enumList.filter((item)=>{return id == item.id})
     return data.length ? data[0].name : ''
+}
+
+// 任务类型图标
+function getTaskIcon(ref_type){
+    if (ref_type == 'config'){
+        return '<i class="task-item-icon" style="background: #28ab80;">c</i>'
+    }else if (ref_type == 'pipeline'){
+        return '<i class="task-item-icon" style="background: #5c88c5;">p</i>'
+    }else if(ref_type == 'receive'){
+        return '<i class="task-item-icon" style="background: #182b50;">r</i>'
+    }
 }
 
 /**

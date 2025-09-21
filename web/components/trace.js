@@ -12,6 +12,7 @@ var MyTrace = Vue.extend({
               <div :class="(scope.row.status==1?'is-light':'')+ ' span-label'" @click="showSpan(scope.row.bar, 'detail_show')">
                 <i class="el-alert__icon el-icon-error" v-if="scope.row.status==1"></i>
                 <span>{{scope.row.operation}}</span>
+                <i class="el-alert__icon el-icon-loading info-2" v-if="!scope.row.bar.finish" title="执行中"></i>
               </div>
             </template>
         </el-table-column>
@@ -80,26 +81,48 @@ var MyTrace = Vue.extend({
 </div>`,
     name: "MyConfigLog",
     props: {
-        trace_id:String,
+        trace_id:String,// 与 entry_id 互斥
+        job:{
+            ref_id: Number,
+            entry_id: Number,
+            trace_id: String,
+        },// 与 trace_id 互斥
     },
     data(){
         return {
             trace_id:"",
+            job:{},
             traces:[], // 踪迹
             total_desc: "", // 合计描述
+            job_task:0,
+            last_span_map:{}
         }
     },
     // 模块初始化
     created(){},
     // 模块初始化
     mounted(){},
+    // 实例销毁前
+    beforeDestroy(){
+        this.removeJob()
+    },
     watch:{
         trace_id:{
-            immediate: true, // 解决首次负值不触发的情况
+            immediate: true, // 解决首次赋值不触发的情况
             handler: function (newVal,oldVal){
                 console.log("trace trace_id",newVal, oldVal)
-                if (newVal != ""){
-                    this.getTrace(newVal)
+                if (newVal){
+                    this.getTrace("/log/traces", {trace_id: newVal})
+                }
+            },
+        },
+        job:{
+            immediate: true,
+            handler: function (newVal,oldVal){
+                console.log("trace job",newVal, oldVal)
+                if (newVal && !this.trace_id){
+                    this.removeJob()
+                    this.job_task = setInterval(()=>{this.getTrace("/job/traces", newVal)}, 4000)
                 }
             },
         }
@@ -108,44 +131,63 @@ var MyTrace = Vue.extend({
     // 具体方法
     methods:{
         // 踪迹展示
-        getTrace(traceId){
-            if (traceId == ""){
-                return
-            }
-            api.innerGet("/log/traces", {trace_id: traceId}, (res)=>{
+        getTrace(path, param){
+            api.innerGet(path, param, (res)=>{
                 if (!res.status){
                     return this.$message.error(res.message);
                 }
+                const micro = Date.now()*1000;
+
                 let list = res.data.list[0].Spans
                 let lastSpan = list.slice(-1)[0]
-                let startTimestamp = list[0].timestamp
+                let startSpan = list[0]
                 // 截止的截止-开始时间 = 总耗时
-                let totalDuration = lastSpan.timestamp+lastSpan.duration-startTimestamp
-                if (totalDuration<list[0].duration){
-                    totalDuration = list[0].duration // 这里应该是等于最大的一个耗时
+                let totalDuration = lastSpan.timestamp+(lastSpan.duration>=0?lastSpan.duration: micro - startSpan.timestamp)-startSpan.timestamp
+                let startDuration = list[0].duration>=0?list[0].duration: micro - startSpan.timestamp
+                if (totalDuration<startDuration){
+                    totalDuration = startDuration // 这里应该是等于最大的一个耗时
                 }
+                if (startSpan.duration>=0){
+                    this.removeJob()
+                }
+                let span_map = {}
                 for (let span of list){
                     // 视图信息控制参数
                     span.bar = {
-                        left: (span.timestamp-startTimestamp)/totalDuration*100, // 节点起始 = 当前节点开始-开始的开始
-                        width: span.duration/totalDuration*100, // 节点截止 = 当前耗时占比总耗时的比例·宽
-                        label: durationTransform(span.duration), // 这里后面要给个单位出来（前端转）
+                        left: (span.timestamp-startSpan.timestamp)/totalDuration*100, // 节点起始 = 当前节点开始-开始的开始
                         detail_show: false,
                         tags_show: false,
                         logs_show: false,
+                        finish: true,
                         log:[], // 单个视图元素
                     }
+                    if (span.duration<0){
+                        span.duration = micro - span.timestamp
+                        span.bar.finish = false
+                    }
+                    span.bar.width = span.duration/totalDuration*100 // 节点截止 = 当前耗时占比总耗时的比例·宽
+                    span.bar.label = durationTransform(span.duration) // 这里后面要给个单位出来（前端转）
                     span.logs.forEach(function (item) {
                         span.bar.log.push({show:false})
                     })
-
                     span.bar.style = 'background: #37be5f; left: '+(span.bar.left> 99.9? 99.9 : span.bar.left)+'%; width: '+(span.bar.width<0.1? '1px': span.bar.width+'%')+';'
+                    span_map[span.span_id] = span
+                    if (this.last_span_map[span.span_id]){ // 重复请求时，继承原UI属性
+                        let last_bar = this.last_span_map[span.span_id].bar
+                        span.bar.detail_show = last_bar.detail_show
+                        span.bar.tags_show = last_bar.tags_show
+                        span.bar.logs_show = last_bar.logs_show
+                        last_bar.log.forEach(function (item, index) {
+                            span.bar.log[index] = item
+                        })
+                    }
                 }
+                this.last_span_map = span_map
 
                 let trace = arrayToTree(list, 'span_id', 'parent_span_id', 'children')
                 console.log(trace, totalDuration)
                 this.traces = trace;
-                this.total_desc = "<span>开始时间:<b>"+getDatetimeString(new Date(startTimestamp/1000))+
+                this.total_desc = "<span>开始时间:<b>"+getDatetimeString(new Date(startSpan.timestamp/1000))+
                     "</b></span>  <span>耗时:<b>"+ durationTransform(totalDuration) +
                     "</b></span>  <span>节点数:<b>"+list.length +"</b><span>"
             })
@@ -168,6 +210,13 @@ var MyTrace = Vue.extend({
                 return '<pre>'+log.value.value+'</pre>'
             }else{
                 return log.value.value
+            }
+        },
+        // 移除任务
+        removeJob(){
+            if (this.job_task> 0){
+                clearInterval(this.job_task)
+                this.job_task = 0
             }
         }
     }

@@ -142,21 +142,20 @@ func (dm *TaskService) RegisterMonitor() {
 			}
 
 			// 区分环境
-			if c.isRun == true {
-				execList[c.conf.Env] = append(execList[c.conf.Env], &dtos.ExecQueueItem{
-					RefId:    c.conf.Id,
-					RefType:  refType,
-					EntryId:  c.conf.EntryId,
-					Name:     c.conf.Name,
-					Duration: curTime.Sub(c.runTime).Seconds(),
-				})
-			}
-			registerList[c.conf.Env] = append(registerList[c.conf.Env], &dtos.ExecQueueItem{
+			item := &dtos.ExecQueueItem{
 				RefId:   c.conf.Id,
 				RefType: refType,
 				EntryId: c.conf.EntryId,
 				Name:    c.conf.Name,
-			})
+			}
+			if c.isRun == true {
+				item.Duration = curTime.Sub(c.runTime).Seconds()
+				item.TraceId = c.runTraceId
+				execList[c.conf.Env] = append(execList[c.conf.Env], item)
+			}
+			registerList[c.conf.Env] = append(registerList[c.conf.Env], item)
+			b, _ := jsoniter.MarshalToString(item)
+			sse.Serve().SendEventMessage(fmt.Sprintf("%v.register.%v", c.conf.Id, refType), b)
 		}
 		// 执行发送
 		// 没有任务还是要发送空数据，不然客户端也不知道上一次的任务是否完成。

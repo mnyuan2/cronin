@@ -116,7 +116,8 @@ type CronConfigListItem struct {
 
 // 任务匹配列表
 type CronMatchListRequest struct {
-	Search []*CronMatchListSearchItem `json:"search"`
+	Search     []*CronMatchListSearchItem `json:"search"`
+	SearchText string                     `json:"search_text"`
 }
 type CronMatchListSearchItem struct {
 	Type  string   `json:"type"`
