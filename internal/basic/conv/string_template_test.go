@@ -17,50 +17,58 @@ import (
 )
 
 func TestTemplate(t *testing.T) {
-	var err error
-	str := []byte(`{"http":{"method":"POST","url":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xx","body":"{\n    \"msgtype\": \"text\",\n    \"text\": {\n        \"content\": \"时间：[[log.create_dt]]\\n任务 [[config.name]]执行[[log.status_name]]了 \\n耗时[[log.duration]]秒\\n响应：[[log.body]]\",\n        \"mentioned_mobile_list\": [[user.mobile]]\n    }\n}","header":[{"key":"","value":""}]}}`)
+	str := []byte(`"\347\272"`)
+	templateByte := []byte("{\"http\":{\"method\":\"POST\",\"url\":\"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx\",\"body\":\"{\\n    \\\"msgtype\\\": \\\"text\\\",\\n    \\\"text\\\": {\\n        \\\"content\\\": \\\"时间：[[.log.create_dt]]\\\\n任务：【[[.env]]】[[.config.name]]\\\\n状态：[[.log.status_name]]-[[.log.status_desc]][[if gt .log.retry_number 0]] 【重试 [[.log.retry_number]]】[[end]]\\\\n耗时：[[.log.duration]]秒\\\\n响应：[[.log.body]]\\\",\\n        \\\"mentioned_mobile_list\\\": [[.user.mobile]]\\n    }\\n}\",\"header\":[{\"key\":\"\",\"value\":\"\",\"remark\":\"\"}]}}")
 
 	// 提取模板变量
 	// 重组临时变量，默认置空，有效的写入新值
 	// 方案1 解析前监测双引号等关键、方案2让低层兼容
-	args := map[string]string{
-		"env":                  "测试环境",
-		"config.name":          "xx任务",
-		"config.protocol_name": "sql脚本",
-		"log.status_name":      "成功",
-		"log.status_desc":      "success",
-		"log.body": strings.ReplaceAll(`Get "http://baidu.com": EOF
-`, `"`, `\\\"`),
-		"log.duration":  "3.2s",
-		"log.create_dt": "2023-01-01 11:12:59",
-		"user.username": "",
-		"user.mobile":   "",
+	args := map[string]any{
+		"env": "测试环境",
+		"config": map[string]any{
+			"name":          "xx任务",
+			"protocol_name": "sql脚本",
+		},
+
+		"log": map[string]any{
+			"status_name":  "成功",
+			"status_desc":  "success",
+			"body":         strings.ReplaceAll(strings.ReplaceAll(string(str), `\`, `\\\\`), `"`, `\\\"`),
+			"duration":     "3.2s",
+			"create_dt":    "2023-01-01 11:12:59",
+			"retry_number": 0,
+		},
+		"user": map[string]any{
+			"username": "",
+			"mobile":   "",
+		},
 	}
 
-	mobles := []string{"01987654321", "12345678910"}
-	args["user.mobile"], err = jsoniter.MarshalToString(mobles)
-	if err != nil {
-		t.Fatal("数据转义错误", err.Error())
-	}
-	args["user.mobile"] = strings.ReplaceAll(args["user.mobile"], `"`, `\"`)
-
+	mobile := []string{"01987654321", "12345678910"}
 	username := []string{"大王", "二王"}
-	args["user.username"], err = jsoniter.MarshalToString(username)
-	if err != nil {
-		t.Fatal("数据转义错误", err.Error())
+	name, _ := jsoniter.MarshalToString(username)
+	bile, _ := jsoniter.MarshalToString(mobile)
+	args["user"] = map[string]any{
+		"username_": strings.ReplaceAll(name, `"`, `\"`),
+		"mobile":    strings.ReplaceAll(bile, `"`, `\"`),
 	}
-	args["user.username"] = strings.ReplaceAll(args["user.username"], `"`, `\"`)
 
-	// 变量替换
-	for k, v := range args {
-		str = bytes.Replace(str, []byte("[["+k+"]]"), []byte(v), -1)
+	// 进行模板替换
+	b, er := DefaultStringTemplate().SetParam(args).Execute(templateByte)
+	if er != nil {
+		t.Fatal(er, "消息模板解析错误[0]")
 	}
-	//fmt.Println(string(str))
 	temp := &pb.SettingMessageTemplate{Http: &pb.CronHttp{Header: []*pb.KvItem{}}}
-	if err := jsoniter.Unmarshal(str, temp); err != nil {
+	if err := jsoniter.Unmarshal(b, temp); err != nil {
 		t.Fatal(err, "解析错误")
 	}
-	fmt.Println(temp)
+	fmt.Println(*temp)
+
+	body := map[string]any{}
+	if err := jsoniter.UnmarshalFromString(temp.Http.Body, &body); err != nil {
+		t.Fatal(err, "解析错误")
+	}
+	fmt.Println(body)
 }
 
 func TestTemplateV2(t *testing.T) {
@@ -212,6 +220,87 @@ func TestStrFindMap(t *testing.T) {
 
 	//resMap["type"] = "pr"
 	//fmt.Println(resMap)
+}
+
+func TestStrParse2(t *testing.T) {
+	inStr := `A3 sql=a1/xx.sql A1{pr=23,a1,a2}  A2{pr=37,push,build}`
+	tempStr := `
+[[$groupStr := slice_filter (str_split .in " ") "^s*$"]]
+[[$groupList := make "[]map[string]any"]]
+[[/*解析子集*/]]
+[[define "parseChild"]]
+	[[$tmp := (str_find .tag_name "^([^{]+)(?:{(.+)}|([^{]+))?$")]]
+	[[$childStr := slice_get $tmp 2]]
+	[[$childGroupList := make "[]map[string]string"]]
+	[[if ne $childStr ""]]
+		[[$childList := slice_filter (str_split $childStr ",") "^s*$"]]
+		[[range $childList]]
+			[[$childItem := make "map[string]string"]]
+			[[$childItem = map_set $childItem "tag_name" .]]
+			[[template "parseParam" $childItem]]
+			[[$childGroupList = append $childGroupList $childItem]]
+		[[end]]
+	[[end]]
+	[[$tmp2 := map_set . "tag_name" (slice_get $tmp 1) "child" $childGroupList]]
+[[end]]
+[[/*解析参数*/]]
+[[define "parseParam"]]
+	[[$tmp := str_find .tag_name "^([^={]*)(?:=([^{]+)|{([^{}]+)})?$"]]
+	[[$tmp2 := map_set . "tag_name" (slice_get $tmp 1) "param" (slice_get $tmp 2)]]
+[[end]]
+
+[[range $groupStr]]
+	[[$groupItem := make "map[string]any"]]
+	[[$tmp := map_set $groupItem "tag_name" .]]
+	[[template "parseChild" $groupItem]]
+	[[template "parseParam" $groupItem]]
+	[[$groupList = append $groupList $groupItem]]
+[[end]]
+[[/*最终输出*/]]
+[[- json_encode_indent $groupList -]]
+`
+	temp := DefaultStringTemplate().SetParam(map[string]any{"in": inStr})
+	b, e := temp.Execute([]byte(tempStr))
+	if e != nil {
+		t.Fatal(e)
+	}
+	fmt.Println(string(b))
+	return
+
+	data2 := []string{}
+	if err := json.Unmarshal(b, &data2); err != nil {
+		t.Fatal(err)
+	}
+	for i, v := range data2 {
+		temp2 := DefaultStringTemplate().SetParam(map[string]any{"data": v})
+		b, e := temp2.Execute([]byte("[[json_encode (str_find .data `^([^{]+)(?:\\{(.+)\\}|([^\\{]+))?$`)]] "))
+		if e != nil {
+			t.Fatal(e)
+		}
+		data3 := []string{}
+		if err := json.Unmarshal(b, &data3); err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println(i, string(b))
+		for i, v3 := range data3 {
+			if i == 0 || v3 == "" {
+				continue
+			}
+			temp3 := DefaultStringTemplate().SetParam(map[string]any{"data": v3})
+			b, e := temp3.Execute([]byte("[[json_encode (str_find .data `^([^={]*)(?:=([^{]+)|{([^{}]+)})?$`)]]"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			fmt.Println("	", i, string(b))
+
+			//data3 := []string{}
+			//if err := json.Unmarshal(b, &data3); err != nil {
+			//	t.Fatal(err)
+			//}
+		}
+
+	}
+
 }
 
 func TestTemplateJson(t *testing.T) {

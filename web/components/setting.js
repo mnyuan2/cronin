@@ -128,9 +128,48 @@ var MySetting = Vue.extend({
                     <el-button size="small" type="primary" @click="globalVariateSubmit()">确 定</el-button>
                 </div>
             </el-dialog>
-            
         </el-tab-pane>
         
+        <el-tab-pane name="template" class="setting-wrap" :style="setting.body_style">
+            <span slot="label" style="padding-right: 30px;"><i class="el-icon-document-checked"></i> &nbsp; 解析模板</span>
+            <el-row>
+                <el-col :span="12">
+                    <el-tabs v-model="template.tab_name" type="card" @tab-click="templateSwitch">
+                        <el-tab-pane label="快捷查询任务" name="config_search">
+                            <el-form :model="template.set.config_search.form">
+                                <el-form-item label="模板内容">
+                                    <el-input type="textarea" v-model="template.set.config_search.form.temp" :rows="10" placeholder="请输入解析模板内容"></el-input>
+                                </el-form-item>
+                                <el-form-item label="提示语">
+                                    <el-input v-model="template.set.config_search.form.hint" placeholder="提示文本"></el-input>
+                                </el-form-item>
+                                <el-form-item style="text-align: center;">
+                                    <el-button size="small" type="primary" @click="templateSet(template.set.config_search.form)">确定</el-button>
+                                </el-form-item>
+                            </el-form>
+                            <el-row style="max-height:500px;overflow-y: auto;">
+                                <p class="h4">模板输出样例</p>
+                                <div class="input-box">
+                                    <pre><code>{{template.set.config_search.help.json}}</code></pre>
+                                </div>
+                                <el-table :data="template.set.config_search.help.table" style="width: 100%">
+                                    <el-table-column prop="field" label="字段"></el-table-column>
+                                    <el-table-column prop="type" label="类型" ></el-table-column>
+                                    <el-table-column prop="required" label="必填"></el-table-column>
+                                    <el-table-column prop="desc" label="描述"></el-table-column>
+                                </el-table>
+                            </el-row>
+                        </el-tab-pane>
+                        
+                        <el-tab-pane label="调试" name="test">测试</el-tab-pane>
+                    </el-tabs>
+                </el-col>
+                <el-col :span="12" style="margin-top: -200px;">
+                    <my-var-params></my-var-params>
+                </el-col>
+            </el-row>
+                
+        </el-tab-pane>  
     </el-tabs>
 </el-main>`,
 
@@ -160,6 +199,36 @@ var MySetting = Vue.extend({
                     show: false,
                     form:{}
                 }
+            },
+            // 模板
+            template:{
+                load: false,
+                tab_name: '',
+                set:{
+                    // 快捷查询解析模板
+                    config_search:{
+                        form:{
+                            hint:"",
+                            temp: "",
+                        },
+                        help:{
+                            json:`[
+    {"tag_name":"A3"},
+    {"tag_name":"sql", "param":"a1/xx.sql"},
+    {"tag_name":"A1", "child":[
+        {"tag_name":"pr","param":"23"}
+        {"tag_name":"a1"}
+    ]},
+]`,
+                            table:[
+                                {field:'tag_name', type:'string', required:'是',desc:'查询标签名称'},
+                                {field:'param', type:'string', required:'否',desc:'追加参数'},
+                                {field:'child', type:'array', required:'否',desc:'and标签集'},
+                            ],
+                        },
+                    },
+
+                }
             }
         }
     },
@@ -186,6 +255,12 @@ var MySetting = Vue.extend({
                 if (!this.preference.load){
                     this.preference.load = true
                     this.preferenceGet()
+                }
+            }else if (e.name === 'template'){
+                if (!this.template.load){
+                    this.template.load = true
+                    this.templateList()
+                    this.template.tab_name = 'config_search'
                 }
             }
         },
@@ -288,6 +363,34 @@ var MySetting = Vue.extend({
                     message: '操作已取消'
                 });
             });
+        },
+
+        //
+        templateSwitch(tab, event){
+            console.log("模板切换",tab, event);
+        },
+        templateList(){
+            api.innerGet("/template/list", null, res =>{
+                if (!res.status){
+                    return this.$message.error(res.message);
+                }
+                console.log("模板列表",res.data.list)
+                res.data.list.forEach((item)=>{
+                    if (item.name == 'config_search'){
+                        this.template.set.config_search.form = item
+                    }
+                })
+            })
+        },
+        templateSet(data){
+            let body = copyJSON(data)
+
+            api.innerPost("/template/set", body, res =>{
+                if (!res.status){
+                    return this.$message.error(res.message);
+                }
+                this.$message.success('保存成功')
+            })
         }
     }
 })

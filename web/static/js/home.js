@@ -383,6 +383,8 @@ const Enum ={
     StatusClosed: 8,
     // 9 删除
     StatusDelete: 9,
+    // 模板·任务快捷查询
+    TemplateConfigSearch: "config_search",
 }
 
 function statusTypeName(status){

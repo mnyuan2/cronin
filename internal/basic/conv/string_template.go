@@ -84,6 +84,19 @@ func DefaultStringTemplate() *StringTemplate {
 					return fmt.Sprintf("%v", val), nil
 				}
 			},
+			"json_encode_indent": func(val any) (string, error) {
+				v := reflect.ValueOf(val)
+				switch v.Kind() {
+				case reflect.Map, reflect.Slice:
+					b, e := jsoniter.MarshalIndent(val, "", "    ")
+					return string(b), e
+				case reflect.String:
+					value := strings.ReplaceAll(val.(string), `"`, `\"`)
+					return value, nil
+				default:
+					return fmt.Sprintf("%v", val), nil
+				}
+			},
 			// encodeURIComponent 遵循 RFC3986 url编码
 			"rawurlencode": func(param string) string {
 				str := url.QueryEscape(param)
@@ -135,6 +148,12 @@ func DefaultStringTemplate() *StringTemplate {
 					return []map[string]any{}
 				case "[]map[string]string":
 					return []map[string]string{}
+				case "[][]string":
+					return [][]string{}
+				case "map[string]any":
+					return map[string]any{}
+				case "map[string]string":
+					return map[string]string{}
 				default:
 					return nil
 				}
@@ -259,6 +278,17 @@ func DefaultStringTemplate() *StringTemplate {
 				}
 				return newData, nil
 			},
+			"slice_get": func(data any, index int) (any, error) {
+				last := reflect.ValueOf(data)
+				// 确保原始值是一个 Slice
+				if last.Kind() != reflect.Slice {
+					return nil, fmt.Errorf("slice_get 参数 1 必须为slice")
+				}
+				if index < 0 || index >= last.Len() {
+					return nil, fmt.Errorf("slice_get 参数 2 超出范围")
+				}
+				return last.Index(index).Interface(), nil
+			},
 
 			// slice 组合成 map
 			//  @param []string list 原始切片数据
@@ -330,6 +360,27 @@ func DefaultStringTemplate() *StringTemplate {
 					values = reflect.Append(values, last)
 				}
 				return values.Interface(), nil
+			},
+			"map_set": func(data any, kv ...any) (any, error) {
+				last := reflect.ValueOf(data)
+				// 确保原始值是一个 map
+				if last.Kind() != reflect.Map {
+					return nil, fmt.Errorf("map_set 参数 1 必须为map")
+				}
+				l := len(kv)
+				if l == 0 {
+					return data, nil
+				}
+				key, val := reflect.Value{}, reflect.Value{}
+				for i, item := range kv {
+					if i%2 == 0 {
+						key = reflect.ValueOf(item)
+					} else {
+						val = reflect.ValueOf(item)
+						last.SetMapIndex(key, val)
+					}
+				}
+				return last.Interface(), nil
 			},
 		},
 	}

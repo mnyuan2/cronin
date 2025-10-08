@@ -227,3 +227,28 @@ type GlobalVariateSetRequest struct {
 	Status int    `json:"status"`
 }
 type GlobalVariateSetReply struct{}
+
+// 模板列表
+type TemplateListRequest struct {
+	Name string `json:"name"`
+}
+type TemplateListReply struct {
+	List []*TemplateListItem `json:"list"`
+}
+type TemplateListItem struct {
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	Title    string `json:"title"`
+	UpdateDt string `json:"update_dt"`
+	Temp     string `json:"temp"`
+	Hint     string `json:"hint"`
+}
+
+// 模板设置
+type TemplateSetRequest struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+	Temp string `json:"temp"`
+	Hint string `json:"hint"`
+}
+type TemplateSetReply struct{}

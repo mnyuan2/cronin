@@ -1,6 +1,7 @@
 package biz
 
 import (
+	"bytes"
 	"context"
 	"cron/internal/basic/auth"
 	"cron/internal/basic/config"
@@ -120,8 +121,41 @@ func (dm *CronConfigService) List(r *pb.CronConfigListRequest) (resp *pb.CronCon
 
 // 快速匹配
 func (dm *CronConfigService) MatchList(r *pb.CronMatchListRequest) (resp *pb.CronMatchListReply, err error) {
-	/*
+	resp = &pb.CronMatchListReply{VarParams: map[string]string{}}
 
+	inTags, w, err := dm.matchListSearchV2(r.SearchText)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := data.NewCronConfigData(dm.ctx).List(w, 200)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, inTag := range inTags {
+		if len(inTag.Child) > 0 {
+			for _, child := range inTag.Child {
+				for _, row := range list {
+					if strings.Contains(row.TagNames, child.TagName) {
+						resp.List = append(resp.List, dm.matchListItem(row, child))
+					}
+				}
+			}
+		} else {
+			for _, row := range list {
+				if strings.Contains(row.TagNames, inTag.TagName) {
+					resp.List = append(resp.List, dm.matchListItem(row, inTag))
+				}
+			}
+		}
+	}
+
+	return resp, err
+}
+
+func (dm *CronConfigService) matchListSearchV1(search []*pb.CronMatchListSearchItem) (*db.Where, error) {
+	/*
 		1.参数：{"pr":{},"tags":[],} // 后面可能有别的形式，而且还要区分顺序。
 	*/
 
@@ -129,17 +163,17 @@ func (dm *CronConfigService) MatchList(r *pb.CronMatchListRequest) (resp *pb.Cro
 	if err != nil {
 		return nil, errs.New(err, "pr_merge 标签")
 	}
-	prSearch := &pb.CronMatchListSearchItem{}
+	//prSearch := &pb.CronMatchListSearchItem{}
 
 	tagIds := []int{}
-	for _, item := range r.Search {
+	for _, item := range search {
 		switch item.Type {
 		case "pr_merge":
 			if len(item.Value) < 2 || (item.Value[0] == "" && item.Value[1] == "") {
 				continue
 			}
 			tagIds = append(tagIds, prMegetag.Id)
-			prSearch = item
+			//prSearch = item
 		case "tag":
 			for _, v := range item.Value {
 				id, _ := strconv.Atoi(v)
@@ -150,125 +184,123 @@ func (dm *CronConfigService) MatchList(r *pb.CronMatchListRequest) (resp *pb.Cro
 		}
 	}
 
-	resp = &pb.CronMatchListReply{VarParams: map[string]string{}}
 	if len(tagIds) == 0 {
-		return resp, nil
+		return nil, nil
 	}
-
 	w := db.NewWhere().
 		Eq("env", dm.user.Env, db.RequiredOption()).
 		FindInSet("tag_ids", tagIds)
-	list, err := data.NewCronConfigData(dm.ctx).List(w, 200)
+
+	return w, nil
+}
+
+func (dm *CronConfigService) matchListSearchV2(search string) ([]*dtos.ConfigSearchItem, *db.Where, error) {
+	tmpl, err := data.NewCronSettingData(dm.ctx).GetTemplateOne(models.TemplateSceneConfigSearch)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	search = strings.TrimSpace(search)
+	if search == "" {
+		return nil, nil, errs.New(nil, pb.OperationFailure, "搜索内容不能为空")
 	}
 
-	//  保持输入的tag顺序
-	tagIdByIndex := map[int][]int{} // tag_id:[index,index]
-	for i, item := range list {
-		ids, _ := conv.Ints().Slice(item.TagIds)
-		for _, id := range ids {
-			if id == 0 {
-				continue
-			}
-			//if _, ok := tagIdByIndex[id]; ok {
-			//	continue
-			//}
-			tagIdByIndex[id] = append(tagIdByIndex[id], i)
-		}
+	b, err := conv.DefaultStringTemplate().SetParam(map[string]any{
+		"in": search,
+	}).Execute([]byte(tmpl.Temp))
+	if err != nil {
+		return nil, nil, errs.New(err, pb.OperationFailure, "接收模板解析失败")
 	}
+	b = bytes.TrimSpace(b)
+	list := []*dtos.ConfigSearchItem{}
+	if b == nil {
+		return nil, nil, errs.New(nil, pb.OperationFailure, "输入解析空")
+	}
+	err = jsoniter.Unmarshal(b, &list)
+	if err != nil {
+		return nil, nil, errs.New(err, pb.OperationFailure, "输入解析失败")
+	}
+	list2 := []*dtos.ConfigSearchItem{} // 过滤空名称后列表
 
-	tagIdsMap := map[int]int{}
-	for _, tagId := range tagIds {
-		indexs, ok := tagIdByIndex[tagId]
-		if !ok {
-			continue
-		}
-		if _, ok := tagIdsMap[tagId]; ok {
-			continue
-		}
-		tagIdsMap[tagId] = tagId
-
-		for _, i := range indexs {
-			item := list[i]
-			vars := []*pb.KvItem{}
-			// 变量解析
-			if item.VarFields != nil {
-				jsoniter.Unmarshal(item.VarFields, &vars)
-			}
-			// pr_merge 检测填充
-			if tagId == prMegetag.Id && prSearch.Type != "" {
-				var number *pb.KvItem
-				if len(vars) > 0 {
-					// 首先要存在 包含 number key 片段的变量才进行 pr 检测，否则检测出来的结果没有意义。
-					for _, v := range vars {
-						if conv.NewStr().Contains(v.Key, "number") {
-							number = v
-							break
-						}
-					}
-					if number != nil {
-						// 检测pr
-						conf := data.NewConfigData(item)
-						prs, _ := conf.PRList(dm.ctx, &pb.GetEventPRList{
-							//Owner:   "",
-							//Repo:    "",
-							State:   "open",
-							Head:    prSearch.Value[0],
-							Base:    prSearch.Value[1],
-							Page:    1,
-							PerPage: 1,
-						})
-						if len(prs) > 0 {
-							// 这里就要进行参数替换了。
-							number.Value = conv.Ints().String(prs[0].Number)
-						}
-					}
-				}
-				if number == nil || number.Value == "" || number.Value == "0" {
+	w := db.NewWhere().
+		Eq("env", dm.user.Env, db.RequiredOption()).
+		Sub(func(sub *db.Where) {
+			for _, item := range list {
+				if item.TagName == "" {
 					continue
 				}
+				tmp := &dtos.ConfigSearchItem{
+					TagName: item.TagName,
+					Param:   item.Param,
+					Child:   []*dtos.ConfigSearchItem{},
+				}
+				if len(item.Child) > 0 {
+					sub.Sub(func(sub2 *db.Where) {
+						sub2.FindInSet("tag_names", item.TagName).Sub(func(sub3 *db.Where) {
+							for _, item2 := range item.Child {
+								if item2.TagName == "" {
+									continue
+								}
+								sub3.FindInSet("tag_names", item2.TagName, db.OrOption())
+								tmp.Child = append(tmp.Child, item2)
+							}
+						})
+					}, db.OrOption())
+				} else {
+					sub.FindInSet("tag_names", item.TagName, db.OrOption())
+				}
+				list2 = append(list2, tmp)
 			}
-			for _, v := range vars {
-				resp.VarParams[v.Key] = v.Value // 这个值可能是模板变量，影响面要评估一下。
-			}
+		})
+	if w.Len() < 2 {
+		return nil, nil, errs.New(nil, pb.OperationFailure, "输入解析空")
+	}
+	return list2, w, nil
+}
 
-			row := &pb.CronConfigListItem{
-				Id:             item.Id,
-				Env:            item.Env,
-				Name:           item.Name,
-				Spec:           item.Spec,
-				Protocol:       item.Protocol,
-				ProtocolName:   models.ProtocolMap[item.Protocol],
-				Remark:         item.Remark,
-				Status:         item.Status,
-				StatusName:     models.ConfigStatusMap[item.Status],
-				StatusRemark:   item.StatusRemark,
-				StatusDt:       item.StatusDt,
-				Type:           item.Type,
-				TypeName:       models.ConfigTypeMap[item.Type],
-				UpdateDt:       item.UpdateDt,
-				VarFields:      []*pb.KvItem{},
-				CreateUserId:   item.CreateUserId,
-				CreateUserName: item.CreateUserName,
-				HandleUserIds:  []int{},
-				TagIds:         []int{},
-				TagNames:       item.TagNames,
+func (dm *CronConfigService) matchListItem(in *models.CronConfig, search *dtos.ConfigSearchItem) *pb.CronConfigListItem {
+	out := &pb.CronConfigListItem{
+		Id:             in.Id,
+		Env:            in.Env,
+		Name:           in.Name,
+		Spec:           in.Spec,
+		Protocol:       in.Protocol,
+		ProtocolName:   models.ProtocolMap[in.Protocol],
+		Remark:         in.Remark,
+		Status:         in.Status,
+		StatusName:     models.ConfigStatusMap[in.Status],
+		StatusRemark:   in.StatusRemark,
+		StatusDt:       in.StatusDt,
+		Type:           in.Type,
+		TypeName:       models.ConfigTypeMap[in.Type],
+		UpdateDt:       in.UpdateDt,
+		VarFields:      []*pb.KvItem{},
+		InVarFields:    []*pb.KvItem{},
+		CreateUserId:   in.CreateUserId,
+		CreateUserName: in.CreateUserName,
+		HandleUserIds:  []int{},
+		TagIds:         []int{},
+		TagNames:       in.TagNames,
+	}
+	if in.VarFields != nil {
+		_ = jsoniter.Unmarshal(in.VarFields, &out.VarFields)
+		// 存在参数时，将第一位参数负值；后续可能扩展多参数支持。
+		if search.Param != "" && len(out.VarFields) > 0 {
+			out.InVarFields = []*pb.KvItem{
+				{
+					Key:   out.VarFields[0].Key,
+					Value: search.Param,
+				},
 			}
-			if item.VarFields != nil {
-				_ = jsoniter.Unmarshal(item.VarFields, &row.VarFields)
-			}
-			if item.HandleUserIds != "" {
-				conv.NewStr().Slice(item.HandleUserIds, &row.HandleUserIds)
-			}
-			if item.TagIds != "" {
-				conv.NewStr().Slice(item.TagIds, &row.TagIds)
-			}
-			resp.List = append(resp.List, row)
 		}
 	}
+	if in.HandleUserIds != "" {
+		conv.NewStr().Slice(in.HandleUserIds, &out.HandleUserIds)
+	}
+	if in.TagIds != "" {
+		conv.NewStr().Slice(in.TagIds, &out.TagIds)
+	}
 
-	return resp, err
+	return out
 }
 
 // 任务详情

@@ -335,9 +335,18 @@ func (builder *Where) Len() int {
 
 // 开始构建, 生成查询语句以及参数
 func (builder *Where) Build() (whereStr string, args []interface{}) {
-	whereStr = "1=1" // 固定加上1=1， 防止外部查询条件还需要判断
-	for _, item := range builder.wheres {
-		whereStr += item.with + item.sql
+	// 固定加上1=1， 防止外部查询条件还需要判断
+	if len(builder.wheres) == 0 {
+		return "1=1", nil
+	}
+
+	whereStr = ""
+	for i, item := range builder.wheres {
+		if i == 0 {
+			whereStr += item.sql
+		} else {
+			whereStr += item.with + item.sql
+		}
 		args = append(args, item.vars...)
 	}
 

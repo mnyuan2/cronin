@@ -7,6 +7,7 @@ import (
 	"cron/internal/basic/enum"
 	"cron/internal/basic/errs"
 	"cron/internal/models"
+	jsoniter "github.com/json-iterator/go"
 )
 
 type CronSettingData struct {
@@ -155,4 +156,42 @@ func (m *CronSettingData) ChangeGlobalVariateStatus(one *models.CronSetting) err
 	one.Name = row.Name
 	one.Content = row.Content
 	return err
+}
+
+// 模板列表
+func (m *CronSettingData) GetTemplateList(w *db.Where) (list []*models.CronSetting, err error) {
+	list = []*models.CronSetting{}
+	if w == nil {
+		w = db.NewWhere()
+	}
+	where, args := w.Eq("scene", models.Template).Build()
+	return list, m.db.Where(where, args...).Find(&list).Error
+}
+
+// 模板设置
+func (m *CronSettingData) SetTemplate(one *models.CronSetting) error {
+	one.UpdateDt = conv.TimeNew().String()
+
+	row := &models.CronSetting{}
+	m.db.Where("scene=? and name=? and id=?", models.Template, one.Name, one.Id).Find(row)
+	if row.Id == 0 {
+		return errs.New(nil, "模板不存在")
+	}
+
+	if err := m.db.Where("id=?", one.Id).Select("content", "update_dt").Updates(one).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// 查询单个模板
+func (m *CronSettingData) GetTemplateOne(name string) (data *models.TemplateConfig, err error) {
+	w := db.NewWhere().Eq("scene", models.Template).Eq("name", name)
+	one, err := m.GetOne(w)
+	if err != nil || one.Id == 0 {
+		return nil, errs.New(err, "模板不存在")
+	}
+	data = &models.TemplateConfig{}
+	err = jsoniter.UnmarshalFromString(one.Content, data)
+	return data, err
 }

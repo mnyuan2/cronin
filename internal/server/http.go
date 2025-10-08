@@ -93,6 +93,9 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.POST("/global_variate/set", routerGlobalVariateSet)
 	r.POST("/global_variate/change_status", routerGlobalVariateChangeStatus)
 
+	r.GET("/template/list", routerTemplateList)
+	r.POST("/template/set", routerTemplateSet)
+
 	r.GET("/user/list", routerUserList)
 	r.POST("/user/set", routerUserSet)
 	r.POST("/user/change_password", routerUserChangePassword)

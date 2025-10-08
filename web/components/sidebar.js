@@ -17,7 +17,7 @@ var MySidebar = Vue.extend({
             </ul>
             <div v-show="!queue.exec.length">-</div>
         </el-card>
-        <el-card class="aside-card">
+        <el-card class="aside-card" shadow="never">
             <div slot="header">
                 <span class="h3">注册任务</span>
             </div>

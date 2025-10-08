@@ -805,7 +805,7 @@ func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
 			"retry_number": r.RetryNum,
 			"status_name":  models.LogStatusMap[r.Status],
 			"status_desc":  r.StatusDesc,
-			"body":         strings.ReplaceAll(string(r.Body), `"`, `\\\"`), // 内部存在双引号会引发错误
+			"body":         strings.ReplaceAll(strings.ReplaceAll(string(r.Body), `\`, `\\\\`), `"`, `\\\"`), // 内部存在双引号和反斜杠会引发错误
 			"duration":     conv.Float64s().ToString(r.Duration, 3),
 			"create_dt":    time.Now().Format(time.DateTime),
 		},
@@ -872,7 +872,7 @@ func (job *JobConfig) messagePushItem(ctx context.Context, templateByte []byte, 
 	}
 
 	template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
-	if er := jsoniter.Unmarshal(b, template); err != nil {
+	if er = jsoniter.Unmarshal(b, template); er != nil {
 		return nil, errs.New(er, "消息模板解析错误")
 	}
 

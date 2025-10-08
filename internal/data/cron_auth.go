@@ -106,6 +106,10 @@ var authList = []*Permission{
 	{Id: 132, Path: "/global_variate/set", Title: "新增/编辑", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_set"},
 	{Id: 133, Path: "/global_variate/change_status", Title: "状态变更", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_status"},
 
+	{Id: 170, Path: "/template/", Title: "模板设置", Group: "", Type: AuthTypeGrant},
+	{Id: 171, Path: "/template/list", Title: "列表", Group: "模板设置", Type: AuthTypeLogin},
+	{Id: 172, Path: "/template/set", Title: "设置", Group: "模板设置", Type: AuthTypeGrant, Tag: "template_set"},
+
 	{Id: 90, Path: "/user/", Title: "用户", Group: "", Type: AuthTypeGrant},
 	{Id: 91, Path: "/user/list", Title: "列表", Group: "用户", Type: AuthTypeGrant, Tag: "user_list"},
 	{Id: 92, Path: "/user/set?auth_type=set", Title: "新增/编辑", Group: "用户", Type: AuthTypeGrant, Tag: "user_set"},
