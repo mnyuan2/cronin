@@ -93,11 +93,12 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 		}
 	} else {
 		if opt.required || !opt.isZero(value) {
+			where := fmt.Sprintf("FIND_IN_SET('%v',%v)", value, field)
 			if val, ok := value.(string); ok {
 				items := strings.Split(val, ",")
 				length := len(items)
-				if length > 0 {
-					where := " ("
+				if length > 1 {
+					where = " ("
 					for i := 0; i < length; i++ {
 						item := items[i]
 						where += fmt.Sprintf("FIND_IN_SET('%v',%v)", item, field)
@@ -107,19 +108,14 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 						}
 					}
 					where += " )"
-
-					builder.wheres = append(builder.wheres, WhereExpr{
-						sql:  where,
-						with: opt.withSpace,
-					})
 				}
-			} else {
-				// 单个值的情况
-				builder.wheres = append(builder.wheres, WhereExpr{
-					sql:  fmt.Sprintf("FIND_IN_SET('%v',%v)", value, field),
-					with: opt.withSpace,
-				})
 			}
+
+			builder.wheres = append(builder.wheres, WhereExpr{
+				sql:  where,
+				with: opt.withSpace,
+			})
+
 		}
 	}
 

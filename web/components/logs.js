@@ -11,13 +11,13 @@ var MyLogs = Vue.extend({
                 </el-select>
             </el-form-item>
             <el-form-item label="任务">
-                <el-select v-model="form.ref_id" placeholder="结果状态" style="width:100%" clearable filterable>
+                <el-select v-model="form.ref_id" placeholder="所有" style="width:100%" clearable filterable>
                     <el-option v-for="item in dic.log_name" :label="item.name" :value="item.id" v-if="item.extend.operation == form.operation"></el-option>
                 </el-select>
             </el-form-item>
             
             <el-form-item label="状态">
-                <el-select v-model="form.status" placeholder="结果状态" style="width:100%" clearable>
+                <el-select v-model="form.status" placeholder="所有" style="width:100%" clearable>
                     <el-option label="成功" value="2"></el-option>
                     <el-option label="失败" value="1"></el-option>
                 </el-select>

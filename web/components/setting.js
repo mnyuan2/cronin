@@ -135,7 +135,7 @@ var MySetting = Vue.extend({
             <el-row>
                 <el-col :span="12">
                     <el-tabs v-model="template.tab_name" type="card" @tab-click="templateSwitch">
-                        <el-tab-pane label="快捷查询任务" name="config_search">
+                        <el-tab-pane label="快捷任务查询" name="config_search">
                             <el-form :model="template.set.config_search.form">
                                 <el-form-item label="模板内容">
                                     <el-input type="textarea" v-model="template.set.config_search.form.temp" :rows="10" placeholder="请输入解析模板内容"></el-input>

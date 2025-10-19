@@ -137,7 +137,7 @@ func (dm *CronConfigService) MatchList(r *pb.CronMatchListRequest) (resp *pb.Cro
 		if len(inTag.Child) > 0 {
 			for _, child := range inTag.Child {
 				for _, row := range list {
-					if strings.Contains(row.TagNames, child.TagName) {
+					if strings.Contains(row.TagNames, inTag.TagName) && strings.Contains(row.TagNames, child.TagName) {
 						resp.List = append(resp.List, dm.matchListItem(row, child))
 					}
 				}
@@ -516,6 +516,14 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// 预处理
+	for _, item := range r.Command.Git.Events {
+		if item.FileUpdate != nil && item.FileUpdate.Content != "" {
+			// 内容需要获取到原文件后，进行模板解析，此处必须序列化防止模板解析
+			item.FileUpdate.Content = base64.StdEncoding.EncodeToString([]byte(item.FileUpdate.Content))
+		}
 	}
 	cmdStr, _ := jsoniter.Marshal(r.Command)
 	cmd, err := dtos.ParseCommon(cmdStr, vars)

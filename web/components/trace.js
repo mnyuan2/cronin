@@ -5,7 +5,15 @@ var MyTrace = Vue.extend({
         <div class="label">操作</div>
         <div class="total-desc" v-html="total_desc"></div>
     </el-row>
-    <el-table :show-header="false" :data="traces" row-key="span_id" default-expand-all :tree-props="{children:'children',hasChildren:'hasChildren'}" class="trace-wrapper">
+    <el-table 
+        :show-header="false" 
+        :data="traces" 
+        row-key="span_id" 
+        :expand-row-keys="traces_bar.span_show" 
+        @expand-change="showSpan" 
+        :tree-props="{children:'children',hasChildren:'hasChildren'}" 
+        class="trace-wrapper"
+    >
         <template #empty>空</template>
         <el-table-column width="300">
             <template slot-scope="scope">
@@ -93,9 +101,12 @@ var MyTrace = Vue.extend({
             trace_id:"",
             job:{},
             traces:[], // 踪迹
+            traces_bar:{
+                span_show:[],
+            },
             total_desc: "", // 合计描述
             job_task:0,
-            last_span_map:{}
+            last_span_map:{},
         }
     },
     // 模块初始化
@@ -151,6 +162,7 @@ var MyTrace = Vue.extend({
                     this.removeJob()
                 }
                 let span_map = {}
+                let span_show = [] // 展开的节点
                 for (let span of list){
                     // 视图信息控制参数
                     span.bar = {
@@ -171,7 +183,6 @@ var MyTrace = Vue.extend({
                         span.bar.log.push({show:false})
                     })
                     span.bar.style = 'background: #37be5f; left: '+(span.bar.left> 99.9? 99.9 : span.bar.left)+'%; width: '+(span.bar.width<0.1? '1px': span.bar.width+'%')+';'
-                    span_map[span.span_id] = span
                     if (this.last_span_map[span.span_id]){ // 重复请求时，继承原UI属性
                         let last_bar = this.last_span_map[span.span_id].bar
                         span.bar.detail_show = last_bar.detail_show
@@ -180,9 +191,13 @@ var MyTrace = Vue.extend({
                         last_bar.log.forEach(function (item, index) {
                             span.bar.log[index] = item
                         })
+                    }else{
+                        span_show.push(span.span_id)
                     }
+                    span_map[span.span_id] = span
                 }
                 this.last_span_map = span_map
+                this.traces_bar.span_show = span_show
 
                 let trace = arrayToTree(list, 'span_id', 'parent_span_id', 'children')
                 console.log(trace, totalDuration)
@@ -194,16 +209,25 @@ var MyTrace = Vue.extend({
         },
         // 节点显示ui控制
         showSpan(row, field){
-            if (typeof field !== 'string' || field == ""){
-                alert('请指定字段')
-                retrun
-            }
-            if(row[field]==false){
-                row[field] = true
+            if (typeof field === 'string' && field != ""){
+                if(row[field]==false){
+                    row[field] = true
+                }else{
+                    row[field] = false
+                }
+            }else if (typeof field === "boolean"){
+                const index = this.traces_bar.span_show.indexOf(row.span_id);
+                if (index > -1) { // 如果存在，则删除
+
+                    this.traces_bar.span_show.splice(index, 1);
+                } else { // 如果不存在，则添加
+                    this.traces_bar.span_show.push(row.span_id);
+                }
             }else{
-                row[field] = false
+                console.log("控制错误",row, field)
             }
         },
+
         // log格式化
         formatLog(log){
             if (log.value.type=='STRING' && isJSON(log.value.value)){
