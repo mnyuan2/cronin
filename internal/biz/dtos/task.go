@@ -7,4 +7,5 @@ type ExecQueueItem struct {
 	EntryId  int     `json:"entry_id"`
 	Name     string  `json:"name"`
 	Duration float64 `json:"duration"`
+	TraceId  string  `json:"trace_id"`
 }

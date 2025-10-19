@@ -31,10 +31,10 @@ var MyConfigLog = Vue.extend({
             <el-card class="box-card" shadow="hover">
                 <div slot="header" @click="traceBox(item.trace_id)">
                     <span :class="item.status == 1 ? 'danger el-icon-warning': 'el-icon-empty'"></span>
-                    <span class="h4">{{item.ref_name}}</span>
+                    <span class="h4" style="max-width: 73%;overflow: clip;white-space: nowrap;">{{item.ref_name}}</span>
                     <span style="margin: 0 5px;font-weight: 600;" class="info-2">{{item.operation}}</span>
                     <span v-if="showLink && item.ref_id" class="panel">
-                        <i  class="el-icon-link hover" @click.stop="jumpDetail(item)" title="任务详情"></i>
+                        <i class="el-icon-link hover" @click.stop="jumpDetail(item)" title="任务详情"></i>
                     </span>
                     <span style="float: right">
                         {{durationTransform(item.duration)}}

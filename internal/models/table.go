@@ -144,6 +144,27 @@ func AutoMigrate(Db *db.MyDB) {
 		}
 	}
 
+	// 初始化模板
+	tempConfigSearch := &CronSetting{}
+	err = Db.Where("scene=? and name=?", Template, TemplateSceneConfigSearch).Find(tempConfigSearch).Error
+	if err != nil {
+		panic(fmt.Sprintf("cron_setting 表模板数据初始化失败，%s", err.Error()))
+	}
+	if tempConfigSearch.Id == 0 {
+		err = Db.Create(&CronSetting{
+			Scene:    Template,
+			Name:     TemplateSceneConfigSearch,
+			Title:    "任务查询",
+			Content:  `{"temp":"[[$groupStr := slice_filter (str_split .in \" \") \"^s*$\"]]\n[[$groupList := make \"[]map[string]any\"]]\n[[/*解析子集*/]]\n[[define \"parseChild\"]]\n\t[[$tmp := (str_find .tag_name \"^([^{]+)(?:{(.+)}|([^{]+))?$\")]]\n\t[[$childStr := slice_get $tmp 2]]\n\t[[$childGroupList := make \"[]map[string]string\"]]\n\t[[if ne $childStr \"\"]]\n\t\t[[$childList := slice_filter (str_split $childStr \",\") \"^s*$\"]]\n\t\t[[range $childList]]\n\t\t\t[[$childItem := make \"map[string]string\"]]\n\t\t\t[[$childItem = map_set $childItem \"tag_name\" .]]\n\t\t\t[[template \"parseParam\" $childItem]]\n\t\t\t[[$childGroupList = append $childGroupList $childItem]]\n\t\t[[end]]\n\t[[end]]\n\t[[$tmp2 := map_set . \"tag_name\" (slice_get $tmp 1) \"child\" $childGroupList]]\n[[end]]\n[[/*解析参数*/]]\n[[define \"parseParam\"]]\n\t[[$tmp := str_find .tag_name \"^([^={]*)(?:=([^{]+)|{([^{}]+)})?$\"]]\n\t[[$tmp2 := map_set . \"tag_name\" (slice_get $tmp 1) \"param\" (slice_get $tmp 2)]]\n[[end]]\n\n[[range $groupStr]]\n\t[[$groupItem := make \"map[string]any\"]]\n\t[[$tmp := map_set $groupItem \"tag_name\" .]]\n\t[[template \"parseChild\" $groupItem]]\n\t[[template \"parseParam\" $groupItem]]\n\t[[$groupList = append $groupList $groupItem]]\n[[end]]\n[[/*最终输出*/]]\n[[- json_encode_indent $groupList -]]","hint":"样例1：标签名；样例2：标签名=参数；样例3：标签名{标签名=参数,标签名,标签名}；多个标签组以空格分隔。"}`,
+			Status:   enum.StatusActive,
+			CreateDt: ti.Format(time.DateTime),
+			UpdateDt: ti.Format(time.DateTime),
+		}).Error
+		if err != nil {
+			panic("模板数据初始化异常，" + err.Error())
+		}
+	}
+
 	// 历史 数据修正
 	historyDataRevise(Db)
 }

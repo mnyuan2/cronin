@@ -5,7 +5,6 @@ import (
 	"cron/internal/basic/grpcurl"
 	"cron/internal/models"
 	"cron/internal/pb"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"regexp"
@@ -261,8 +260,6 @@ func CheckGit(raw, c *pb.CronGit) error {
 			if e.FileUpdate.Message == "" {
 				return errors.New("git 提交描述不得为空")
 			}
-			// 内容需要获取到原文件后，进行模板解析，此处必须序列化防止模板解析
-			raw.Events[i].FileUpdate.Content = base64.StdEncoding.EncodeToString([]byte(raw.Events[i].FileUpdate.Content))
 		default:
 			return fmt.Errorf("未支持的事件 %v-%v", i, e.Id)
 		}

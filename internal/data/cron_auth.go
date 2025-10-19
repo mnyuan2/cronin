@@ -66,6 +66,7 @@ var authList = []*Permission{
 	{Id: 140, Path: "/job/events", Title: "sse事件", Group: "注册任务", Type: AuthTypeLogin},
 	{Id: 141, Path: "/job/stop", Title: "终止任务", Group: "注册任务", Type: AuthTypeLogin},
 	{Id: 142, Path: "/job/list", Title: "已注册列表", Group: "注册任务", Type: AuthTypeLogin},
+	{Id: 143, Path: "/job/traces", Title: "执行中日志", Group: "注册任务", Type: AuthTypeLogin},
 
 	{Id: 41, Path: "/work/table", Title: "工作表", Group: "我的", Type: AuthTypeLogin},
 	{Id: 42, Path: "/work/task_del", Title: "任务删除", Group: "我的", Type: AuthTypeOpen},
@@ -104,6 +105,10 @@ var authList = []*Permission{
 	{Id: 131, Path: "/global_variate/list", Title: "查看", Group: "全局变量", Type: AuthTypeLogin},
 	{Id: 132, Path: "/global_variate/set", Title: "新增/编辑", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_set"},
 	{Id: 133, Path: "/global_variate/change_status", Title: "状态变更", Group: "全局变量", Type: AuthTypeGrant, Tag: "global_variate_status"},
+
+	{Id: 170, Path: "/template/", Title: "模板设置", Group: "", Type: AuthTypeGrant},
+	{Id: 171, Path: "/template/list", Title: "列表", Group: "模板设置", Type: AuthTypeLogin},
+	{Id: 172, Path: "/template/set", Title: "设置", Group: "模板设置", Type: AuthTypeGrant, Tag: "template_set"},
 
 	{Id: 90, Path: "/user/", Title: "用户", Group: "", Type: AuthTypeGrant},
 	{Id: 91, Path: "/user/list", Title: "列表", Group: "用户", Type: AuthTypeGrant, Tag: "user_list"},

@@ -531,6 +531,15 @@ i.el-alert__icon{
     padding: 0 4px;
     overflow: hidden;
 }
+.trace-page .trace-wrapper .cell .span-label .el-icon-loading{
+    font-size: 12px;
+    position: absolute;
+    right: 4px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    display: block;
+}
 .trace-page .trace-wrapper .el-table__empty-block{
     min-height: auto;
 }

@@ -64,6 +64,7 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	})
 	r.GET("/job/list", httpRegister)
 	r.POST("/job/stop", httpJobStop)
+	r.GET("/job/traces", httpJobTraces)
 
 	r.GET("/work/table", routerWorkTable)
 	r.POST("/work/task_del", routerWorkTaskDel)
@@ -91,6 +92,9 @@ func InitHttp(Resource embed.FS, isBuildResource bool) *gin.Engine {
 	r.GET("/global_variate/list", routerGlobalVariateList)
 	r.POST("/global_variate/set", routerGlobalVariateSet)
 	r.POST("/global_variate/change_status", routerGlobalVariateChangeStatus)
+
+	r.GET("/template/list", routerTemplateList)
+	r.POST("/template/set", routerTemplateSet)
 
 	r.GET("/user/list", routerUserList)
 	r.POST("/user/set", routerUserSet)

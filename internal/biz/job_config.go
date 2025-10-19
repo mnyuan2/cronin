@@ -83,7 +83,8 @@ type JobConfig struct {
 	commandParse *pb.CronConfigCommand
 	msgSetParse  *dtos.MsgSetParse
 	ErrorCount   int // 连续错误
-	tracer       trace.Tracer
+	tracer       *tracing.MysqlTracer
+	runTraceId   string // 运行时链路id
 	varParams    map[string]any
 	isRun        bool // 是否执行中，false.否、true.是
 	runTime      time.Time
@@ -91,16 +92,24 @@ type JobConfig struct {
 }
 
 // 任务执行器
-func NewJobConfig(conf *models.CronConfig) *JobConfig {
+func NewJobConfig(conf *models.CronConfig, other ...any) *JobConfig {
 	job := &JobConfig{
 		conf: conf,
 	}
 
+	for _, item := range other {
+		switch item.(type) {
+		case *tracing.MysqlTracer:
+			job.tracer = item.(*tracing.MysqlTracer)
+		}
+	}
+
 	// 日志
-	job.tracer = tracing.Tracer(job.conf.Env+"-cronin", trace.WithInstrumentationAttributes(
-		attribute.String("driver", "mysql"),
-		attribute.String("env", job.conf.Env),
-	))
+	if job.tracer == nil {
+		job.tracer = tracing.SqlTracer(job.conf.Env+"-cronin", trace.WithInstrumentationAttributes(
+			attribute.String("env", job.conf.Env),
+		))
+	}
 
 	return job
 }
@@ -161,8 +170,10 @@ func (job *JobConfig) Run() {
 	var err errs.Errs
 	var res []byte
 	ctx1, span := job.tracer.Start(context.Background(), "job-task", trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
+	job.runTraceId = span.SpanContext().TraceID().String()
 	defer func() {
 		job.isRun = false
+		job.runTraceId = ""
 		if res != nil {
 			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
 		}
@@ -203,6 +214,7 @@ func (job *JobConfig) Run() {
 			}
 		}
 		span.End()
+		job.tracer.LogsExpire() // 过期检测，方案还可以优化
 	}()
 	if job.isRun {
 		err = errs.New(nil, "任务正在进行中，跳过")
@@ -270,8 +282,10 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	job.isRun = true
 	job.runTime = time.Now()
 	ctx, span := job.tracer.Start(ctx, "job-task", trace.WithAttributes(attribute.Int("ref_id", job.conf.Id)))
+	job.runTraceId = span.SpanContext().TraceID().String()
 	defer func() {
 		job.isRun = false
+		job.runTraceId = ""
 		if res != nil {
 			span.AddEvent("", trace.WithAttributes(attribute.String("resp", string(res))))
 		}
@@ -288,6 +302,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		p, _ := jsoniter.Marshal(job.varParams)
 		span.AddEvent("", trace.WithAttributes(attribute.Stringer("var_params", bytes.NewBuffer(p))))
 		span.End()
+		job.tracer.LogsExpire()
 	}()
 	log.Println("任务执行 开始", job.conf.Name)
 	span.SetAttributes(
@@ -348,12 +363,49 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 	return res, err
 }
 
+// 执行中日志
+func (job *JobConfig) Logs(traceId ...string) ([]*models.CronLogSpan, errs.Errs) {
+	if len(traceId) > 0 {
+		id := traceId[0]
+		if id == "" {
+			return nil, errs.New(nil, "未指定踪迹id")
+		}
+		if job.runTraceId != id {
+			return nil, errs.New(nil, "非执行中任务")
+
+		}
+		return job.tracer.Logs(id), nil
+	}
+	if job.runTraceId == "" {
+		return nil, errs.New(nil, "任务未执行")
+	}
+	return job.tracer.Logs(job.runTraceId), nil
+}
+
 // 停止任务，Run 执行时有效
-func (job *JobConfig) Stop(ctx context.Context, remark string) error {
+func (job *JobConfig) Stop(ctx context.Context, user *auth.UserToken, remark string) error {
 	if !job.isRun {
 		return nil
 	}
+	id, err := trace.TraceIDFromHex(job.runTraceId)
+	if err != nil {
+		return err
+	}
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: id,
+	})
+	_, span := job.tracer.Start(context.Background(), "stop", trace.WithLinks(trace.Link{SpanContext: parent}))
+	defer span.End()
+
 	job.ctxCancel(errors.New(remark))
+
+	span.SetAttributes(
+		attribute.String("component", "HTTP"),
+		attribute.Int("user.id", user.UserId),
+		attribute.String("user.username", user.UserName),
+	)
+	span.AddEvent("", trace.WithAttributes(attribute.String("remark", remark)))
+
 	return nil
 }
 
@@ -500,16 +552,33 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 	// 本地执行
 	switch r.Type {
 	case "cmd":
-		cmd := exec.Command("cmd", "/C", statement) // 合并 winds 命令
-		if re, er := cmd.Output(); er != nil {
-			return re, errs.New(er, "执行错误")
-		} else {
+		// 临时批处理文件
+		tmpfile, er := os.CreateTemp("", fmt.Sprintf("tmp_%v_%v_*.bat", job.conf.Id, time.Now().UnixMicro()))
+		if er != nil {
+			return nil, errs.New(er, "执行错误")
+		}
+		defer os.Remove(tmpfile.Name())
+
+		if _, er = tmpfile.Write([]byte(statement)); er != nil {
+			return nil, errs.New(er, "执行错误")
+		}
+		if er = tmpfile.Close(); er != nil {
+			return nil, errs.New(er, "执行错误")
+		}
+		// 执行命令
+		cmd := exec.CommandContext(ctx, "cmd", "/C", tmpfile.Name())
+		re, er := cmd.CombinedOutput()
+
+		if re != nil {
 			srcCoder := mahonia.NewDecoder("gbk").ConvertString(string(re))
 			res = []byte(srcCoder)
 		}
+		if er != nil {
+			return re, errs.New(er, string(res))
+		}
 
 	case "sh":
-		e := exec.Command("sh", "-c", statement)
+		e := exec.CommandContext(ctx, "sh", "-c", statement)
 		cmd, er := e.Output()
 		if er != nil {
 			return nil, errs.New(er, "执行结果错误")
@@ -518,7 +587,7 @@ func (job *JobConfig) cmdFunc(ctx context.Context, r *pb.CronCmd) (res []byte, e
 		res = []byte(srcCoder)
 
 	case "bash":
-		cmd := exec.Command("/bin/bash", "-c", statement)
+		cmd := exec.CommandContext(ctx, "/bin/bash", "-c", statement)
 		re, er := cmd.Output()
 		if er != nil {
 			return nil, errs.New(er, "执行结果错误")
@@ -736,7 +805,7 @@ func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
 			"retry_number": r.RetryNum,
 			"status_name":  models.LogStatusMap[r.Status],
 			"status_desc":  r.StatusDesc,
-			"body":         strings.ReplaceAll(string(r.Body), `"`, `\\\"`), // 内部存在双引号会引发错误
+			"body":         strings.ReplaceAll(strings.ReplaceAll(string(r.Body), `\`, `\\\\`), `"`, `\\\"`), // 内部存在双引号和反斜杠会引发错误
 			"duration":     conv.Float64s().ToString(r.Duration, 3),
 			"create_dt":    time.Now().Format(time.DateTime),
 		},
@@ -803,7 +872,7 @@ func (job *JobConfig) messagePushItem(ctx context.Context, templateByte []byte, 
 	}
 
 	template := &pb.SettingMessageTemplate{Http: &pb.CronHttp{}}
-	if er := jsoniter.Unmarshal(b, template); err != nil {
+	if er = jsoniter.Unmarshal(b, template); er != nil {
 		return nil, errs.New(er, "消息模板解析错误")
 	}
 

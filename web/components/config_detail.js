@@ -44,6 +44,19 @@ var MyConfigDetail = Vue.extend({
                 {{detail.audit_user_name}}
             </el-descriptions-item>
         </el-descriptions>
+        
+        <el-card class="aside-card" :shadow="!register.job.ref_type?'hover':''">
+            <div style="padding: 1px 3px 1px 8px;">
+                <span v-html="getTaskIcon(register.job.ref_type)"></span>
+                <a class="el-link el-link--default is-underline" href="javascript:;" style="vertical-align: sub;">{{!register.job.ref_type ? '未注册任务' : register.job.trace_id? '任务执行中...': '已注册任务'}}</a>
+                <p style="margin: 0;color: #909399;line-height: 100%;font-size: 12px;" v-if="register.job.trace_id">
+                    <i class="el-icon-loading" title="查看日志" style="cursor: pointer;margin-right: 2px" @click="jobLogShow"></i>
+                    ({{durationTransform(register.job.duration, 's')}}) 
+                    <el-popconfirm :title="'确定停止执行 '+register.job.name+' 任务吗？'" @confirm="jobStop(register.job)"><i slot="reference" class="el-icon-circle-close stop"></i></el-popconfirm>
+                </p>
+            </div>
+        </el-card>
+        
     </el-aside>
     <el-main>
         <div class="title">
@@ -252,6 +265,10 @@ var MyConfigDetail = Vue.extend({
             <span><el-button size="mini" round class="el-icon-search button-icon" @click="logSearchBox"></el-button><span class="help">{{logs.form_desc}}</span></span>
             <my-config-log :search="logs.search" v-if="logs.show"></my-config-log>
         </el-row>
+        <!-- 注册任务用踪迹弹窗 -->
+        <el-drawer title="日志踪迹" :visible.sync="register.log_show" direction="rtl" size="70%" wrapperClosable="false" :before-close="jobLogClose" append-to-body>
+            <my-trace :job="register.log_param" v-if="register.log_show"></my-trace>
+        </el-drawer>
         
         <el-dialog title="编辑任务" :visible.sync="detail_form_box.show && req.type=='config'" :close-on-click-modal="false" class="config-form-box" :before-close="formClose">
             <my-config-form v-if="detail_form_box.show && req.type==='config'" :request="{detail:detail}" @close="formClose"></my-config-form>
@@ -379,6 +396,12 @@ var MyConfigDetail = Vue.extend({
                 "squash":"扁平化分支",
                 "rebase":"变基并合并"
             },
+            // 注册信息
+            register:{
+                job:{},
+                log_show:false,
+                log_param:{},
+            }
         }
     },
     // 模块初始化
@@ -393,10 +416,6 @@ var MyConfigDetail = Vue.extend({
         if (this.$route.query.entry_id){
             this.req.entry_id = Number(this.$route.query.entry_id)
         }
-        // this.logs.search.tags =  JSON.stringify({
-        //     ref_id: this.req.id,
-        //     component:this.req.type
-        // })
         let time = new Date()
         time.setDate(time.getDate()-7)
         this.logs.form.timestamp_start = getDatetimeString(time)
@@ -416,6 +435,10 @@ var MyConfigDetail = Vue.extend({
     mounted(){
         this.getDetail()
         this.getDicList()
+        this.$sse.addEventListener(this.req.id+".register."+this.req.type, this.registerJob)
+    },
+    beforeDestroy(){
+        this.$sse.removeEventListener(this.req.id+".register."+this.req.type, this.registerJob)
     },
     // 具体方法
     methods:{
@@ -486,6 +509,9 @@ var MyConfigDetail = Vue.extend({
                 if (!this.logs.show){
                     this.logs.show = true
                     this.logs.search.env = res.data.env
+                }
+                if (res.data.status != Enum.StatusActive){
+                    this.registerJob(null)
                 }
             })
         },
@@ -678,7 +704,45 @@ var MyConfigDetail = Vue.extend({
             if (e.is_change){
                 this.getDetail()
             }
-        }
+        },
+        // 消息监听处理
+        registerJob(e){
+            let data = null
+            if (e){
+                data = JSON.parse(e.data)
+                if (data.trace_id != this.register.job.trace_id){
+                    if (!this.logs.form_show){
+                        this.logs.search = copyJSON(this.logs.search) // 重载日志列表
+                    }
+                }
+            }
+            if (!data){
+                this.register.job = {}
+            }else{
+                this.register.job = data
+            }
+        },
+        jobLogShow(){
+            this.register.log_param = {
+                ref_id: this.register.job.ref_id,
+                entry_id: this.register.job.entry_id,
+                trace_id: this.register.job.trace_id,
+            }
+            this.register.log_show = true
+        },
+        jobLogClose(e){
+            this.register.log_show = false
+            this.register.log_param = {}
+        },
+        // 停止执行任务
+        jobStop(row){
+            api.innerPost("/job/stop",row, res=>{
+                if (!res.status){
+                    return this.$message.error(res.message)
+                }
+                this.$message.success('操作成功')
+            })
+        },
     }
 })
 

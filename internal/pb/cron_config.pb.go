@@ -103,7 +103,8 @@ type CronConfigListItem struct {
 	TopNumber      int       `json:"top_number"`       // 最近执行次数（最大5次）
 	TopErrorNumber int       `json:"top_error_number"` // 最近执行次数中，失败的次数
 	UpdateDt       string    `json:"update_dt"`
-	VarFields      []*KvItem `json:"var_fields" gorm:"-"` // 定义变量参数
+	InVarFields    []*KvItem `json:"in_var_fields" gorm:"-"` // 追加的参数
+	VarFields      []*KvItem `json:"var_fields" gorm:"-"`    // 定义变量参数
 	VarFieldsStr   []byte    `json:"-" gorm:"column:var_fields;"`
 	HandleUserStr  []byte    `json:"-" gorm:"column:handle_user_ids;"`
 	TagIdsStr      []byte    `json:"-" gorm:"column:tag_ids"`
@@ -116,7 +117,8 @@ type CronConfigListItem struct {
 
 // 任务匹配列表
 type CronMatchListRequest struct {
-	Search []*CronMatchListSearchItem `json:"search"`
+	Search     []*CronMatchListSearchItem `json:"search"`
+	SearchText string                     `json:"search_text"`
 }
 type CronMatchListSearchItem struct {
 	Type  string   `json:"type"`

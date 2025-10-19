@@ -40,9 +40,10 @@ var MyConfigSelect = Vue.extend({
     <el-table :data="list.items" @selection-change="selectedChange" max-height="460">
         <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="name" label="任务名称">
-            <div slot-scope="{row}" class="abc" style="display: flex;">
+            <div slot-scope="{row}" class="name" style="display: flex;">
                 <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
                     <router-link target="_blank" :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                    <div class="info-2">{{row.remark}}</div>
                 </span>
             </div>
         </el-table-column>
@@ -55,7 +56,7 @@ var MyConfigSelect = Vue.extend({
                 </el-tooltip>
             </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注"></el-table-column>
+        <el-table-column prop="tag_names" label="标签" width="180"></el-table-column>
     </el-table>
     <el-pagination
             @size-change="handleSizeChange"

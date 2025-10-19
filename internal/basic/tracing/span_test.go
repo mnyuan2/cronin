@@ -86,11 +86,18 @@ func TestDemo2(t *testing.T) {
 }
 
 func TestOption(t *testing.T) {
-	conf := trace.NewSpanStartConfig(trace.WithTimestamp(time.Now()))
-	fmt.Println(conf.Timestamp(), conf.Timestamp().IsZero())
+	tr := &MysqlTracer{}
 
-	conf2 := trace.NewSpanStartConfig()
-	fmt.Println(conf2.Timestamp(), conf2.Timestamp().IsZero())
+	fmt.Println(tr.spans == nil)
+
+	tr.spans = map[string][]*MysqlSpan{}
+	fmt.Println(tr.spans == nil)
+
+	//conf := trace.NewSpanStartConfig(trace.WithTimestamp(time.Now()))
+	//fmt.Println(conf.Timestamp(), conf.Timestamp().IsZero())
+	//
+	//conf2 := trace.NewSpanStartConfig()
+	//fmt.Println(conf2.Timestamp(), conf2.Timestamp().IsZero())
 }
 
 // 跨服务注入

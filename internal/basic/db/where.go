@@ -93,11 +93,12 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 		}
 	} else {
 		if opt.required || !opt.isZero(value) {
+			where := fmt.Sprintf("FIND_IN_SET('%v',%v)", value, field)
 			if val, ok := value.(string); ok {
 				items := strings.Split(val, ",")
 				length := len(items)
-				if length > 0 {
-					where := " ("
+				if length > 1 {
+					where = " ("
 					for i := 0; i < length; i++ {
 						item := items[i]
 						where += fmt.Sprintf("FIND_IN_SET('%v',%v)", item, field)
@@ -107,19 +108,14 @@ func (builder *Where) FindInSet(field string, value interface{}, options ...Opti
 						}
 					}
 					where += " )"
-
-					builder.wheres = append(builder.wheres, WhereExpr{
-						sql:  where,
-						with: opt.withSpace,
-					})
 				}
-			} else {
-				// 单个值的情况
-				builder.wheres = append(builder.wheres, WhereExpr{
-					sql:  fmt.Sprintf("FIND_IN_SET('%v',%v)", value, field),
-					with: opt.withSpace,
-				})
 			}
+
+			builder.wheres = append(builder.wheres, WhereExpr{
+				sql:  where,
+				with: opt.withSpace,
+			})
+
 		}
 	}
 
@@ -335,9 +331,18 @@ func (builder *Where) Len() int {
 
 // 开始构建, 生成查询语句以及参数
 func (builder *Where) Build() (whereStr string, args []interface{}) {
-	whereStr = "1=1" // 固定加上1=1， 防止外部查询条件还需要判断
-	for _, item := range builder.wheres {
-		whereStr += item.with + item.sql
+	// 固定加上1=1， 防止外部查询条件还需要判断
+	if len(builder.wheres) == 0 {
+		return "1=1", nil
+	}
+
+	whereStr = ""
+	for i, item := range builder.wheres {
+		if i == 0 {
+			whereStr += item.sql
+		} else {
+			whereStr += item.with + item.sql
+		}
 		args = append(args, item.vars...)
 	}
 

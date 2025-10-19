@@ -26,7 +26,7 @@ type JobPipeline struct {
 	confs       []*pb.CronConfigListItem // 配置任务集合
 	conf        *JobConfig               // 流水线解析后的本身配置
 	msgSetParse *dtos.MsgSetParse
-	tracer      trace.Tracer
+	//tracer      *tracing.MysqlTracer
 }
 
 // 任务执行器
@@ -62,10 +62,9 @@ func NewJobPipeline(conf *models.CronPipeline) *JobPipeline {
 	}
 
 	// 日志
-	job.tracer = tracing.Tracer(job.pipeline.Env+"-cronin", trace.WithInstrumentationAttributes(
-		attribute.String("driver", "mysql"),
-		attribute.String("env", job.pipeline.Env),
-	))
+	//job.tracer = tracing.SqlTracer(job.pipeline.Env+"-cronin", trace.WithInstrumentationAttributes(
+	//	attribute.String("env", job.pipeline.Env),
+	//))
 
 	return job
 }
@@ -78,14 +77,16 @@ func (job *JobPipeline) parse(conf *models.CronPipeline) error {
 // 执行任务
 func (job *JobPipeline) Run() {
 	var err errs.Errs
-	ctx1, span := job.tracer.Start(context.Background(), "job-pipeline", trace.WithAttributes(
+	ctx1, span := job.conf.tracer.Start(context.Background(), "job-pipeline", trace.WithAttributes(
 		attribute.Int("ref_id", job.pipeline.Id),
 		attribute.String("env", job.pipeline.Env),
 		attribute.String("component", "pipeline"),
 		attribute.String("ref_name", job.pipeline.Name),
 	))
+	job.conf.runTraceId = span.SpanContext().TraceID().String()
 	defer func() {
 		job.conf.isRun = false
+		job.conf.runTraceId = ""
 		status, remark := 0, ""
 		g := data.NewChangeLogHandle(&auth.UserToken{UserName: "系统"}).SetType(models.LogTypeUpdateSys).OldPipeline(*job.pipeline)
 		//if res != nil {
@@ -116,6 +117,7 @@ func (job *JobPipeline) Run() {
 			span.AddEvent("", trace.WithAttributes(attribute.String("warning", "变更记录写入失败"+er.Error())))
 		}
 		span.End()
+		job.conf.tracer.LogsExpire()
 	}()
 	if job.conf.isRun {
 		err = errs.New(nil, "任务正在进行中，跳过")
@@ -173,7 +175,7 @@ func (job *JobPipeline) Run() {
 				continue
 			}
 		}
-		jobs = append(jobs, NewJobConfig(temp))
+		jobs = append(jobs, NewJobConfig(temp, job.conf.tracer))
 	}
 
 	// 参数解析

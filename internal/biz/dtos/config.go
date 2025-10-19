@@ -7,6 +7,12 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+type ConfigSearchItem struct {
+	TagName string              `json:"tag_name"`
+	Param   string              `json:"param"`
+	Child   []*ConfigSearchItem `json:"child"`
+}
+
 func ParseParams(varFields []byte, after func(list map[string]any)) (map[string]any, errs.Errs) {
 	varParams := map[string]any{}
 	if len(varFields) > 5 {

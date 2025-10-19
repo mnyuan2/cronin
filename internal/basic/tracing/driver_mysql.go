@@ -15,6 +15,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -164,15 +165,18 @@ func sumIndexV2(rows []models.CronLogSpan) {
 	}
 }
 
-type mysqlTracer struct {
+type MysqlTracer struct {
 	embedded.Tracer
 
 	service string
 	env     string
 	nonce   int64
+
+	spans   map[string][]*MysqlSpan // 局部队列: trace_id:[]span
+	spansMu sync.Mutex              // 互斥锁
 }
 
-func (t *mysqlTracer) tracer() {}
+func (t *MysqlTracer) tracer() {}
 
 // 链路id生成
 type mysqlIDGenerator struct {
@@ -269,7 +273,7 @@ func Inject(s trace.Span) string {
 
 }
 
-func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func (t *MysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	conf := trace.NewSpanStartConfig(opts...)
 	span := &MysqlSpan{
 		service:   t.service,
@@ -304,9 +308,55 @@ func (t *mysqlTracer) Start(ctx context.Context, spanName string, opts ...trace.
 	} else {
 		span.traceId, span.spanId = gen.NewIDs(ctx)
 	}
+	if t.spans != nil { // 写入局部队列
+		t.spansMu.Lock()
+		defer t.spansMu.Unlock()
+		if _, ok := t.spans[span.traceId.String()]; ok {
+			t.spans[span.traceId.String()] = append(t.spans[span.traceId.String()], span)
+		} else {
+			t.spans[span.traceId.String()] = []*MysqlSpan{span}
+		}
+	}
+	span.sc = trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: span.traceId,
+		SpanID:  span.spanId,
+	})
 
 	ctx = context.WithValue(ctx, "mysql_span", span)
 	return ctx, span
+}
+
+// 获取日志
+func (t *MysqlTracer) Logs(traceId string) []*models.CronLogSpan {
+	t.spansMu.Lock()
+	defer t.spansMu.Unlock()
+	l := len(t.spans[traceId])
+	list := make([]*models.CronLogSpan, l)
+	for i := 0; i < l; i++ {
+		list[i] = t.spans[traceId][i].log()
+	}
+	return list
+}
+
+// 移除临时缓存
+func (t *MysqlTracer) LogsExpire() {
+	t.spansMu.Lock()
+	defer t.spansMu.Unlock()
+	cur := time.Now().Unix()
+	for k, v := range t.spans {
+		if len(v) == 0 {
+			delete(t.spans, k)
+			continue
+		}
+		if v[0].endTime.IsZero() {
+			continue
+		}
+		end := v[0].endTime.Unix()
+		if cur-end >= 180 { // 超过3分钟移除缓存
+			delete(t.spans, k)
+			continue
+		}
+	}
 }
 
 type MysqlSpanLog struct {
@@ -384,20 +434,10 @@ func (s *MysqlSpan) AddEvent(name string, options ...trace.EventOption) {
 	s.logs = append(s.logs, g)
 }
 
-// End does nothing.
-func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
-	config := trace.NewSpanEndConfig(options...)
-	if !config.Timestamp().IsZero() {
-		s.endTime = config.Timestamp()
-	} else {
-		s.endTime = time.Now()
-	}
-
-	//tagsKey, tagsVal := make([]string, len(s.tags)), make([]string, len(s.tags))
+// 日志
+func (s *MysqlSpan) log() *models.CronLogSpan {
 	tagsKv := make([]string, len(s.tags))
 	for i, item := range s.tags {
-		//tagsKey[i] = string(item.Key)
-		//tagsVal[i] = item.Value.Emit()
 		tagsKv[i] = fmt.Sprintf("%s=%s", item.Key, item.Value.Emit())
 		if item.Key == "ref_id" {
 			s.refId = fmt.Sprintf("%v", item.Value.AsInterface())
@@ -408,21 +448,36 @@ func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
 		Timestamp:  s.startTime.UnixMicro(),
 		Service:    s.service,
 		Operation:  s.operation,
-		Duration:   s.endTime.Sub(s.startTime).Microseconds(),
+		Duration:   -1, // 未完成
 		Status:     int(s.status),
 		StatusDesc: s.statusDesc,
 		Env:        s.env,
 		RefId:      s.refId,
 	}
+	if !s.endTime.IsZero() {
+		data.Duration = s.endTime.Sub(s.startTime).Microseconds()
+	}
+
 	data.TraceId = s.traceId.String()
 	data.SpanId, _ = gen.ParseID(s.spanId.String())
 	data.ParentSpanId, _ = gen.ParseID(s.parentSpanId.String())
 	data.Tags, _ = jsoniter.Marshal(s.tags)
 	data.Logs, _ = jsoniter.Marshal(s.logs)
-	//data.TagsKey, _ = jsoniter.Marshal(tagsKey)
-	//data.TagsVal, _ = jsoniter.Marshal(tagsVal)
 	data.TagsKV, _ = jsoniter.Marshal(tagsKv)
 
+	return data
+}
+
+// End does nothing.
+func (s *MysqlSpan) End(options ...trace.SpanEndOption) {
+	config := trace.NewSpanEndConfig(options...)
+	if !config.Timestamp().IsZero() {
+		s.endTime = config.Timestamp()
+	} else {
+		s.endTime = time.Now()
+	}
+
+	data := s.log()
 	mysqlQueue <- *data
 }
 

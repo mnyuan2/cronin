@@ -112,7 +112,7 @@ var MyPipelineForm = Vue.extend({
                 <el-step title="列表" icon="el-icon-s-order"></el-step>
             </el-steps>
             <div id="match-add-search" class="sort-drag-box form-inline" style="margin-top: 20px;" v-show="match_add.step_index == 0">
-                <div class="input-box" v-for="(s,index) in match_add.search">
+                <div class="input-box" v-for="(s,index) in match_add.search" style="display: none;"><!-- v1方案停用 -->
                     <div class="drag">
                         <i class="el-icon-more-outline" style="transform: rotate(90deg);"></i>
                     </div>
@@ -130,14 +130,24 @@ var MyPipelineForm = Vue.extend({
                         </el-select>
                     </div>
                 </div>
+                <div class="input-box"><!-- v2方案启用 -->
+                    <el-input type="textarea" placeholder="请输入查询规则" v-model="match_add.search_text" ></el-input>
+                    <div class="info-2">
+                        <el-tooltip effect="dark" content="点击查看定义" placement="top-start">
+                            <router-link target="_blank" to="/setting?tag_name=template" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                        </el-tooltip>
+                        {{match_add.template.hint}}
+                    </div>
+                </div>
             </div>
             <div v-show="match_add.step_index == 1">
                 <el-table :data="match_add.list" @selection-change="matchSelectedChange" max-height="460">
-                    <el-table-column type="selection" width="55"></el-table-column>
+                    <el-table-column type="selection" width="50"></el-table-column>
                     <el-table-column prop="name" label="任务名称">
-                        <div slot-scope="{row}" class="abc" style="display: flex;">
+                        <div slot-scope="{row}" class="name" style="display: flex;">
                             <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
                                 <router-link target="_blank" :to="{path:'/config_detail',query:{id:row.id, type:'config'}}" class="el-link el-link--primary is-underline" :title="row.name">{{row.name}}</router-link>
+                                <div class="info-2">{{row.remark}}</div>
                             </span>
                         </div>
                     </el-table-column>
@@ -150,7 +160,7 @@ var MyPipelineForm = Vue.extend({
                             </el-tooltip>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="remark" label="备注"></el-table-column>
+                    <el-table-column prop="tag_names" label="标签" width="180"></el-table-column>
                 </el-table>
             </div>
             <div slot="footer" class="dialog-footer">
@@ -229,14 +239,16 @@ var MyPipelineForm = Vue.extend({
             match_add:{
                 show: false,
                 step_index: 0,
-                search:[
+                search:[ // v1
                     {"type":"pr_merge","value":["",""]},
                     {"type":"tag", "value":[]},
                 ],
+                search_text: '', // v2
                 list:[],
                 selected: [],
                 var_params:[],
                 sort: null,
+                template:{hint:""},
             },
             // 任务弹窗
             config:{
@@ -280,7 +292,7 @@ var MyPipelineForm = Vue.extend({
     created(){
         this.getDic()
         this.getPreference()
-
+        this.getTemplateList()
     },
     // 模块初始化
     mounted(){
@@ -449,14 +461,14 @@ var MyPipelineForm = Vue.extend({
 
             switch (index) {
                 case 1:
-                    let body = copyJSON(this.match_add.search).map(function (item){
-                        item.value = item.value.map(function (item2){
-                            return item2.toString()
-                        })
-                        return item
-                    })
+                    // let body = copyJSON(this.match_add.search).map(function (item){
+                    //     item.value = item.value.map(function (item2){
+                    //         return item2.toString()
+                    //     })
+                    //     return item
+                    // })
 
-                    api.innerPost('/config/match_list', {search:body}, res=>{
+                    api.innerPost('/config/match_list', {search_text:this.match_add.search_text}, res=>{
                         if (!res.status){
                             return this.$message.error(res.message)
                         }
@@ -471,8 +483,8 @@ var MyPipelineForm = Vue.extend({
                         this.match_add.selected.forEach((item)=>{
                             let temp = copyJSON(item)
                             temp.view_panel = false
-                            temp.var_fields.forEach((item2)=>{
-                                params[item2.key] = this.match_add.var_params[item2.key]
+                            temp.in_var_fields.forEach((item2)=>{
+                                params[item2.key] = item2.value
                             })
                             this.form.configs.push(temp)
                         })
@@ -602,6 +614,15 @@ var MyPipelineForm = Vue.extend({
                     return this.$message.error('偏好错误，'+res.message)
                 }
                 this.preference = res.data
+            },{async: false})
+        },
+        // 获取快捷模板信息
+        getTemplateList(){
+            api.innerGet("/template/list", {name:Enum.TemplateConfigSearch},res=>{
+                if (!res.status){
+                    return this.$message.error('模板错误，'+res.message)
+                }
+                this.match_add.template = res.data.list[0]
             },{async: false})
         },
     }
