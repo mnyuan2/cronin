@@ -3,6 +3,7 @@ package host
 import (
 	"cron/internal/basic/errs"
 	"golang.org/x/crypto/ssh"
+	"time"
 )
 
 type Config struct {
@@ -30,11 +31,12 @@ func (m *Host) RemoteExec(statement string) ([]byte, errs.Errs) {
 			ssh.Password(m.conf.Secret),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         30 * time.Second,
 	}
 	// 连接到远程服务器
 	conn, er := ssh.Dial("tcp", m.conf.Ip+":"+m.conf.Port, config)
 	if er != nil {
-		return nil, errs.New(er, "拨号失败")
+		return nil, errs.New(er, "拨号失败("+m.conf.Ip+":"+m.conf.Port+")")
 	}
 	defer conn.Close()
 

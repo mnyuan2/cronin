@@ -305,7 +305,8 @@ var MyConfigForm = Vue.extend({
         <el-form-item label-width="2px">
             <div>
                 <el-button type="text" @click="msgBoxShow()">消息<i class="el-icon-plus"></i></el-button>
-                <span v-show="form.empty_not_msg==1" style="float:right">空结果不发消息</span>
+                <b class="b" v-show="form.empty_not_msg==1" style="float:right">空结果不发消息</b>
+                <b class="b" v-show="form.only_last_msg==1" style="float:right">仅发最终结果消息</b>
             </div>
             <div class="input-box" v-for="(msg,msg_index) in form.msg_set">
                 <el-row v-html="msg.descrition"></el-row>
@@ -491,6 +492,7 @@ var MyConfigForm = Vue.extend({
     <el-dialog title="消息设置" :visible.sync="msg_set_box.show && !request.disabled" :show-close="false" :close-on-click-modal="false" :modal="false">
         <div>
             <el-checkbox v-model="msg_set_box.form.empty_not_msg">空结果不发消息</el-checkbox>
+            <el-checkbox v-model="msg_set_box.form.only_last_msg">仅发最终结果消息</el-checkbox>
         </div>
         <el-table :data="msg_set_box.form.msg_set" style="width: 100%">
             <el-table-column label="当任务状态*" width="180">
@@ -847,6 +849,7 @@ var MyConfigForm = Vue.extend({
                 err_retry_mode_name: '',
                 msg_set: [],
                 empty_not_msg: 2,
+                only_last_msg: 2,
                 tag_ids: [],
                 tag_names: "",
                 status: '1',
@@ -1376,6 +1379,7 @@ var MyConfigForm = Vue.extend({
             this.msg_set_box.show = true
             this.msg_set_box.form = {
                 empty_not_msg: this.form.empty_not_msg == 1,
+                only_last_msg: this.form.only_last_msg == 1,
                 msg_set: copyJSON(this.form.msg_set),
             }
             if (this.msg_set_box.form.msg_set.length == 0){
@@ -1414,6 +1418,7 @@ var MyConfigForm = Vue.extend({
             })
             this.form.msg_set = list
             this.form.empty_not_msg = this.msg_set_box.form.empty_not_msg ? 1 : 2
+            this.form.only_last_msg = this.msg_set_box.form.only_last_msg ? 1 : 2
             this.msg_set_box.show = false
             this.msg_set_box.form = {}
         },

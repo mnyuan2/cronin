@@ -112,6 +112,7 @@ type CronConfig struct {
 	CreateDt        string `json:"create_dt" gorm:"column:create_dt;type:datetime;default:null;comment:创建时间;"`
 	MsgSet          []byte `json:"msg_set" gorm:"column:msg_set;type:json;default:null;comment:消息配置详情;"`
 	EmptyNotMsg     int    `json:"empty_not_msg" gorm:"column:empty_not_msg;type:tinyint(2);default:2;comment:空结果不发消息：1.是、2.否;"`
+	OnlyLastMsg     int    `json:"only_last_msg" gorm:"column:only_last_msg;type:tinyint(2);default:2;comment:仅发最终结果消息：1.是、2.否;"`
 	MsgSetHash      string `json:"msg_set_hash" gorm:"column:msg_set_hash;type:char(32);default:'';comment:消息配置hash;"`
 	AfterSleep      int    `json:"after_sleep" gorm:"column:after_sleep;type:int(11);default:0;comment:延迟关闭;"`
 	ErrRetryNum     int    `json:"err_retry_num" gorm:"column:err_retry_num;type:int(11);default:0;comment:错误重试次数;"`

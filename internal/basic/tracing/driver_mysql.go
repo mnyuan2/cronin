@@ -245,10 +245,9 @@ func Extract(traceId string) trace.SpanStartOption {
 	if len(ids) < 3 {
 		return nil
 	}
-	hex := fmt.Sprintf("%032x", ids[0]) // 32位
-	traceID, _ := trace.TraceIDFromHex(hex)
-	spanIDHex := fmt.Sprintf("%016x", ids[1]) // 16位
-	spanID, _ := trace.SpanIDFromHex(spanIDHex)
+
+	traceID, _ := trace.TraceIDFromHex(ids[0])
+	spanID, _ := trace.SpanIDFromHex(ids[1])
 
 	lk := &trace.Link{
 		SpanContext: trace.SpanContext{}.WithTraceID(traceID).WithSpanID(spanID),
@@ -264,9 +263,7 @@ func Inject(s trace.Span) string {
 	case *MysqlSpan:
 		tr := val.traceId.String()
 		sp := val.spanId.String()
-		traceId := tr
-		spanId, _ := gen.ParseID(sp)
-		return fmt.Sprintf("%s:%s:0000000000000000:1", traceId, spanId)
+		return fmt.Sprintf("%s:%s:0000000000000000:1", tr, sp)
 	default:
 		return fmt.Sprintf("%+v", s)
 	}

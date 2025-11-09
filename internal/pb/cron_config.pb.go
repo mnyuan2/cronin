@@ -157,6 +157,7 @@ type CronConfigDetailReply struct {
 	Command          *CronConfigCommand `json:"command"`
 	MsgSet           []*CronMsgSet      `json:"msg_set"`
 	EmptyNotMsg      int                `json:"empty_not_msg"` // 空结果不发送消息：2.空结果发送消息（默认）、1.空结果不发送消息
+	OnlyLastMsg      int                `json:"only_last_msg"` // 仅发最终结果消息：1.仅发最终结果消息、2.发所有结果消息（默认）
 	AfterSleep       int                `json:"after_sleep"`
 	ErrRetryNum      int                `json:"err_retry_num"`
 	ErrRetrySleep    int                `json:"err_retry_sleep"` // 错误重试间隔
@@ -188,6 +189,7 @@ type CronConfigSetRequest struct {
 	TagIds        []int              `json:"tag_ids"`            // 标签
 	MsgSet        []*CronMsgSet      `json:"msg_set"`            // 消息设置
 	EmptyNotMsg   int                `json:"empty_not_msg"`      // 空结果不发消息
+	OnlyLastMsg   int                `json:"only_last_msg"`      // 仅发最终结果消息
 	AfterSleep    int                `json:"after_sleep"`        // 延迟关闭
 	ErrRetryNum   int                `json:"err_retry_num"`      // 错误重试次数
 	ErrRetrySleep int                `json:"err_retry_sleep"`    // 错误重试间隔
@@ -287,19 +289,23 @@ type CronConfigRegisterListResponse struct {
 
 // 任务设置
 type CronConfigRunRequest struct {
-	Id          int                `json:"id"`                 // 任务编号
-	Name        string             `json:"name,omitempty"`     // 任务名称
-	Type        int                `json:"type"`               // 类型
-	Spec        string             `json:"spec"`               // 执行时间表达式
-	Protocol    int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
-	Command     *CronConfigCommand `json:"command,omitempty"`  // 命令
-	Status      int                `json:"status"`             // 状态
-	Remark      string             `json:"remark"`
-	AfterTmpl   string             `json:"after_tmpl"`          // 结果模板
-	VarFields   []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
-	MsgSet      []*CronMsgSet      `json:"msg_set"`             // 消息设置
-	EmptyNotMsg int                `json:"empty_not_msg"`
-	AfterSleep  int                `json:"after_sleep"`
+	Id            int                `json:"id"`                 // 任务编号
+	Name          string             `json:"name,omitempty"`     // 任务名称
+	Type          int                `json:"type"`               // 类型
+	Spec          string             `json:"spec"`               // 执行时间表达式
+	Protocol      int                `json:"protocol,omitempty"` // 协议：1.http、2.grpc、3.系统命令
+	Command       *CronConfigCommand `json:"command,omitempty"`  // 命令
+	Status        int                `json:"status"`             // 状态
+	Remark        string             `json:"remark"`
+	AfterTmpl     string             `json:"after_tmpl"`          // 结果模板
+	VarFields     []*KvItem          `json:"var_fields" gorm:"-"` // 定义变量参数
+	MsgSet        []*CronMsgSet      `json:"msg_set"`             // 消息设置
+	EmptyNotMsg   int                `json:"empty_not_msg"`
+	OnlyLastMsg   int                `json:"only_last_msg"` // 仅发最终结果消息
+	AfterSleep    int                `json:"after_sleep"`
+	ErrRetryNum   int                `json:"err_retry_num"`   // 错误重试次数
+	ErrRetrySleep int                `json:"err_retry_sleep"` // 错误重试间隔
+	ErrRetryMode  int                `json:"err_retry_mode"`  // 错误重试模式：1.固定间隔、2.增长间隔
 }
 type CronConfigRunResponse struct {
 	Result string `json:"result"`

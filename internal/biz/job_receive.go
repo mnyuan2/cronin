@@ -96,6 +96,8 @@ func (job *JobReceive) Run() {
 		span.End()
 		job.conf.tracer.LogsExpire()
 	}()
+	b, _ := jsoniter.Marshal(job.params)
+	span.AddEvent("log", trace.WithAttributes(attribute.String("raw_params", string(b))))
 	if job.conf.isRun {
 		err = errs.New(nil, "任务正在进行中，跳过")
 		return

@@ -226,10 +226,11 @@ var MyConfigDetail = Vue.extend({
                             </div>
                         </el-form>
                     </el-descriptions-item>
-                    <el-descriptions-item span="2" v-if="detail.var_fields && detail.var_fields.length">
+                    <el-descriptions-item span="2">
                         <template slot="label">消息</template>
                         <div>
                             <el-checkbox v-model="detail.empty_not_msg==1" disabled v-show="detail.empty_not_msg==1">空结果不发消息</el-checkbox>
+                            <el-checkbox v-model="detail.only_last_msg==1" disabled v-show="detail.only_last_msg==1">仅发最终结果消息</el-checkbox>
                             <el-row class="input-box" v-for="(msg,msg_index) in detail.msg_set" v-html="msg.descrition" style="padding: 2px 4px;"></el-row>
                         </div>
                     </el-descriptions-item>

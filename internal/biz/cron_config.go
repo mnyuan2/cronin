@@ -640,6 +640,7 @@ func (dm *CronConfigService) Set(r *pb.CronConfigSetRequest) (resp *pb.CronConfi
 	d.Command, _ = jsoniter.Marshal(r.Command)
 	d.MsgSet, _ = jsoniter.Marshal(r.MsgSet)
 	d.EmptyNotMsg = r.EmptyNotMsg
+	d.OnlyLastMsg = r.OnlyLastMsg
 	d.VarFieldsHash = fmt.Sprintf("%x", md5.Sum(d.VarFields))
 	d.CommandHash = fmt.Sprintf("%x", md5.Sum(d.Command))
 	d.MsgSetHash = fmt.Sprintf("%x", md5.Sum(d.MsgSet))
@@ -778,14 +779,18 @@ func (dm *CronConfigService) Run(r *pb.CronConfigRunRequest) (resp *pb.CronConfi
 	}
 
 	conf := &models.CronConfig{
-		Id:          r.Id,
-		Env:         dm.user.Env,
-		Name:        r.Name,
-		Type:        r.Type,
-		Protocol:    r.Protocol,
-		AfterTmpl:   r.AfterTmpl,
-		AfterSleep:  r.AfterSleep,
-		EmptyNotMsg: r.EmptyNotMsg,
+		Id:            r.Id,
+		Env:           dm.user.Env,
+		Name:          r.Name,
+		Type:          r.Type,
+		Protocol:      r.Protocol,
+		AfterTmpl:     r.AfterTmpl,
+		AfterSleep:    r.AfterSleep,
+		EmptyNotMsg:   r.EmptyNotMsg,
+		OnlyLastMsg:   r.OnlyLastMsg,
+		ErrRetryNum:   r.ErrRetryNum,
+		ErrRetrySleep: r.ErrRetrySleep,
+		ErrRetryMode:  r.ErrRetryMode,
 	}
 	conf.Command, err = jsoniter.Marshal(r.Command)
 	if err != nil {

@@ -83,6 +83,7 @@ type JobConfig struct {
 	commandParse *pb.CronConfigCommand
 	msgSetParse  *dtos.MsgSetParse
 	ErrorCount   int // 连续错误
+	isLastMsg    int // 0.未启用、1.是、2.否
 	tracer       *tracing.MysqlTracer
 	runTraceId   string // 运行时链路id
 	varParams    map[string]any
@@ -235,6 +236,9 @@ func (job *JobConfig) Run() {
 	if err = job.Parse(param); err != nil {
 		return
 	}
+	if job.conf.OnlyLastMsg == enum.BoolYes {
+		job.isLastMsg = enum.BoolNot
+	}
 
 	for i := 0; i <= job.conf.ErrRetryNum; i++ {
 		if i > 0 {
@@ -249,6 +253,9 @@ func (job *JobConfig) Run() {
 			res, err = job.AfterTmpl(res, param)
 		}
 		if err != nil {
+			if i >= job.conf.ErrRetryNum {
+				job.isLastMsg = enum.BoolYes
+			}
 			job.ErrorCount++
 			go job.messagePush(ctx, &dtos.MsgPushRequest{
 				Status:     enum.StatusDisable,
@@ -258,6 +265,7 @@ func (job *JobConfig) Run() {
 				RetryNum:   i,
 			})
 		} else {
+			job.isLastMsg = enum.BoolYes
 			job.ErrorCount = 0
 			go job.messagePush(ctx, &dtos.MsgPushRequest{
 				Status:     enum.StatusActive,
@@ -322,6 +330,9 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		span.AddEvent("", trace.WithAttributes(attribute.Stringer("config", bytes.NewBuffer(job.conf.Command))))
 		return
 	}
+	if job.conf.OnlyLastMsg == enum.BoolYes {
+		job.isLastMsg = enum.BoolNot
+	}
 
 	for i := 0; i <= job.conf.ErrRetryNum; i++ {
 		if i > 0 {
@@ -336,6 +347,9 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 			res, err = job.AfterTmpl(res, params)
 		}
 		if err != nil {
+			if i >= job.conf.ErrRetryNum {
+				job.isLastMsg = enum.BoolYes
+			}
 			job.ErrorCount++
 			job.messagePush(ctx, &dtos.MsgPushRequest{
 				Status:     enum.StatusDisable,
@@ -345,6 +359,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 				RetryNum:   i,
 			})
 		} else {
+			job.isLastMsg = enum.BoolYes
 			job.ErrorCount = 0
 			job.messagePush(ctx, &dtos.MsgPushRequest{
 				Status:     enum.StatusActive,
@@ -745,6 +760,8 @@ func (job *JobConfig) rpcGrpc(ctx context.Context, r *pb.CronRpc) (resp []byte, 
 func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
 	if job.conf.EmptyNotMsg == enum.BoolYes && len(bytes.TrimSpace(r.Body)) == 0 {
 		return
+	} else if job.isLastMsg == enum.BoolNot {
+		return
 	}
 	sets, ok := job.msgSetParse.StatusList[r.Status]
 	if !ok {
@@ -759,7 +776,12 @@ func (job *JobConfig) messagePush(ctx context.Context, r *dtos.MsgPushRequest) {
 		}
 		span.End()
 	}()
-
+	span.SetAttributes(
+		attribute.Int("status", r.Status),
+	)
+	span.AddEvent("data", trace.WithAttributes(
+		attribute.String("status_desc", r.StatusDesc),
+	))
 	msgIds, userIds := []int{}, []int{}
 	for _, set := range sets {
 		msgIds = append(msgIds, set.MsgId)

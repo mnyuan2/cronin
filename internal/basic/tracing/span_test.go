@@ -123,4 +123,5 @@ func TestInject(t *testing.T) {
 
 	fmt.Printf("%+v\n", span2)
 	//span2.End()
+	//time.Sleep(3*time.Second)
 }

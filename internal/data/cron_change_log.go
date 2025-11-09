@@ -242,6 +242,17 @@ func (h *ChangeLogHandle) diffConfig(old, new *models.CronConfig) (content []*mo
 			NewValName: enum.BoolMap[new.EmptyNotMsg],
 		})
 	}
+	if old.OnlyLastMsg != new.OnlyLastMsg {
+		content = append(content, &models.ChangeLogField{
+			Field:      "only_last_msg",
+			VType:      reflect.Int.String(),
+			OldVal:     old.OnlyLastMsg,
+			NewVal:     new.OnlyLastMsg,
+			FieldName:  "仅发最终结果消息",
+			OldValName: enum.BoolMap[old.OnlyLastMsg],
+			NewValName: enum.BoolMap[new.OnlyLastMsg],
+		})
+	}
 	if old.VarFieldsHash != new.VarFieldsHash {
 		content = append(content, &models.ChangeLogField{
 			Field:      "var_fields",
