@@ -81,7 +81,7 @@ go build -ldflags "-X main.version=v0.xx -X main.isBuildResource=true" -o cronin
 ```
 ./cronin.xx
 ```
-入口页地址： http://127.0.0.1:9003/
+入口页地址： http://127.0.0.1:9003/login
 
 默认账号：root / 123456
 
