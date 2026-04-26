@@ -250,7 +250,7 @@ func (job *JobConfig) Run() {
 		}
 		res, err = job.Exec(ctx)
 		if err == nil {
-			res, err = job.AfterTmpl(res, param)
+			res, err = job.AfterTmpl(span, res, param)
 		}
 		if err != nil {
 			if i >= job.conf.ErrRetryNum {
@@ -344,7 +344,7 @@ func (job *JobConfig) Running(ctx context.Context, remark string, params map[str
 		}
 		res, err = job.Exec(ctx)
 		if err == nil {
-			res, err = job.AfterTmpl(res, params)
+			res, err = job.AfterTmpl(span, res, params)
 		}
 		if err != nil {
 			if i >= job.conf.ErrRetryNum {
@@ -445,7 +445,7 @@ func (job *JobConfig) Exec(ctx context.Context) (res []byte, err errs.Errs) {
 }
 
 // 结果模板处理
-func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) (out []byte, err errs.Errs) {
+func (job *JobConfig) AfterTmpl(span trace.Span, result []byte, param map[string]any) (out []byte, err errs.Errs) {
 	p := map[string]any{
 		"result": string(result),
 	}
@@ -453,6 +453,7 @@ func (job *JobConfig) AfterTmpl(result []byte, param map[string]any) (out []byte
 		p[k] = v
 	}
 	if job.conf.AfterTmpl != "" {
+		span.AddEvent("", trace.WithAttributes(attribute.String("after_tmpl_raw", string(result))))
 		str, er := conv.DefaultStringTemplate().
 			SetParam(p).
 			Execute([]byte(job.conf.AfterTmpl))

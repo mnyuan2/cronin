@@ -313,9 +313,26 @@ func (m *GiteeApiV5) PullCreate(handler *Handler, r *PullsCreateRequest) (res *P
 			return nil, errors.New(message.(string))
 		}
 	}
-	res = &Pull{}
-	if err = jsoniter.Unmarshal(respByte, &res); err != nil {
-		return nil, fmt.Errorf("响应解析失败，%w", err)
+
+	body := &giteeV5Pull{}
+	if err = jsoniter.Unmarshal(respByte, body); err != nil {
+		return res, fmt.Errorf("响应解析失败，%w", err)
+	}
+	res = &Pull{
+		Id:          strconv.Itoa(body.Id),
+		Title:       body.Title,
+		Number:      body.Number,
+		State:       body.State,
+		CreateAt:    body.CreatedAt,
+		Url:         body.HtmlUrl,
+		HeadRefName: body.Head.Ref,
+		BaseRefName: body.Base.Ref,
+	}
+	if body.Mergeable {
+		res.Mergeable = "mergeable"
+	}
+	if !body.CanMergeCheck && res.State == "open" {
+		res.Mergeable = "conflicting"
 	}
 	return res, nil
 }

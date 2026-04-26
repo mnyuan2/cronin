@@ -24,10 +24,24 @@ type Git struct {
 
 type GitEvent struct {
 	Id         int                 `json:"id"`                    // 事件id
+	PRCreate   *GitEventPRCreate   `json:"pr_create,omitempty"`   // pr创建
 	PRDetail   *GitEventPRMerge    `json:"pr_detail,omitempty"`   // pr详情
 	PRIsMerge  *GitEventPRMerge    `json:"pr_is_merge,omitempty"` // pr是否合并
 	PRMerge    *GitEventPRMerge    `json:"pr_merge"`              // pr合并内容
 	FileUpdate *GitEventFileUpdate `json:"file_update,omitempty"` // 文件更新
+}
+
+type GitEventPRCreate struct {
+	Owner string `json:"owner"` // 空间地址
+	Repo  string `json:"repo"`  // 项目名称（仓库路径）
+	Head  string `json:"head"`  // 源分支
+	Base  string `json:"base"`  // 目标分支
+	Title string `json:"title"` // 标题
+	Body  string `json:"body"`  // 说明
+	// 可选。合并PR的方法，merge（合并所有提交）、squash（扁平化分支合并）和rebase（变基并合并）。默认为merge。
+	MergeMethod string `json:"merge_method"`
+	// 可选。合并PR后是否删除源分支，默认false（不删除）
+	PruneSourceBranch bool `json:"prune_source_branch"`
 }
 
 type GitEventPRMerge struct {

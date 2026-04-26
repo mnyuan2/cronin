@@ -415,6 +415,30 @@ i.el-alert__icon{
     min-height: 45px;
 }
 
+/* 任务表单 git*/
+.form-row .form-row-item{
+    display: flex;
+}
+.form-row .form-row-item label {
+    white-space: nowrap;
+}
+.sprit{
+    width: 100%;
+    font-size: 16px;
+    height: 100%;
+    display: block;
+    text-align: center;
+    margin-top: 8px;
+}
+.select-branch .el-icon-right{
+    width: 100%;
+    font-size: 20px;
+    height: 100%;
+    display: block;
+    text-align: center;
+    margin-top: 22px;
+}
+
 /* 日志搜索 */
 .el-button.button-icon{
     border: none;

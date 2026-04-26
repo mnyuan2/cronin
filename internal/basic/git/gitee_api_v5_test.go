@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"net/url"
 	"strconv"
 	"strings"
@@ -45,6 +46,32 @@ func TestApiV5_User(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	fmt.Println(handler)
+	fmt.Println(res)
+}
+
+func TestApiV5_PullResponse(t *testing.T) {
+	respByte := []byte(``)
+
+	body := &giteeV5Pull{}
+	if err := jsoniter.Unmarshal(respByte, body); err != nil {
+		t.Fatalf("响应解析失败，%s", err)
+	}
+	res := &Pull{
+		Id:          strconv.Itoa(body.Id),
+		Title:       body.Title,
+		Number:      body.Number,
+		State:       body.State,
+		CreateAt:    body.CreatedAt,
+		Url:         body.HtmlUrl,
+		HeadRefName: body.Head.Ref,
+		BaseRefName: body.Base.Ref,
+	}
+	if body.Mergeable {
+		res.Mergeable = "mergeable"
+	}
+	if !body.CanMergeCheck && res.State == "open" {
+		res.Mergeable = "conflicting"
+	}
 	fmt.Println(res)
 }
 

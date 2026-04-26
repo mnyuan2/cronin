@@ -38,6 +38,8 @@ func (job *JobConfig) gitFunc(ctx context.Context, r *pb.CronGit) (resp []byte, 
 
 	for i, e := range r.Events {
 		switch e.Id {
+		case enum.GitEventPullsCreate:
+			resp, err = job.PRCreate(ctx, api, e.PRCreate)
 		case enum.GitEventPullsDetail:
 			resp, err = job.PRDetail(ctx, api, e.PRDetail)
 		case enum.GitEventPullsIsMerge:
@@ -181,6 +183,35 @@ func (job *JobConfig) PRList(ctx context.Context, api git.Api, r *pb.GetEventPRL
 	}
 	resp, _ = jsoniter.Marshal(res)
 
+	return resp, nil
+}
+
+// pr 创建
+func (job *JobConfig) PRCreate(ctx context.Context, api git.Api, r *pb.GitEventPRCreate) (resp []byte, err errs.Errs) {
+	h := git.NewHandler(ctx)
+	defer func() {
+		job.handlerLog("PRCreate", h, err)
+	}()
+	if r.Owner == "" || r.Repo == "" || r.Head == "" || r.Base == "" || r.Title == "" {
+		return nil, errs.New(nil, "必填参数不足")
+	}
+	request := &git.PullsCreateRequest{
+		BaseRequest: git.BaseRequest{
+			Owner: r.Owner,
+			Repo:  r.Repo,
+		},
+		Head:  r.Head,
+		Base:  r.Base,
+		Title: r.Title,
+		Body:  r.Body,
+		//Merge:   r.MergeMethod,
+		//Prune:   r.PruneSourceBranch,
+	}
+	res, er := api.PullCreate(h, request)
+	if er != nil {
+		return nil, errs.New(er, "pr创建失败")
+	}
+	resp, _ = jsoniter.Marshal(res)
 	return resp, nil
 }
 

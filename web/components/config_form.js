@@ -374,32 +374,67 @@ var MyConfigForm = Vue.extend({
                     <el-option v-for="(dic_v,dic_k) in dic.git_event" :label="dic_v.name" :value="dic_v.id"></el-option>
                 </el-select>
             </el-form-item>
+            <el-row class="el-form-item el-form-item--small form-row" style="margin-left: 44px;">
+                <el-col :span="6" class="form-row-item">
+                    <label class="el-form-item__label">空间*</label>
+                    <el-autocomplete v-model="gitSet.data.owner" :fetch-suggestions="preferenceGitSuggestions" placeholder="仓库所属空间地址" size="small"></el-autocomplete>
+                </el-col>
+                <el-col :span="1">
+                    <i class="sprit">/</i>
+                </el-col>
+                <el-col :span="6" class="form-row-item">
+                    <label class="el-form-item__label">仓库*</label>
+                    <el-autocomplete v-model="gitSet.data.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.owner)" placeholder="仓库路径" size="small"></el-autocomplete>
+                </el-col>
+            </el-row>
             <el-divider><i class="el-icon-setting"></i></el-divider>
             
-            <div v-if="gitSet.data.id==2"> pr创建 开发中 ...
-                
+            <div v-if="gitSet.data.id==2">
+                <el-row class="el-form-item el-form-item--small select-branch">
+                    <el-col :span="8">
+                        <label>源分支*</label>
+                        <el-input v-model="gitSet.data.pr_create.head" placeholder="来源分支" size="small">
+                        </el-input>
+                    </el-col>
+                    <el-col :span="1" style="text-align: center;"><i class="el-icon-right"></i></el-col>
+                    <el-col :span="8">
+                        <label>目标分支*</b>
+                        <el-input v-model="gitSet.data.pr_create.base" placeholder="合并到的目标分支" size="small">
+                        </el-input>
+                    </el-col>
+                </el-row>
+                <el-row>
+                    <el-col :span="17">
+                        <el-row class="el-form-item el-form-item--small">
+                            <el-input v-model="gitSet.data.pr_create.title" placeholder="标题" size="small"></el-input>
+                        </el-row>
+                        <el-row class="el-form-item el-form-item--small">
+                            <el-input v-model="gitSet.data.pr_create.body" type="textarea" :autosize="{minRows:6}" placeholder="说明" size="small"></el-input>
+                        </el-row>
+                    </el-col>
+                    <el-col :span="7" style="padding-left: 20px;">
+                        <el-row class="el-form-item el-form-item--small">
+                            <label>标签</b>
+                            <el-select v-model="gitSet.data.pr_create.merge_method" size="small">
+                                
+                            </el-select>
+                        </el-row>
+                        <el-row class="el-form-item el-form-item--small">
+                            <label class="el-form-item__label">合并选项</label>
+                            <el-checkbox v-model="gitSet.data.pr_create.prune_source_branch" size="small">合并后删除提交分支</el-checkbox>
+                        </el-row>
+                    </el-col>
+                </el-row>
             </div>
             
             <!-- pr详情 -->
             <div v-if="gitSet.data.id==3"> 
-                <el-form-item label="空间*">
-                    <el-autocomplete v-model="gitSet.data.pr_detail.owner" :fetch-suggestions="preferenceGitSuggestions" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-autocomplete>
-                </el-form-item>
-                <el-form-item label="仓库*">
-                    <el-autocomplete v-model="gitSet.data.pr_detail.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.pr_detail.owner)" placeholder="仓库路径"></el-autocomplete>
-                </el-form-item>
                 <el-form-item label="PR 编号*">
                     <el-input v-model="gitSet.data.pr_detail.number" placeholder="本仓库PR的序数"></el-input>
                 </el-form-item>
             </div>
             <!-- pr合并校验 -->
             <div v-if="gitSet.data.id==8"> 
-                <el-form-item label="空间*">
-                    <el-autocomplete v-model="gitSet.data.pr_is_merge.owner" :fetch-suggestions="preferenceGitSuggestions" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-autocomplete>
-                </el-form-item>
-                <el-form-item label="仓库*">
-                    <el-autocomplete v-model="gitSet.data.pr_is_merge.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.pr_is_merge.owner)" placeholder="仓库路径"></el-autocomplete>
-                </el-form-item>
                 <el-form-item label="PR 编号*">
                     <el-input v-model="gitSet.data.pr_is_merge.number" placeholder="本仓库PR的序数"></el-input>
                 </el-form-item>
@@ -420,12 +455,6 @@ var MyConfigForm = Vue.extend({
             
             <!-- pr合并 -->
             <div v-if="gitSet.data.id==9"> 
-                <el-form-item label="空间*">
-                    <el-autocomplete v-model="gitSet.data.pr_merge.owner" :fetch-suggestions="preferenceGitSuggestions" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-autocomplete>
-                </el-form-item>
-                <el-form-item label="仓库*">
-                    <el-autocomplete v-model="gitSet.data.pr_merge.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.pr_merge.owner)" placeholder="仓库路径"></el-autocomplete>
-                </el-form-item>
                 <el-form-item label="PR 编号*">
                     <el-input v-model="gitSet.data.pr_merge.number" placeholder="本仓库PR的序数"></el-input>
                 </el-form-item>
@@ -460,12 +489,6 @@ var MyConfigForm = Vue.extend({
             </div>
             <!-- 文件更新 -->
             <div v-if="gitSet.data.id==131">
-                <el-form-item label="空间*">
-                    <el-autocomplete v-model="gitSet.data.file_update.owner" :fetch-suggestions="preferenceGitSuggestions" placeholder="仓库所属空间地址(企业、组织或个人的地址path)"></el-autocomplete>
-                </el-form-item>
-                <el-form-item label="仓库*">
-                    <el-autocomplete v-model="gitSet.data.file_update.repo" :fetch-suggestions="(text,call)=>preferenceGitSuggestions(text, call, gitSet.data.file_update.owner)" placeholder="仓库路径"></el-autocomplete>
-                </el-form-item>
                 <el-form-item label="文件*">
                     <el-input v-model="gitSet.data.file_update.path" placeholder="文件的路径">
                         <template slot="prepend">{{gitSet.data.file_update.owner}}/{{gitSet.data.file_update.repo}}/</template>
@@ -534,7 +557,7 @@ var MyConfigForm = Vue.extend({
         <el-form :model="bigger_set.form" size="small" label-width="69px">
             <el-form-item class="var_fields">
                 <span slot="label" style="white-space: nowrap;">
-                    参数
+                    入参
                     <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
                         <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
                     </el-tooltip>
@@ -557,6 +580,21 @@ var MyConfigForm = Vue.extend({
                 </span>
                 <el-input type="textarea" v-model="bigger_set.form.after_tmpl" :autosize="{minRows:2}" placeholder="任务成功后，对结果响应文本进行二次解析；可重构响应及错误验证。\n结果变量: result·string"></el-input>
             </el-form-item>
+            <el-form-item class="var_fields">
+                <span slot="label" style="white-space: nowrap;">
+                    出参
+                    <el-tooltip effect="dark" content="申明过的参数可以被外部方法传入，点击查看更多" placement="top-start">
+                        <router-link target="_blank" to="/var_params" style="color: #606266"><i class="el-icon-info"></i></router-link>
+                    </el-tooltip>
+                </span>
+                <el-input v-for="(p_v,p_i) in bigger_set.form.var_fields" v-model="p_v.remark" placeholder="参数说明" class="input-input">
+                    <el-input slot="prepend" v-model="p_v.key" placeholder="key" @input="e=>inputChangeArrayPush(e,p_i,bigger_set.form.var_fields)">
+                        <el-input slot="suffix" v-model="p_v.value" placeholder="默认值"></el-input>
+                    </el-input>
+                    <el-button slot="append" icon="el-icon-delete" @click="arrayDelete(p_i, bigger_set.form.var_fields)"></el-button>
+                </el-input>
+            </el-form-item>
+            <el-divider></el-divider>
             <el-form-item label="重试">
                 <el-col :span="11">
                     <el-input type="number" v-model="bigger_set.form.err_retry_num" placeholder="失败时最大重试" class="input-input">
@@ -635,6 +673,8 @@ var MyConfigForm = Vue.extend({
                 index: -1, // 操作行号
                 data:{      // 单个设置详情
                     id: '',// 事件编号
+                    owner: '', // 空间
+                    repo: '', // 仓库
                 },
                 // 合并类型
                 gitMergeTypeList: {
@@ -684,44 +724,61 @@ var MyConfigForm = Vue.extend({
         "gitSet.data.id":{
             handler(v) {
                 console.log("gitSet.data.id 改变", v, this.gitSet.index)
-
-                if (this.gitSet.index !== -1){
-                    return
-                }
                 switch (v) {
                     case 2:
+                        if (this.gitSet.index !== -1){
+                            this.gitSet.data.owner = this.gitSet.data.pr_create.owner
+                            this.gitSet.data.repo = this.gitSet.data.pr_create.repo
+                            return
+                        }
                         this.gitSet.data = {
                             id: v,
-                            pr_create: {}
+                            pr_create: {
+                                head: '', // 源分支
+                                base: '',// 目标分支
+                                title: "", // 标题
+                                body: "", // 说明内容
+                                merge_method: "merge",
+                                prune_source_branch: false,
+                            }
                         }
                         break
                     case 3:
+                        if (this.gitSet.index !== -1){
+                            this.gitSet.data.owner = this.gitSet.data.pr_create.owner
+                            this.gitSet.data.repo = this.gitSet.data.pr_create.repo
+                            return
+                        }
                         this.gitSet.data = {
                             id: v,
                             pr_detail:{
-                                owner: this.preference.git.owner ?? '', // 空间
-                                repo: this.preference.git.repo ?? '', // 仓库
                                 number: '',
                             }
                         }
                         break
                     case 8:
+                        if (this.gitSet.index !== -1){
+                            this.gitSet.data.owner = this.gitSet.data.pr_create.owner
+                            this.gitSet.data.repo = this.gitSet.data.pr_create.repo
+                            return
+                        }
                         this.gitSet.data = {
                             id: v,
                             pr_is_merge:{
-                                owner: this.preference.git.owner ?? '', // 空间
-                                repo: this.preference.git.repo ?? '', // 仓库
                                 number: '',
                                 state: 'merge',
                             }
                         }
                         break
                     case 9:
+                        if (this.gitSet.index !== -1){
+                            this.gitSet.data.owner = this.gitSet.data.pr_create.owner
+                            this.gitSet.data.repo = this.gitSet.data.pr_create.repo
+                            return
+                        }
                         this.gitSet.data = {
                             id: v,
                             pr_merge: {
-                                owner: this.preference.git.owner ?? '', // 空间
-                                repo: this.preference.git.repo ?? '', // 仓库
                                 number: '',
                                 title: "",
                                 description: "",
@@ -731,11 +788,14 @@ var MyConfigForm = Vue.extend({
                         }
                         break
                     case 131:
+                        if (this.gitSet.index !== -1){
+                            this.gitSet.data.owner = this.gitSet.data.file_update.owner
+                            this.gitSet.data.repo = this.gitSet.data.file_update.repo
+                            return
+                        }
                         this.gitSet.data = {
                             id: v,
                             file_update:{
-                                owner: this.preference.git.owner ?? '', // 空间
-                                repo: this.preference.git.repo ?? '', // 仓库
                                 path: '',
                                 content: '',
                                 message: '',
@@ -744,7 +804,7 @@ var MyConfigForm = Vue.extend({
                         }
                         break
                     default:
-                        this.gitSet.data = {id:''}
+                        this.gitSet.data = {id:'',owner:'',repo:''}
                 }
             }
         }
@@ -1219,9 +1279,15 @@ var MyConfigForm = Vue.extend({
             if (index === "" || index == null || isNaN(index)){
                 return this.$message.error("索引位标志异常"+index);
             }
-            let data = {id:''}
+            let data = {
+                id:'',
+                owner: this.preference.git.owner ?? '',
+                repo: this.preference.git.repo ?? '',
+            }
             if (oldData != undefined){
                 data = copyJSON(oldData)
+                data.owner = ''
+                data.repo = ''
             }
 
             this.gitSet.show = true
@@ -1236,26 +1302,33 @@ var MyConfigForm = Vue.extend({
                 console.log('gitSetShow', this.sqlSet)
                 return this.$message.error("索引位标志异常");
             }
-
+            if (this.gitSet.data.owner == ""){
+                return this.$message.warning("空间为必填")
+            }
+            if (this.gitSet.data.repo == ""){
+                return this.$message.warning("仓库为必填")
+            }
             if (this.gitSet.data.id == 2){
-                // 待完善...
+                this.gitSet.data.pr_create.owner = this.gitSet.data.owner
+                this.gitSet.data.pr_create.repo = this.gitSet.data.repo
+                if (!this.gitSet.data.pr_create.head){
+                    return this.$message.warning("源分支必填")
+                }
+                if (!this.gitSet.data.pr_create.base){
+                    return this.$message.warning("目标分支必填")
+                }
+                if (!this.gitSet.data.pr_create.title){
+                    return this.$message.warning("PR标题为必填")
+                }
             }else if (this.gitSet.data.id == 3){ // pr 详情
-                if (this.gitSet.data.pr_detail.owner == ""){
-                    return this.$message.warning("空间为必填")
-                }
-                if (this.gitSet.data.pr_detail.repo == ""){
-                    return this.$message.warning("仓库为必填")
-                }
+                this.gitSet.data.pr_detail.owner = this.gitSet.data.owner
+                this.gitSet.data.pr_detail.repo = this.gitSet.data.repo
                 if (!this.gitSet.data.pr_detail.number){
                     return this.$message.warning("仓库PR编号为必填")
                 }
             }else if (this.gitSet.data.id == 8){ // pr 是否 合并
-                if (this.gitSet.data.pr_is_merge.owner == ""){
-                    return this.$message.warning("空间为必填")
-                }
-                if (this.gitSet.data.pr_is_merge.repo == ""){
-                    return this.$message.warning("仓库为必填")
-                }
+                this.gitSet.data.pr_is_merge.owner = this.gitSet.data.owner
+                this.gitSet.data.pr_is_merge.repo = this.gitSet.data.repo
                 if (!this.gitSet.data.pr_is_merge.number){
                     return this.$message.warning("仓库PR编号为必填")
                 }
@@ -1263,12 +1336,8 @@ var MyConfigForm = Vue.extend({
                     return this.$message.warning("目标状态为必填")
                 }
             }else if (this.gitSet.data.id == 9){ // pr 合并
-                if (this.gitSet.data.pr_merge.owner == ""){
-                    return this.$message.warning("空间为必填")
-                }
-                if (this.gitSet.data.pr_merge.repo == ""){
-                    return this.$message.warning("仓库为必填")
-                }
+                this.gitSet.data.pr_merge.owner = this.gitSet.data.owner
+                this.gitSet.data.pr_merge.repo = this.gitSet.data.repo
                 if (!this.gitSet.data.pr_merge.number){
                     return this.$message.warning("仓库PR编号为必填")
                 }
@@ -1276,12 +1345,8 @@ var MyConfigForm = Vue.extend({
                     return this.$message.warning("合并方式不得为空")
                 }
             }else if (this.gitSet.data.id == 131){ // 文件 更新
-                if (this.gitSet.data.file_update.owner == ""){
-                    return this.$message.warning("空间为必填")
-                }
-                if (this.gitSet.data.file_update.repo == ""){
-                    return this.$message.warning("仓库为必填")
-                }
+                this.gitSet.data.file_update.owner = this.gitSet.data.owner
+                this.gitSet.data.file_update.repo = this.gitSet.data.repo
                 if (!this.gitSet.data.file_update.path){
                     return this.$message.warning("文件路径 为必填")
                 }
@@ -1476,7 +1541,10 @@ var MyConfigForm = Vue.extend({
         gitBuildDesc(data){
             switch (data.id){
                 case 2:
-                    data.desc = '完善中...'
+                    data.desc = `<b>pr创建</b> <a href="https://gitee.com/${data.pr_create.owner}/${data.pr_create.repo}/pull/new" target="_blank" title="创建pr"><i class="el-icon-connection"></i></a> <b class="b">${data.pr_create.owner}/${data.pr_create.repo}</b>  ${data.pr_create.prune_source_branch===true?'<b class="b">删除提交分支</b>':''}`+
+                        `<br><i style="margin-left: 2em;"></i>源分支：<b>${data.pr_create.head}</b> → 目标分支：<b>${data.pr_create.base}</b>`+
+                        `<br><i style="margin-left: 2em;"></i>标题：<b>${data.pr_create.title}</b>`+
+                        `<br><i style="margin-left: 2em;"></i>说明：<pre style="display: inline-flex;">${data.pr_create.body}</pre>`
                     break
                 case 3:
                     data.desc = `<b>pr详情</b> <a href="https://gitee.com/${data.pr_detail.owner}/${data.pr_detail.repo}/pulls/${data.pr_detail.number}" target="_blank" title="点击 查看pr详情"><i class="el-icon-connection"></i></a> <b class="b">${data.pr_detail.owner}/${data.pr_detail.repo}</b>/pulls/<b class="b">${data.pr_detail.number}</b>`

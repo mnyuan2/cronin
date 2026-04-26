@@ -193,6 +193,25 @@ func CheckGit(raw, c *pb.CronGit) error {
 	}
 	for i, e := range c.Events {
 		switch e.Id {
+		case enum.GitEventPullsCreate:
+			if e.PRCreate.Owner == "" {
+				return errors.New("git 仓库空间 未设置")
+			}
+			if !regexp.MustCompile(`^[a-zA-Z][\w-]{1,}[a-zA-Z0-9]$`).MatchString(e.PRCreate.Owner) {
+				return errors.New("git 仓库空间 只允许字母、数字或者下划线（_）、中划线（-），至少 2 个字符，必须以字母开头，不能以特殊字符结尾")
+			}
+			if e.PRCreate.Repo == "" {
+				return errors.New("git 项目名称 未设置")
+			}
+			if e.PRCreate.Head == "" {
+				return errors.New("git 源分支 未设置")
+			}
+			if e.PRCreate.Base == "" {
+				return errors.New("git 目标分支 未设置")
+			}
+			if e.PRCreate.Title == "" {
+				return errors.New("git 标题 未设置")
+			}
 		case enum.GitEventPullsDetail:
 			if e.PRDetail.Owner == "" {
 				return errors.New("git 仓库空间 未设置")
